@@ -25,7 +25,7 @@ const Admin = () => {
       }
 
       const { data: roleData } = await supabase
-        .from('user_roles')
+        .from('user_roles' as any)
         .select('role')
         .eq('user_id', user.id)
         .eq('role', 'admin')
@@ -59,7 +59,7 @@ const Admin = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
           <p>Überprüfe Berechtigung...</p>
         </div>
       </div>
@@ -75,7 +75,7 @@ const Admin = () => {
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-blue-600">Innovatech</h1>
+            <h1 className="text-2xl font-bold text-primary">Innovatech</h1>
             <p className="text-sm text-muted-foreground">Admin-Dashboard</p>
           </div>
           <Button onClick={handleLogout} variant="outline">
@@ -103,7 +103,7 @@ const Admin = () => {
               <p className="text-muted-foreground mb-4">
                 Benutzer und deren Rollen verwalten
               </p>
-              <Button className="w-full bg-blue-600 hover:bg-blue-700">
+              <Button className="w-full">
                 Benutzer verwalten
               </Button>
             </div>
@@ -115,7 +115,7 @@ const Admin = () => {
               <p className="text-muted-foreground mb-4">
                 Globale Einstellungen konfigurieren
               </p>
-              <Button className="w-full bg-blue-600 hover:bg-blue-700">
+              <Button className="w-full">
                 Einstellungen
               </Button>
             </div>
@@ -127,7 +127,7 @@ const Admin = () => {
               <p className="text-muted-foreground mb-4">
                 Systemberichte und Statistiken
               </p>
-              <Button className="w-full bg-blue-600 hover:bg-blue-700">
+              <Button className="w-full">
                 Berichte anzeigen
               </Button>
             </div>

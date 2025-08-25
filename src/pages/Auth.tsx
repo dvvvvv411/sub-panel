@@ -31,7 +31,7 @@ const Auth = () => {
   const password = watch('password');
 
   const getUserRole = async (userId: string) => {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('user_roles')
       .select('role')
       .eq('user_id', userId)
@@ -41,16 +41,17 @@ const Auth = () => {
       console.error('Error fetching user role:', error);
       return null;
     }
-    return data?.role || null;
+    if (!data) return null;
+    return (data.role as string) || null;
   };
 
   const assignDefaultRole = async (userId: string) => {
     const { error } = await supabase
-      .from('user_roles')
+      .from('user_roles' as any)
       .insert({
         user_id: userId,
         role: 'mitarbeiter'
-      });
+      } as any);
 
     if (error) {
       console.error('Error assigning default role:', error);
@@ -126,7 +127,7 @@ const Auth = () => {
   return (
     <div className="min-h-screen flex">
       {/* Linke Seite - Visualisierung */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-hero-gradient relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-transparent"></div>
         
         {/* Abstrakte Shapes */}
@@ -151,7 +152,7 @@ const Auth = () => {
         <div className="w-full max-w-md space-y-8">
           <div className="text-center">
             <div className="lg:hidden mb-8">
-              <h1 className="text-4xl font-bold text-blue-600 mb-2">Innovatech</h1>
+              <h1 className="text-4xl font-bold text-primary mb-2">Innovatech</h1>
             </div>
             <h2 className="text-3xl font-bold text-foreground mb-2">
               {isLogin ? 'Anmelden' : 'Registrieren'}
@@ -231,7 +232,7 @@ const Auth = () => {
 
             <Button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700"
+              className="w-full"
               disabled={isLoading}
             >
               {isLoading 
@@ -248,7 +249,7 @@ const Auth = () => {
             <Button
               variant="ghost"
               onClick={switchMode}
-              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              className="text-primary hover:bg-primary/10"
             >
               {isLogin ? 'Registrieren' : 'Anmelden'}
             </Button>

@@ -4,19 +4,19 @@ import { Button } from "@/components/ui/button";
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-hero-gradient">
       <div className="text-center space-y-8 max-w-2xl px-4">
         <div className="space-y-4">
-          <h1 className="text-6xl font-bold text-blue-600 tracking-tight">
+          <h1 className="text-6xl font-bold text-primary tracking-tight">
             Innovatech
           </h1>
-          <p className="text-xl text-gray-600 leading-relaxed">
+          <p className="text-xl text-muted-foreground leading-relaxed">
             Willkommen bei Innovatech - Ihrer Plattform für innovative Lösungen und moderne Technologien.
           </p>
         </div>
 
         <div className="space-y-4">
-          <p className="text-gray-500">
+          <p className="text-muted-foreground">
             Melden Sie sich an, um Zugang zu Ihrem personalisierten Dashboard zu erhalten.
           </p>
           
@@ -24,7 +24,7 @@ const Index = () => {
             <Button 
               asChild
               size="lg"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg"
+              className="px-8 py-3 text-lg"
             >
               <Link to="/auth">
                 Anmelden / Registrieren
@@ -35,7 +35,7 @@ const Index = () => {
               asChild
               variant="outline" 
               size="lg"
-              className="border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-3 text-lg"
+              className="border-primary text-primary hover:bg-primary/10 px-8 py-3 text-lg"
             >
               <Link to="/auth">
                 Mehr erfahren
@@ -44,7 +44,7 @@ const Index = () => {
           </div>
         </div>
 
-        <div className="pt-8 text-sm text-gray-400">
+        <div className="pt-8 text-sm text-muted-foreground">
           © 2024 Innovatech. Alle Rechte vorbehalten.
         </div>
       </div>
