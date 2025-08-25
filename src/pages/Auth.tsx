@@ -125,134 +125,154 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Linke Seite - Visualisierung */}
-      <div className="hidden lg:flex lg:w-1/2 bg-hero-gradient relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-transparent"></div>
-        
-        {/* Abstrakte Shapes */}
-        <div className="absolute top-20 left-20 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
-        <div className="absolute bottom-32 right-16 w-48 h-48 bg-white/5 rounded-full blur-2xl"></div>
-        <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-white/15 rounded-lg rotate-45 blur-lg"></div>
-        
-        <div className="relative z-10 flex flex-col justify-center items-center w-full px-12 text-white">
-          <div className="text-center">
-            <h1 className="text-6xl font-bold mb-6 tracking-tight">
-              Innovatech
-            </h1>
-            <p className="text-xl text-blue-100 max-w-md leading-relaxed">
-              Innovative Lösungen für die Zukunft. Melden Sie sich an und entdecken Sie neue Möglichkeiten.
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
+      <div className="w-full max-w-6xl bg-card rounded-2xl shadow-2xl overflow-hidden">
+        <div className="flex min-h-[600px]">
+          {/* Linke Seite - Dominantes Blau mit Vektor-Shapes */}
+          <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 relative overflow-hidden">
+            {/* Abstrakte Vektor-Shapes */}
+            <div className="absolute top-12 left-12 w-24 h-24 bg-white/10 rounded-full"></div>
+            <div className="absolute top-32 right-16 w-16 h-16 bg-white/15 rounded-lg rotate-45"></div>
+            <div className="absolute bottom-24 left-16 w-32 h-32 bg-white/5 rounded-full"></div>
+            <div className="absolute bottom-12 right-12 w-20 h-20 bg-white/10 rounded-lg rotate-12"></div>
+            <div className="absolute top-1/2 left-1/4 w-6 h-6 bg-white/20 rounded-full"></div>
+            <div className="absolute top-1/3 right-1/3 w-8 h-8 bg-white/15 rounded-full"></div>
+            
+            {/* Zusätzliche geometrische Formen */}
+            <div className="absolute top-20 right-24 w-12 h-12 border-2 border-white/20 rounded-full"></div>
+            <div className="absolute bottom-32 left-32 w-16 h-1 bg-white/10 rounded-full rotate-45"></div>
+            <div className="absolute top-1/2 right-8 w-1 h-16 bg-white/10 rounded-full rotate-12"></div>
 
-      {/* Rechte Seite - Formular */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-background">
-        <div className="w-full max-w-md space-y-8">
-          <div className="text-center">
-            <div className="lg:hidden mb-8">
-              <h1 className="text-4xl font-bold text-primary mb-2">Innovatech</h1>
+            <div className="relative z-10 flex flex-col justify-center items-center w-full px-12 text-white">
+              <div className="text-center space-y-6">
+                <div className="w-20 h-20 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-6">
+                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm-2-6V9a4 4 0 118 0v2" />
+                  </svg>
+                </div>
+                <h1 className="text-4xl font-bold mb-4 tracking-tight">
+                  Willkommen zurück
+                </h1>
+                <p className="text-lg text-blue-100 leading-relaxed max-w-sm">
+                  Melden Sie sich an, um auf Ihr Innovatech Dashboard zuzugreifen
+                </p>
+                <div className="pt-4">
+                  <p className="text-sm text-blue-200">
+                    Sicherer Zugang zu Ihrem Verwaltungsbereich
+                  </p>
+                </div>
+              </div>
             </div>
-            <h2 className="text-3xl font-bold text-foreground mb-2">
-              {isLogin ? 'Anmelden' : 'Registrieren'}
-            </h2>
-            <p className="text-muted-foreground">
-              {isLogin 
-                ? 'Melden Sie sich bei Ihrem Konto an' 
-                : 'Erstellen Sie Ihr neues Konto'
-              }
-            </p>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="email">E-Mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="ihre.email@beispiel.de"
-                  {...register('email', {
-                    required: 'E-Mail ist erforderlich',
-                    pattern: {
-                      value: /^\S+@\S+$/i,
-                      message: 'Ungültige E-Mail-Adresse',
-                    },
-                  })}
-                  className="mt-1"
-                />
-                {errors.email && (
-                  <p className="text-sm text-destructive mt-1">{errors.email.message}</p>
-                )}
+          {/* Rechte Seite - Formular */}
+          <div className="w-full lg:w-1/2 flex items-center justify-center p-8 lg:p-12">
+            <div className="w-full max-w-md space-y-8">
+              <div className="text-center">
+                <div className="lg:hidden mb-8">
+                  <h1 className="text-3xl font-bold text-primary mb-2">Innovatech</h1>
+                </div>
+                <h2 className="text-2xl font-bold text-foreground mb-2">
+                  {isLogin ? 'Anmelden' : 'Registrieren'}
+                </h2>
+                <p className="text-muted-foreground text-sm">
+                  {isLogin 
+                    ? 'Melden Sie sich bei Ihrem Konto an' 
+                    : 'Erstellen Sie Ihr neues Konto'
+                  }
+                </p>
               </div>
 
-              <div>
-                <Label htmlFor="password">Passwort</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  {...register('password', {
-                    required: 'Passwort ist erforderlich',
-                    minLength: {
-                      value: 6,
-                      message: 'Passwort muss mindestens 6 Zeichen lang sein',
-                    },
-                  })}
-                  className="mt-1"
-                />
-                {errors.password && (
-                  <p className="text-sm text-destructive mt-1">{errors.password.message}</p>
-                )}
-              </div>
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="email" className="text-sm font-medium">E-Mail</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="ihre.email@beispiel.de"
+                      {...register('email', {
+                        required: 'E-Mail ist erforderlich',
+                        pattern: {
+                          value: /^\S+@\S+$/i,
+                          message: 'Ungültige E-Mail-Adresse',
+                        },
+                      })}
+                      className="mt-2 h-11"
+                    />
+                    {errors.email && (
+                      <p className="text-sm text-destructive mt-1">{errors.email.message}</p>
+                    )}
+                  </div>
 
-              {!isLogin && (
-                <div>
-                  <Label htmlFor="confirmPassword">Passwort bestätigen</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="••••••••"
-                    {...register('confirmPassword', {
-                      required: 'Passwort-Bestätigung ist erforderlich',
-                      validate: value =>
-                        value === password || 'Passwörter stimmen nicht überein',
-                    })}
-                    className="mt-1"
-                  />
-                  {errors.confirmPassword && (
-                    <p className="text-sm text-destructive mt-1">
-                      {errors.confirmPassword.message}
-                    </p>
+                  <div>
+                    <Label htmlFor="password" className="text-sm font-medium">Passwort</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      {...register('password', {
+                        required: 'Passwort ist erforderlich',
+                        minLength: {
+                          value: 6,
+                          message: 'Passwort muss mindestens 6 Zeichen lang sein',
+                        },
+                      })}
+                      className="mt-2 h-11"
+                    />
+                    {errors.password && (
+                      <p className="text-sm text-destructive mt-1">{errors.password.message}</p>
+                    )}
+                  </div>
+
+                  {!isLogin && (
+                    <div>
+                      <Label htmlFor="confirmPassword" className="text-sm font-medium">Passwort bestätigen</Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        placeholder="••••••••"
+                        {...register('confirmPassword', {
+                          required: 'Passwort-Bestätigung ist erforderlich',
+                          validate: value =>
+                            value === password || 'Passwörter stimmen nicht überein',
+                        })}
+                        className="mt-2 h-11"
+                      />
+                      {errors.confirmPassword && (
+                        <p className="text-sm text-destructive mt-1">
+                          {errors.confirmPassword.message}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
+
+                <Button
+                  type="submit"
+                  className="w-full h-11 text-base font-medium"
+                  disabled={isLoading}
+                >
+                  {isLoading 
+                    ? (isLogin ? 'Wird angemeldet...' : 'Wird registriert...') 
+                    : (isLogin ? 'Anmelden' : 'Registrieren')
+                  }
+                </Button>
+              </form>
+
+              <div className="text-center border-t pt-6">
+                <p className="text-muted-foreground text-sm mb-3">
+                  {isLogin ? 'Noch kein Konto?' : 'Bereits ein Konto?'}
+                </p>
+                <Button
+                  variant="ghost"
+                  onClick={switchMode}
+                  className="text-primary hover:bg-primary/10 h-10 px-6"
+                >
+                  {isLogin ? 'Registrieren' : 'Anmelden'}
+                </Button>
+              </div>
             </div>
-
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading 
-                ? (isLogin ? 'Wird angemeldet...' : 'Wird registriert...') 
-                : (isLogin ? 'Anmelden' : 'Registrieren')
-              }
-            </Button>
-          </form>
-
-          <div className="text-center">
-            <p className="text-muted-foreground">
-              {isLogin ? 'Noch kein Konto?' : 'Bereits ein Konto?'}
-            </p>
-            <Button
-              variant="ghost"
-              onClick={switchMode}
-              className="text-primary hover:bg-primary/10"
-            >
-              {isLogin ? 'Registrieren' : 'Anmelden'}
-            </Button>
           </div>
         </div>
       </div>
