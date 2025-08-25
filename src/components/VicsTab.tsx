@@ -93,7 +93,8 @@ export const VicsTab = () => {
 
   const fetchContractSubmissions = async () => {
     try {
-      const { data, error } = await supabase
+      // Use any type to bypass TypeScript issues with new tables
+      const { data, error } = await (supabase as any)
         .from('employment_contract_submissions')
         .select(`
           *,
@@ -160,8 +161,8 @@ export const VicsTab = () => {
       // Generate unique token
       const token = crypto.randomUUID();
       
-      // Create contract request
-      const { error } = await supabase
+      // Create contract request using any type to bypass TypeScript issues
+      const { error } = await (supabase as any)
         .from('employment_contract_requests')
         .insert({
           employee_id: employee.id,
