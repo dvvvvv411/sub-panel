@@ -94,15 +94,7 @@ export const CreateEmployeeDialog: React.FC<CreateEmployeeDialogProps> = ({
         return;
       }
 
-      // Restore the original admin session
-      if (currentSession?.session) {
-        await supabase.auth.setSession({
-          access_token: currentSession.session.access_token,
-          refresh_token: currentSession.session.refresh_token
-        });
-      }
-
-      // Update employee status to 'created'
+      // Update employee status to 'created' BEFORE restoring session
       const { error: updateError } = await supabase
         .from('employees')
         .update({ status: 'created' })
@@ -111,10 +103,18 @@ export const CreateEmployeeDialog: React.FC<CreateEmployeeDialogProps> = ({
       if (updateError) {
         console.error('Error updating employee status:', updateError);
         toast.error('Account erstellt, aber Status konnte nicht aktualisiert werden');
-      } else {
-        toast.success(`Account für ${employee.first_name} ${employee.last_name} erfolgreich erstellt!`);
+        return;
       }
 
+      // Restore the original admin session
+      if (currentSession?.session) {
+        await supabase.auth.setSession({
+          access_token: currentSession.session.access_token,
+          refresh_token: currentSession.session.refresh_token
+        });
+      }
+
+      toast.success(`Account für ${employee.first_name} ${employee.last_name} erfolgreich erstellt!`);
       onSuccess();
     } catch (error) {
       console.error('Error creating account:', error);
