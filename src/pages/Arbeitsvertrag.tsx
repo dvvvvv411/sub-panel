@@ -80,11 +80,17 @@ const Arbeitsvertrag = () => {
   const fetchContractRequest = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.functions.invoke('get-contract-request', {
-        body: { token }
+      const response = await fetch(`https://yvzgszkliqkzfaulpvju.supabase.co/functions/v1/get-contract-request?token=${token}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2emdzemtsaXFremZhdWxwdmp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxMjkwMDMsImV4cCI6MjA3MTcwNTAwM30.cz09qE_Pem9ViV44Q9W75nNWIUOzx8o3n0_yYL9j9FY`,
+          'Content-Type': 'application/json'
+        }
       });
 
-      if (error || data.error) {
+      const data = await response.json();
+
+      if (!response.ok || data.error) {
         toast.error(data?.error || 'Fehler beim Laden der Anfrage');
         navigate('/');
         return;

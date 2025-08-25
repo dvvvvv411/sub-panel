@@ -19,7 +19,17 @@ Deno.serve(async (req) => {
     );
 
     const url = new URL(req.url);
-    const token = url.searchParams.get('token');
+    let token = url.searchParams.get('token');
+    
+    // Fallback: try to read from request body if not in query params
+    if (!token && req.method === 'POST') {
+      try {
+        const body = await req.json();
+        token = body.token;
+      } catch (e) {
+        // Ignore JSON parsing errors
+      }
+    }
 
     if (!token) {
       return new Response(
@@ -73,10 +83,10 @@ Deno.serve(async (req) => {
     if (existingSubmission) {
       return new Response(
         JSON.stringify({ 
-          error: 'Diese Anfrage wurde bereits eingereicht',
-          submitted: true
+          submitted: true,
+          message: 'Diese Anfrage wurde bereits eingereicht'
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

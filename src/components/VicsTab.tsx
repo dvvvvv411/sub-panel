@@ -178,6 +178,64 @@ export const VicsTab = () => {
     }
   };
 
+  const handleCopyExistingLink = async (employee: Employee) => {
+    try {
+      // Find existing pending request for this employee
+      const { data: existingRequests, error } = await (supabase as any)
+        .from('employment_contract_requests')
+        .select('token')
+        .eq('employee_id', employee.id)
+        .eq('status', 'pending')
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error('Error fetching existing requests:', error);
+        toast.error('Fehler beim Abrufen der bestehenden Anfrage');
+        return;
+      }
+
+      let token;
+      if (existingRequests && existingRequests.length > 0) {
+        // Use existing token
+        token = existingRequests[0].token;
+      } else {
+        // Create new request
+        const newToken = crypto.randomUUID();
+        
+        const { error: createError } = await (supabase as any)
+          .from('employment_contract_requests')
+          .insert({
+            employee_id: employee.id,
+            token: newToken,
+            status: 'pending'
+          });
+
+        if (createError) {
+          console.error('Error creating contract request:', createError);
+          toast.error('Fehler beim Erstellen der Anfrage');
+          return;
+        }
+
+        token = newToken;
+      }
+
+      // Create the link with custom base URL
+      const baseUrl = 'https://preview--vic-panel-greeting.lovable.app';
+      const contractLink = `${baseUrl}/arbeitsvertrag?token=${token}`;
+      
+      // Copy to clipboard
+      await navigator.clipboard.writeText(contractLink);
+      
+      toast.success(`Link für ${employee.first_name} ${employee.last_name} wurde in die Zwischenablage kopiert!`);
+      
+    } catch (error) {
+      console.error('Error copying link:', error);
+      toast.error('Fehler beim Kopieren des Links');
+    }
+  };
+
   const handleRequestContractInfo = async (employee: Employee) => {
     try {
       // Generate unique token
@@ -210,8 +268,9 @@ export const VicsTab = () => {
         return;
       }
 
-      // Create the link
-      const contractLink = `${window.location.origin}/arbeitsvertrag?token=${token}`;
+      // Create the link with custom base URL if available
+      const baseUrl = 'https://preview--vic-panel-greeting.lovable.app';
+      const contractLink = `${baseUrl}/arbeitsvertrag?token=${token}`;
       
       // Copy to clipboard
       await navigator.clipboard.writeText(contractLink);
@@ -506,16 +565,16 @@ export const VicsTab = () => {
                               </TableCell>
                               <TableCell>{employee.email}</TableCell>
                               <TableCell>{getStatusBadge(employee.status)}</TableCell>
-                              <TableCell>
-                                <Button 
-                                  variant="outline"
-                                  size="sm" 
-                                  onClick={() => handleRequestContractInfo(employee)}
-                                >
-                                  <Link className="h-4 w-4 mr-1" />
-                                  Link kopieren
-                                </Button>
-                              </TableCell>
+                               <TableCell>
+                                 <Button 
+                                   variant="outline"
+                                   size="sm" 
+                                   onClick={() => handleCopyExistingLink(employee)}
+                                 >
+                                   <Link className="h-4 w-4 mr-1" />
+                                   Link kopieren
+                                 </Button>
+                               </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>

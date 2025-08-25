@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
       .from('employment_contract_submissions')
       .select('id')
       .eq('request_id', request.id)
-      .single();
+      .maybeSingle();
 
     if (existingSubmission) {
       return new Response(
@@ -140,13 +140,22 @@ Deno.serve(async (req) => {
     const { error: updateError } = await supabase
       .from('employment_contract_requests')
       .update({ 
-        status: 'submitted',
-        submitted_at: new Date().toISOString()
+        status: 'submitted'
       })
       .eq('id', request.id);
 
     if (updateError) {
       console.error('Error updating request status:', updateError);
+    }
+
+    // Update employee status to 'contract_received'
+    const { error: employeeUpdateError } = await supabase
+      .from('employees')
+      .update({ status: 'contract_received' })
+      .eq('id', request.employee_id);
+
+    if (employeeUpdateError) {
+      console.error('Error updating employee status:', employeeUpdateError);
     }
 
     return new Response(
