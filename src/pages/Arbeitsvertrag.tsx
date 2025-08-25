@@ -245,12 +245,6 @@ const Arbeitsvertrag = () => {
           <p className="text-muted-foreground">
             Hallo {contractRequest?.employee.first_name}, bitte füllen Sie die folgenden Informationen aus.
           </p>
-          {contractRequest?.expiresAt && (
-            <p className="text-sm text-amber-600 mt-2">
-              <Calendar className="h-4 w-4 inline mr-1" />
-              Gültig bis: {new Date(contractRequest.expiresAt).toLocaleDateString('de-DE')}
-            </p>
-          )}
         </div>
 
         {/* Progress Steps */}
