@@ -1,4 +1,11 @@
+
 project_id = "yvzgszkliqkzfaulpvju"
 
 [functions.create-user]
 verify_jwt = true
+
+[functions.get-contract-request]
+verify_jwt = false
+
+[functions.submit-contract]
+verify_jwt = false

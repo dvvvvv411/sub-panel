@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Upload, UserCheck, Clock, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Plus, Upload, UserCheck, Clock, Trash2, Link, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { CreateEmployeeDialog } from '@/components/CreateEmployeeDialog';
@@ -18,14 +20,36 @@ interface Employee {
   last_name: string;
   email: string;
   phone?: string | null;
-  status: string; // Changed from union type to string to match database
+  status: string;
   created_at: string;
   created_by?: string;
   updated_at?: string;
 }
 
+interface ContractSubmission {
+  id: string;
+  employee_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  desired_start_date?: string;
+  marital_status?: string;
+  social_security_number?: string;
+  tax_number?: string;
+  health_insurance?: string;
+  iban?: string;
+  bic?: string;
+  bank_name?: string;
+  id_front_path?: string;
+  id_back_path?: string;
+  created_at: string;
+  employees?: Employee;
+}
+
 export const VicsTab = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [contractSubmissions, setContractSubmissions] = useState<ContractSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -34,11 +58,14 @@ export const VicsTab = () => {
     phone: ''
   });
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [selectedSubmission, setSelectedSubmission] = useState<ContractSubmission | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('imported');
 
   useEffect(() => {
     fetchEmployees();
+    fetchContractSubmissions();
   }, []);
 
   const fetchEmployees = async () => {
@@ -61,6 +88,36 @@ export const VicsTab = () => {
       toast.error('Fehler beim Laden der Mitarbeiter');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchContractSubmissions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('employment_contract_submissions')
+        .select(`
+          *,
+          employees (
+            id,
+            first_name,
+            last_name,
+            email,
+            phone,
+            status
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching contract submissions:', error);
+        toast.error('Fehler beim Laden der Arbeitsverträge');
+        return;
+      }
+
+      setContractSubmissions(data || []);
+    } catch (error) {
+      console.error('Error fetching contract submissions:', error);
+      toast.error('Fehler beim Laden der Arbeitsverträge');
     }
   };
 
@@ -98,13 +155,46 @@ export const VicsTab = () => {
     }
   };
 
+  const handleRequestContractInfo = async (employee: Employee) => {
+    try {
+      // Generate unique token
+      const token = crypto.randomUUID();
+      
+      // Create contract request
+      const { error } = await supabase
+        .from('employment_contract_requests')
+        .insert({
+          employee_id: employee.id,
+          token: token,
+          status: 'pending'
+        });
+
+      if (error) {
+        console.error('Error creating contract request:', error);
+        toast.error('Fehler beim Erstellen der Anfrage');
+        return;
+      }
+
+      // Create the link
+      const contractLink = `${window.location.origin}/arbeitsvertrag?token=${token}`;
+      
+      // Copy to clipboard
+      await navigator.clipboard.writeText(contractLink);
+      
+      toast.success(`Link für ${employee.first_name} ${employee.last_name} wurde in die Zwischenablage kopiert!`);
+      
+    } catch (error) {
+      console.error('Error creating contract request:', error);
+      toast.error('Fehler beim Erstellen der Anfrage');
+    }
+  };
+
   const handleCreateAccount = (employee: Employee) => {
     setSelectedEmployee(employee);
     setIsDialogOpen(true);
   };
 
   const handleAccountCreated = (employeeId: string) => {
-    // Optimistically update the employee status in local state
     setEmployees(prevEmployees => 
       prevEmployees.map(emp => 
         emp.id === employeeId 
@@ -113,14 +203,9 @@ export const VicsTab = () => {
       )
     );
     
-    // Switch to the "Erstellte Mitarbeiter" tab
     setActiveTab('created');
-    
-    // Close dialog and clear selected employee
     setIsDialogOpen(false);
     setSelectedEmployee(null);
-    
-    // Fetch fresh data in background to ensure consistency
     fetchEmployees();
   };
 
@@ -143,6 +228,11 @@ export const VicsTab = () => {
       console.error('Error deleting employee:', error);
       toast.error('Fehler beim Löschen des Mitarbeiters');
     }
+  };
+
+  const handleViewDetails = (submission: ContractSubmission) => {
+    setSelectedSubmission(submission);
+    setIsDetailDialogOpen(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -259,9 +349,12 @@ export const VicsTab = () => {
 
       {/* Employee Lists */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="imported">
             Importierte Mitarbeiter ({importedEmployees.length})
+          </TabsTrigger>
+          <TabsTrigger value="contracts">
+            Arbeitsverträge ({contractSubmissions.length})
           </TabsTrigger>
           <TabsTrigger value="created">
             Erstellte Mitarbeiter ({createdEmployees.length})
@@ -273,7 +366,7 @@ export const VicsTab = () => {
             <CardHeader>
               <CardTitle>Importierte Mitarbeiter</CardTitle>
               <CardDescription>
-                Diese Mitarbeiter wurden hinzugefügt, haben aber noch keinen Account
+                Diese Mitarbeiter wurden hinzugefügt, bitten Sie sie um Arbeitsvertrag-Informationen
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -310,10 +403,10 @@ export const VicsTab = () => {
                           <div className="flex gap-2">
                             <Button 
                               size="sm" 
-                              onClick={() => handleCreateAccount(employee)}
+                              onClick={() => handleRequestContractInfo(employee)}
                             >
-                              <UserCheck className="h-4 w-4 mr-1" />
-                              Account erstellen
+                              <Link className="h-4 w-4 mr-1" />
+                              AV Infos anfragen
                             </Button>
                             <Button
                               variant="outline"
@@ -322,6 +415,69 @@ export const VicsTab = () => {
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="contracts">
+          <Card>
+            <CardHeader>
+              <CardTitle>Eingereichte Arbeitsverträge</CardTitle>
+              <CardDescription>
+                Mitarbeiter, die ihre Arbeitsvertrag-Informationen eingereicht haben
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {contractSubmissions.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">
+                  Noch keine Arbeitsvertrag-Informationen eingereicht
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>E-Mail</TableHead>
+                      <TableHead>Eingereicht am</TableHead>
+                      <TableHead>Aktionen</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {contractSubmissions.map((submission) => (
+                      <TableRow key={submission.id}>
+                        <TableCell className="font-medium">
+                          {submission.first_name} {submission.last_name}
+                        </TableCell>
+                        <TableCell>{submission.email}</TableCell>
+                        <TableCell>
+                          {new Date(submission.created_at).toLocaleDateString('de-DE')}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline"
+                              size="sm" 
+                              onClick={() => handleViewDetails(submission)}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              Details
+                            </Button>
+                            {submission.employees && (
+                              <Button 
+                                size="sm" 
+                                onClick={() => handleCreateAccount(submission.employees!)}
+                              >
+                                <UserCheck className="h-4 w-4 mr-1" />
+                                Account erstellen
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -386,6 +542,69 @@ export const VicsTab = () => {
         onClose={() => setIsDialogOpen(false)}
         onSuccess={handleAccountCreated}
       />
+
+      {/* Contract Details Dialog */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Arbeitsvertrag-Details: {selectedSubmission?.first_name} {selectedSubmission?.last_name}</DialogTitle>
+          </DialogHeader>
+          {selectedSubmission && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Personal Data */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Persönliche Daten</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div><strong>Name:</strong> {selectedSubmission.first_name} {selectedSubmission.last_name}</div>
+                    <div><strong>E-Mail:</strong> {selectedSubmission.email}</div>
+                    <div><strong>Telefon:</strong> {selectedSubmission.phone || '-'}</div>
+                    <div><strong>Startdatum:</strong> {selectedSubmission.desired_start_date ? new Date(selectedSubmission.desired_start_date).toLocaleDateString('de-DE') : '-'}</div>
+                    <div><strong>Familienstand:</strong> {selectedSubmission.marital_status || '-'}</div>
+                  </CardContent>
+                </Card>
+
+                {/* Tax & Insurance Data */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Steuer- und Versicherungsdaten</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div><strong>Sozialversicherungsnr.:</strong> {selectedSubmission.social_security_number || '-'}</div>
+                    <div><strong>Steuernummer:</strong> {selectedSubmission.tax_number || '-'}</div>
+                    <div><strong>Krankenkasse:</strong> {selectedSubmission.health_insurance || '-'}</div>
+                  </CardContent>
+                </Card>
+
+                {/* Bank Data */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Bankverbindung</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div><strong>IBAN:</strong> {selectedSubmission.iban || '-'}</div>
+                    <div><strong>BIC:</strong> {selectedSubmission.bic || '-'}</div>
+                    <div><strong>Bank:</strong> {selectedSubmission.bank_name || '-'}</div>
+                  </CardContent>
+                </Card>
+
+                {/* ID Photos */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Personalausweis</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm">
+                    <div><strong>Vorderseite:</strong> {selectedSubmission.id_front_path ? 'Hochgeladen' : 'Nicht verfügbar'}</div>
+                    <div><strong>Rückseite:</strong> {selectedSubmission.id_back_path ? 'Hochgeladen' : 'Nicht verfügbar'}</div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
