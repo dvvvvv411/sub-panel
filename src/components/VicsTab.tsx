@@ -68,6 +68,13 @@ export const VicsTab = () => {
     fetchContractSubmissions();
   }, []);
 
+  // Refresh employees after contract submissions are loaded to update status
+  useEffect(() => {
+    if (contractSubmissions.length > 0) {
+      fetchEmployees();
+    }
+  }, [contractSubmissions]);
+
   const fetchEmployees = async () => {
     try {
       setLoading(true);
@@ -116,6 +123,21 @@ export const VicsTab = () => {
       }
 
       setContractSubmissions(data || []);
+
+      // Update employee status to 'contract_received' for submitted contracts
+      if (data && data.length > 0) {
+        const employeeIds = data.map((submission: any) => submission.employee_id);
+        
+        const { error: updateError } = await supabase
+          .from('employees')
+          .update({ status: 'contract_received' })
+          .in('id', employeeIds)
+          .eq('status', 'contract_requested');
+
+        if (updateError) {
+          console.error('Error updating employee status:', updateError);
+        }
+      }
     } catch (error) {
       console.error('Error fetching contract submissions:', error);
       toast.error('Fehler beim Laden der Arbeitsverträge');
@@ -176,6 +198,18 @@ export const VicsTab = () => {
         return;
       }
 
+      // Update employee status to 'contract_requested'
+      const { error: updateError } = await supabase
+        .from('employees')
+        .update({ status: 'contract_requested' })
+        .eq('id', employee.id);
+
+      if (updateError) {
+        console.error('Error updating employee status:', updateError);
+        toast.error('Fehler beim Aktualisieren des Status');
+        return;
+      }
+
       // Create the link
       const contractLink = `${window.location.origin}/arbeitsvertrag?token=${token}`;
       
@@ -183,6 +217,10 @@ export const VicsTab = () => {
       await navigator.clipboard.writeText(contractLink);
       
       toast.success(`Link für ${employee.first_name} ${employee.last_name} wurde in die Zwischenablage kopiert!`);
+      
+      // Switch to contracts tab and refresh data
+      setActiveTab('contracts');
+      fetchEmployees();
       
     } catch (error) {
       console.error('Error creating contract request:', error);
@@ -240,6 +278,10 @@ export const VicsTab = () => {
     switch (status) {
       case 'imported':
         return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Importiert</Badge>;
+      case 'contract_requested':
+        return <Badge variant="outline" className="border-blue-500 text-blue-700"><Link className="h-3 w-3 mr-1" />AV Infos angefragt</Badge>;
+      case 'contract_received':
+        return <Badge variant="outline" className="border-green-500 text-green-700"><UserCheck className="h-3 w-3 mr-1" />AV Infos erhalten</Badge>;
       case 'created':
         return <Badge variant="default"><UserCheck className="h-3 w-3 mr-1" />Erstellt</Badge>;
       case 'verified':
@@ -250,6 +292,7 @@ export const VicsTab = () => {
   };
 
   const importedEmployees = employees.filter(emp => emp.status === 'imported');
+  const contractRequestedEmployees = employees.filter(emp => emp.status === 'contract_requested' || emp.status === 'contract_received');
   const createdEmployees = employees.filter(emp => emp.status === 'created' || emp.status === 'verified');
 
   return (
@@ -355,7 +398,7 @@ export const VicsTab = () => {
             Importierte Mitarbeiter ({importedEmployees.length})
           </TabsTrigger>
           <TabsTrigger value="contracts">
-            Arbeitsverträge ({contractSubmissions.length})
+            Arbeitsverträge ({contractRequestedEmployees.length + contractSubmissions.length})
           </TabsTrigger>
           <TabsTrigger value="created">
             Erstellte Mitarbeiter ({createdEmployees.length})
@@ -430,61 +473,107 @@ export const VicsTab = () => {
         <TabsContent value="contracts">
           <Card>
             <CardHeader>
-              <CardTitle>Eingereichte Arbeitsverträge</CardTitle>
+              <CardTitle>Arbeitsverträge</CardTitle>
               <CardDescription>
-                Mitarbeiter, die ihre Arbeitsvertrag-Informationen eingereicht haben
+                Übersicht über angeforderte und eingereichte Arbeitsvertrag-Informationen
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {contractSubmissions.length === 0 ? (
+              {contractRequestedEmployees.length === 0 && contractSubmissions.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
-                  Noch keine Arbeitsvertrag-Informationen eingereicht
+                  Noch keine Arbeitsvertrag-Anfragen gestellt
                 </p>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>E-Mail</TableHead>
-                      <TableHead>Eingereicht am</TableHead>
-                      <TableHead>Aktionen</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {contractSubmissions.map((submission) => (
-                      <TableRow key={submission.id}>
-                        <TableCell className="font-medium">
-                          {submission.first_name} {submission.last_name}
-                        </TableCell>
-                        <TableCell>{submission.email}</TableCell>
-                        <TableCell>
-                          {new Date(submission.created_at).toLocaleDateString('de-DE')}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="outline"
-                              size="sm" 
-                              onClick={() => handleViewDetails(submission)}
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              Details
-                            </Button>
-                            {submission.employees && (
-                              <Button 
-                                size="sm" 
-                                onClick={() => handleCreateAccount(submission.employees!)}
-                              >
-                                <UserCheck className="h-4 w-4 mr-1" />
-                                Account erstellen
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="space-y-6">
+                  {/* Contract Requested Employees */}
+                  {contractRequestedEmployees.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3">Angeforderte Verträge</h3>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>E-Mail</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Aktionen</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {contractRequestedEmployees.map((employee) => (
+                            <TableRow key={employee.id}>
+                              <TableCell className="font-medium">
+                                {employee.first_name} {employee.last_name}
+                              </TableCell>
+                              <TableCell>{employee.email}</TableCell>
+                              <TableCell>{getStatusBadge(employee.status)}</TableCell>
+                              <TableCell>
+                                <Button 
+                                  variant="outline"
+                                  size="sm" 
+                                  onClick={() => handleRequestContractInfo(employee)}
+                                >
+                                  <Link className="h-4 w-4 mr-1" />
+                                  Link kopieren
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+
+                  {/* Contract Submissions */}
+                  {contractSubmissions.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3">Eingereichte Verträge</h3>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>E-Mail</TableHead>
+                            <TableHead>Eingereicht am</TableHead>
+                            <TableHead>Aktionen</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {contractSubmissions.map((submission) => (
+                            <TableRow key={submission.id}>
+                              <TableCell className="font-medium">
+                                {submission.first_name} {submission.last_name}
+                              </TableCell>
+                              <TableCell>{submission.email}</TableCell>
+                              <TableCell>
+                                {new Date(submission.created_at).toLocaleDateString('de-DE')}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-2">
+                                  <Button 
+                                    variant="outline"
+                                    size="sm" 
+                                    onClick={() => handleViewDetails(submission)}
+                                  >
+                                    <Eye className="h-4 w-4 mr-1" />
+                                    Details
+                                  </Button>
+                                  {submission.employees && (
+                                    <Button 
+                                      size="sm" 
+                                      onClick={() => handleCreateAccount(submission.employees!)}
+                                    >
+                                      <UserCheck className="h-4 w-4 mr-1" />
+                                      Account erstellen
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>
