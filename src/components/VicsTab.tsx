@@ -736,7 +736,7 @@ export const VicsTab = () => {
                                     <Eye className="h-4 w-4 mr-1" />
                                     Details
                                   </Button>
-                                  {submission.employees && (
+                                  {submission.employees && submission.employees.status !== 'created' && submission.employees.status !== 'verified' && (
                                     <Button 
                                       size="sm" 
                                       onClick={() => handleCreateAccount(submission.employees!)}
