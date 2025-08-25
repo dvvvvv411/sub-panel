@@ -24,7 +24,7 @@ interface CreateEmployeeDialogProps {
   employee: Employee | null;
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (employeeId: string) => void;
 }
 
 const generatePassword = (): string => {
@@ -115,7 +115,7 @@ export const CreateEmployeeDialog: React.FC<CreateEmployeeDialogProps> = ({
       }
 
       toast.success(`Account für ${employee.first_name} ${employee.last_name} erfolgreich erstellt!`);
-      onSuccess();
+      onSuccess(employee.id);
     } catch (error) {
       console.error('Error creating account:', error);
       toast.error('Fehler beim Erstellen des Accounts');

@@ -35,6 +35,7 @@ export const VicsTab = () => {
   });
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('imported');
 
   useEffect(() => {
     fetchEmployees();
@@ -102,10 +103,25 @@ export const VicsTab = () => {
     setIsDialogOpen(true);
   };
 
-  const handleAccountCreated = () => {
-    fetchEmployees();
+  const handleAccountCreated = (employeeId: string) => {
+    // Optimistically update the employee status in local state
+    setEmployees(prevEmployees => 
+      prevEmployees.map(emp => 
+        emp.id === employeeId 
+          ? { ...emp, status: 'created' }
+          : emp
+      )
+    );
+    
+    // Switch to the "Erstellte Mitarbeiter" tab
+    setActiveTab('created');
+    
+    // Close dialog and clear selected employee
     setIsDialogOpen(false);
     setSelectedEmployee(null);
+    
+    // Fetch fresh data in background to ensure consistency
+    fetchEmployees();
   };
 
   const handleDeleteEmployee = async (employeeId: string) => {
@@ -242,7 +258,7 @@ export const VicsTab = () => {
       </div>
 
       {/* Employee Lists */}
-      <Tabs defaultValue="imported" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="imported">
             Importierte Mitarbeiter ({importedEmployees.length})
