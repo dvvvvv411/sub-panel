@@ -69,50 +69,34 @@ export const CreateEmployeeDialog: React.FC<CreateEmployeeDialogProps> = ({
 
   const handleCreateAccount = async () => {
     if (!employee || !password) return;
-
+    
     setIsCreating(true);
+    
     try {
-      // Store current session to restore it later
-      const { data: currentSession } = await supabase.auth.getSession();
+      console.log('Creating account for:', employee.email);
       
-      // Create user account via Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: employee.email,
-        password: password,
-        options: {
-          data: {
-            full_name: `${employee.first_name} ${employee.last_name}`,
-            phone: employee.phone
-          },
-          emailRedirectTo: `${window.location.origin}/auth`
+      // Use Edge Function to create user without affecting current session
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: employee.email,
+          password: password,
+          employeeId: employee.id
         }
       });
 
-      if (authError) {
-        console.error('Error creating user account:', authError);
-        toast.error(`Fehler beim Erstellen des Accounts: ${authError.message}`);
+      if (error) {
+        console.error('Edge function error:', error);
+        toast.error(`Fehler beim Erstellen des Accounts: ${error.message}`);
         return;
       }
 
-      // Restore the original admin session FIRST to ensure proper RLS permissions
-      if (currentSession?.session) {
-        await supabase.auth.setSession({
-          access_token: currentSession.session.access_token,
-          refresh_token: currentSession.session.refresh_token
-        });
-      }
-
-      // Update employee status to 'created'
-      const { error: updateError } = await supabase
-        .from('employees')
-        .update({ status: 'created' })
-        .eq('id', employee.id);
-
-      if (updateError) {
-        console.error('Error updating employee status:', updateError);
-        toast.error('Account erstellt, aber Status konnte nicht aktualisiert werden');
+      if (data.error) {
+        console.error('Server error:', data.error);
+        toast.error(`Fehler beim Erstellen des Accounts: ${data.error}`);
         return;
       }
+
+      console.log('User created successfully via Edge Function:', data.userId);
 
       toast.success(`Account für ${employee.first_name} ${employee.last_name} erfolgreich erstellt!`);
       onSuccess(employee.id);
