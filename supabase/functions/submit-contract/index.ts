@@ -46,7 +46,6 @@ Deno.serve(async (req) => {
       .select('*')
       .eq('token', token)
       .eq('status', 'pending')
-      .gt('expires_at', new Date().toISOString())
       .single();
 
     if (requestError || !request) {
