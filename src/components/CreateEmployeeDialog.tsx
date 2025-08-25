@@ -72,6 +72,9 @@ export const CreateEmployeeDialog: React.FC<CreateEmployeeDialogProps> = ({
 
     setIsCreating(true);
     try {
+      // Store current session to restore it later
+      const { data: currentSession } = await supabase.auth.getSession();
+      
       // Create user account via Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: employee.email,
@@ -89,6 +92,14 @@ export const CreateEmployeeDialog: React.FC<CreateEmployeeDialogProps> = ({
         console.error('Error creating user account:', authError);
         toast.error(`Fehler beim Erstellen des Accounts: ${authError.message}`);
         return;
+      }
+
+      // Restore the original admin session
+      if (currentSession?.session) {
+        await supabase.auth.setSession({
+          access_token: currentSession.session.access_token,
+          refresh_token: currentSession.session.refresh_token
+        });
       }
 
       // Update employee status to 'created'
