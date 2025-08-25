@@ -439,6 +439,21 @@ export const VicsTab = () => {
     }
   };
 
+  const getMaritalStatusLabel = (status: string): string => {
+    switch (status) {
+      case 'single':
+        return 'Ledig';
+      case 'married':
+        return 'Verheiratet';
+      case 'divorced':
+        return 'Geschieden';
+      case 'widowed':
+        return 'Verwitwet';
+      default:
+        return status || '-';
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'imported':
@@ -817,7 +832,7 @@ export const VicsTab = () => {
                     <div><strong>E-Mail:</strong> {selectedSubmission.email}</div>
                     <div><strong>Telefon:</strong> {selectedSubmission.phone || '-'}</div>
                     <div><strong>Startdatum:</strong> {selectedSubmission.desired_start_date ? new Date(selectedSubmission.desired_start_date).toLocaleDateString('de-DE') : '-'}</div>
-                    <div><strong>Familienstand:</strong> {selectedSubmission.marital_status || '-'}</div>
+                    <div><strong>Familienstand:</strong> {getMaritalStatusLabel(selectedSubmission.marital_status || '')}</div>
                   </CardContent>
                 </Card>
 
