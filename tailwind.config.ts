@@ -65,6 +65,7 @@ export default {
 			},
 			backgroundImage: {
 				'hero-gradient': 'var(--hero-gradient)',
+				'auth-gradient': 'var(--auth-gradient)',
 			},
 			textShadow: {
 				'glow': 'var(--text-glow)',
