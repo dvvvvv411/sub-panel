@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { ArrowLeft, ArrowRight, Upload, CheckCircle, File } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Upload, CheckCircle, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Employee {
@@ -65,13 +66,6 @@ const Arbeitsvertrag = () => {
   });
 
   const token = searchParams.get('token');
-
-  const steps = [
-    { number: 1, title: 'Persönliche\nDaten', shortTitle: 'Persönliche Daten' },
-    { number: 2, title: 'Steuer &\nVersicherung', shortTitle: 'Steuer & Versicherung' },
-    { number: 3, title: 'Bankverbindung', shortTitle: 'Bankverbindung' },
-    { number: 4, title: 'Personalausweis', shortTitle: 'Personalausweis' }
-  ];
 
   useEffect(() => {
     if (!token) {
@@ -209,7 +203,7 @@ const Arbeitsvertrag = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Lädt...</p>
@@ -220,7 +214,7 @@ const Arbeitsvertrag = () => {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
@@ -235,77 +229,54 @@ const Arbeitsvertrag = () => {
     );
   }
 
+  const steps = [
+    { number: 1, title: 'Persönliche Daten' },
+    { number: 2, title: 'Steuer & Versicherung' },
+    { number: 3, title: 'Bankverbindung' },
+    { number: 4, title: 'Personalausweis' }
+  ];
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto p-6">
-        {/* Logo/Header placeholder */}
-        <div className="text-center mb-12">
-          <div className="w-48 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg mx-auto mb-8 flex items-center justify-center">
-            <span className="text-white font-bold text-xl">Company Logo</span>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
+      <div className="max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-foreground mb-2">Arbeitsvertrag-Informationen</h1>
+          <p className="text-muted-foreground">
+            Hallo {contractRequest?.employee.first_name}, bitte füllen Sie die folgenden Informationen aus.
+          </p>
+          {contractRequest?.expiresAt && (
+            <p className="text-sm text-amber-600 mt-2">
+              <Calendar className="h-4 w-4 inline mr-1" />
+              Gültig bis: {new Date(contractRequest.expiresAt).toLocaleDateString('de-DE')}
+            </p>
+          )}
         </div>
 
         {/* Progress Steps */}
-        <div className="mb-12">
-          <div className="flex justify-between items-center mb-8">
-            {steps.map((step, index) => (
-              <div key={step.number} className="flex flex-col items-center flex-1">
-                <div className="flex items-center w-full">
-                  {/* Step Circle */}
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold z-10 ${
-                    currentStep > step.number 
-                      ? 'bg-green-500 text-white' 
-                      : currentStep === step.number
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-gray-300 text-gray-600'
-                  }`}>
-                    {currentStep > step.number ? (
-                      <CheckCircle className="h-6 w-6" />
-                    ) : (
-                      step.number
-                    )}
-                  </div>
-                  
-                  {/* Connecting Line */}
-                  {index < steps.length - 1 && (
-                    <div className={`h-1 flex-1 mx-4 ${
-                      currentStep > step.number ? 'bg-green-500' : 'bg-gray-300'
-                    }`}></div>
-                  )}
-                </div>
-                
-                {/* Step Title */}
-                <span className="text-sm text-center mt-3 max-w-20 leading-tight font-medium text-foreground whitespace-pre-line">
-                  {step.title}
-                </span>
+        <div className="flex justify-between mb-8">
+          {steps.map((step) => (
+            <div key={step.number} className="flex flex-col items-center">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium mb-2 ${
+                currentStep >= step.number 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-muted text-muted-foreground'
+              }`}>
+                {step.number}
               </div>
-            ))}
-          </div>
+              <span className="text-xs text-center max-w-20">{step.title}</span>
+            </div>
+          ))}
         </div>
 
-        {/* Preview Button */}
-        <div className="text-center mb-8">
-          <Button variant="outline" className="text-blue-600 border-blue-600 hover:bg-blue-50">
-            <File className="h-4 w-4 mr-2" />
-            Arbeitsvertrag Vorschau
-          </Button>
-        </div>
-
-        {/* Main Form Card */}
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl flex items-center justify-center gap-2">
-              <File className="h-6 w-6 text-orange-500" />
-              Arbeitsvertrag - {steps[currentStep - 1].shortTitle}
-            </CardTitle>
-            <CardDescription className="text-lg">
-              Schritt {currentStep} von 4
-            </CardDescription>
+        {/* Form Content */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Schritt {currentStep}: {steps[currentStep - 1].title}</CardTitle>
           </CardHeader>
-          
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4">
             {currentStep === 1 && (
-              <div className="space-y-4">
+              <>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="firstName">Vorname *</Label>
@@ -367,11 +338,11 @@ const Arbeitsvertrag = () => {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
+              </>
             )}
 
             {currentStep === 2 && (
-              <div className="space-y-4">
+              <>
                 <div>
                   <Label htmlFor="socialSecurity">Sozialversicherungsnummer</Label>
                   <Input
@@ -396,62 +367,67 @@ const Arbeitsvertrag = () => {
                     onChange={(e) => handleInputChange('healthInsurance', e.target.value)}
                   />
                 </div>
-              </div>
+              </>
             )}
 
             {currentStep === 3 && (
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="iban">IBAN</Label>
-                  <Input
-                    id="iban"
-                    value={formData.iban}
-                    onChange={(e) => handleInputChange('iban', e.target.value)}
-                    placeholder="DE89 3704 0044 0532 0130 00"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="bic">BIC</Label>
-                  <Input
-                    id="bic"
-                    value={formData.bic}
-                    onChange={(e) => handleInputChange('bic', e.target.value)}
-                    placeholder="COBADEFFXXX"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="bankName">Name der Bank</Label>
-                  <Input
-                    id="bankName"
-                    value={formData.bankName}
-                    onChange={(e) => handleInputChange('bankName', e.target.value)}
-                    placeholder="Deutsche Bank AG"
-                  />
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="font-medium text-blue-900 mb-3">Bankverbindung</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="iban">IBAN</Label>
+                      <Input
+                        id="iban"
+                        value={formData.iban}
+                        onChange={(e) => handleInputChange('iban', e.target.value)}
+                        placeholder="DE89 3704 0044 0532 0130 00"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="bic">BIC</Label>
+                      <Input
+                        id="bic"
+                        value={formData.bic}
+                        onChange={(e) => handleInputChange('bic', e.target.value)}
+                        placeholder="COBADEFFXXX"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="bankName">Name der Bank</Label>
+                      <Input
+                        id="bankName"
+                        value={formData.bankName}
+                        onChange={(e) => handleInputChange('bankName', e.target.value)}
+                        placeholder="Commerzbank AG"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
             {currentStep === 4 && (
               <div className="space-y-6">
-                <div className="text-center mb-6">
-                  <h3 className="text-xl font-semibold mb-2">Personalausweis</h3>
-                  <p className="text-muted-foreground">
-                    Bitte laden Sie beide Seiten Ihres Personalausweises hoch (optional)
+                <div className="text-center">
+                  <h3 className="text-lg font-medium mb-2">Personalausweis hochladen</h3>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Bitte laden Sie beide Seiten Ihres Personalausweises hoch
                   </p>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label>Vorderseite</Label>
-                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-muted-foreground/50 transition-colors">
+                    <Label>Vorderseite *</Label>
+                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
                       {idFrontFile ? (
                         <div>
-                          <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
-                          <p className="text-sm text-green-700 font-medium">{idFrontFile.name}</p>
+                          <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                          <p className="text-sm text-green-700">{idFrontFile.name}</p>
                           <Button
                             variant="outline"
                             size="sm"
-                            className="mt-3"
+                            className="mt-2"
                             onClick={() => handleFileChange('front', null)}
                           >
                             Entfernen
@@ -459,8 +435,8 @@ const Arbeitsvertrag = () => {
                         </div>
                       ) : (
                         <div>
-                          <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                          <p className="text-sm text-muted-foreground mb-3">Vorderseite hochladen</p>
+                          <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                          <p className="text-sm text-muted-foreground mb-2">Vorderseite hochladen</p>
                           <Input
                             type="file"
                             accept="image/*"
@@ -473,16 +449,16 @@ const Arbeitsvertrag = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Rückseite</Label>
-                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-muted-foreground/50 transition-colors">
+                    <Label>Rückseite *</Label>
+                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
                       {idBackFile ? (
                         <div>
-                          <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
-                          <p className="text-sm text-green-700 font-medium">{idBackFile.name}</p>
+                          <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                          <p className="text-sm text-green-700">{idBackFile.name}</p>
                           <Button
                             variant="outline"
                             size="sm"
-                            className="mt-3"
+                            className="mt-2"
                             onClick={() => handleFileChange('back', null)}
                           >
                             Entfernen
@@ -490,8 +466,8 @@ const Arbeitsvertrag = () => {
                         </div>
                       ) : (
                         <div>
-                          <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                          <p className="text-sm text-muted-foreground mb-3">Rückseite hochladen</p>
+                          <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                          <p className="text-sm text-muted-foreground mb-2">Rückseite hochladen</p>
                           <Input
                             type="file"
                             accept="image/*"
@@ -505,38 +481,41 @@ const Arbeitsvertrag = () => {
                 </div>
               </div>
             )}
-
-            {/* Navigation Buttons */}
-            <div className="flex justify-between pt-6">
-              <Button
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentStep === 1}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Zurück
-              </Button>
-
-              {currentStep < 4 ? (
-                <Button
-                  onClick={handleNext}
-                  disabled={!validateStep(currentStep)}
-                >
-                  Weiter
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  {submitting ? 'Wird eingereicht...' : 'Einreichen'}
-                </Button>
-              )}
-            </div>
           </CardContent>
         </Card>
+
+        {/* Navigation Buttons */}
+        <div className="flex justify-between mt-8">
+          <Button
+            variant="outline"
+            onClick={handlePrevious}
+            disabled={currentStep === 1}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Zurück
+          </Button>
+          
+          {currentStep < 4 ? (
+            <Button onClick={handleNext}>
+              Weiter
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          ) : (
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Wird eingereicht...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Einreichen
+                </>
+              )}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
