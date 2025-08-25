@@ -42,16 +42,16 @@ const Auth = () => {
       return null;
     }
     if (!data) return null;
-    return (data.role as string) || null;
+    return data.role || null;
   };
 
   const assignDefaultRole = async (userId: string) => {
-    const { error } = await supabase
-      .from('user_roles' as any)
+    const { error } = await (supabase as any)
+      .from('user_roles')
       .insert({
         user_id: userId,
         role: 'mitarbeiter'
-      } as any);
+      });
 
     if (error) {
       console.error('Error assigning default role:', error);
