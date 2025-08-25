@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
       .from('employment_contract_submissions')
       .select('id')
       .eq('request_id', request.id)
-      .single();
+      .maybeSingle();
 
     if (existingSubmission) {
       return new Response(
