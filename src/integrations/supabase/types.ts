@@ -50,6 +50,125 @@ export type Database = {
         }
         Relationships: []
       }
+      employment_contract_requests: {
+        Row: {
+          created_at: string
+          employee_id: string
+          expires_at: string
+          id: string
+          status: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          expires_at?: string
+          id?: string
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          expires_at?: string
+          id?: string
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employment_contract_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employment_contract_submissions: {
+        Row: {
+          bank_name: string | null
+          bic: string | null
+          created_at: string
+          desired_start_date: string | null
+          email: string
+          employee_id: string
+          first_name: string
+          health_insurance: string | null
+          iban: string | null
+          id: string
+          id_back_path: string | null
+          id_front_path: string | null
+          last_name: string
+          marital_status: string | null
+          phone: string | null
+          request_id: string
+          social_security_number: string | null
+          tax_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          bank_name?: string | null
+          bic?: string | null
+          created_at?: string
+          desired_start_date?: string | null
+          email: string
+          employee_id: string
+          first_name: string
+          health_insurance?: string | null
+          iban?: string | null
+          id?: string
+          id_back_path?: string | null
+          id_front_path?: string | null
+          last_name: string
+          marital_status?: string | null
+          phone?: string | null
+          request_id: string
+          social_security_number?: string | null
+          tax_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bank_name?: string | null
+          bic?: string | null
+          created_at?: string
+          desired_start_date?: string | null
+          email?: string
+          employee_id?: string
+          first_name?: string
+          health_insurance?: string | null
+          iban?: string | null
+          id?: string
+          id_back_path?: string | null
+          id_front_path?: string | null
+          last_name?: string
+          marital_status?: string | null
+          phone?: string | null
+          request_id?: string
+          social_security_number?: string | null
+          tax_number?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employment_contract_submissions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employment_contract_submissions_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "employment_contract_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_profiles: {
         Row: {
           created_at: string
