@@ -2,10 +2,12 @@
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="min-h-screen bg-hero-gradient flex items-center justify-center">
       <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+        <h1 className="text-6xl md:text-8xl font-bold text-foreground tracking-tight">
+          Vic Panel 2.0
+        </h1>
+        <div className="mt-8 w-32 h-0.5 bg-muted mx-auto"></div>
       </div>
     </div>
   );
