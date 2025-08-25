@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Upload, UserCheck, Clock, Trash2, Link, Eye } from 'lucide-react';
+import { Plus, Upload, UserCheck, Clock, Trash2, Link, Eye, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { CreateEmployeeDialog } from '@/components/CreateEmployeeDialog';
@@ -46,6 +46,66 @@ interface ContractSubmission {
   created_at: string;
   employees?: Employee;
 }
+
+// Component to display ID images
+const IDImageDisplay: React.FC<{ path: string; alt: string }> = ({ path, alt }) => {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const loadImage = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase.storage
+          .from('ids')
+          .createSignedUrl(path, 60 * 60); // 1 hour expiry
+
+        if (error || !data) {
+          console.error('Error getting signed URL:', error);
+          setError(true);
+          return;
+        }
+
+        setImageUrl(data.signedUrl);
+      } catch (error) {
+        console.error('Error loading image:', error);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadImage();
+  }, [path]);
+
+  if (loading) {
+    return (
+      <div className="w-full h-40 bg-muted rounded-lg flex items-center justify-center">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error || !imageUrl) {
+    return (
+      <div className="w-full h-40 bg-muted rounded-lg flex items-center justify-center text-muted-foreground">
+        Bild konnte nicht geladen werden
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full">
+      <img
+        src={imageUrl}
+        alt={alt}
+        className="w-full h-auto max-h-40 object-contain rounded-lg border border-border"
+        onError={() => setError(true)}
+      />
+    </div>
+  );
+};
 
 export const VicsTab = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -331,6 +391,52 @@ export const VicsTab = () => {
   const handleViewDetails = (submission: ContractSubmission) => {
     setSelectedSubmission(submission);
     setIsDetailDialogOpen(true);
+  };
+
+  const getImageUrl = async (path: string): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('ids')
+        .createSignedUrl(path, 60 * 60); // 1 hour expiry
+
+      if (error || !data) {
+        console.error('Error getting signed URL:', error);
+        return null;
+      }
+
+      return data.signedUrl;
+    } catch (error) {
+      console.error('Error getting image URL:', error);
+      return null;
+    }
+  };
+
+  const downloadImage = async (path: string, filename: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('ids')
+        .download(path);
+
+      if (error || !data) {
+        toast.error('Fehler beim Herunterladen des Bildes');
+        return;
+      }
+
+      // Create blob URL and download
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success('Bild erfolgreich heruntergeladen');
+    } catch (error) {
+      console.error('Error downloading image:', error);
+      toast.error('Fehler beim Herunterladen des Bildes');
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -740,13 +846,60 @@ export const VicsTab = () => {
                 </Card>
 
                 {/* ID Photos */}
-                <Card>
+                <Card className="md:col-span-2">
                   <CardHeader>
                     <CardTitle className="text-sm">Personalausweis</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2 text-sm">
-                    <div><strong>Vorderseite:</strong> {selectedSubmission.id_front_path ? 'Hochgeladen' : 'Nicht verfügbar'}</div>
-                    <div><strong>Rückseite:</strong> {selectedSubmission.id_back_path ? 'Hochgeladen' : 'Nicht verfügbar'}</div>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Front ID */}
+                      <div className="space-y-2">
+                        <div className="font-medium text-sm">Vorderseite</div>
+                        {selectedSubmission.id_front_path ? (
+                          <>
+                            <IDImageDisplay path={selectedSubmission.id_front_path} alt="Personalausweis Vorderseite" />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => downloadImage(
+                                selectedSubmission.id_front_path!,
+                                `${selectedSubmission.first_name}_${selectedSubmission.last_name}_Ausweis_Vorderseite.jpg`
+                              )}
+                              className="w-full"
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Vorderseite herunterladen
+                            </Button>
+                          </>
+                        ) : (
+                          <div className="text-muted-foreground text-sm">Nicht verfügbar</div>
+                        )}
+                      </div>
+
+                      {/* Back ID */}
+                      <div className="space-y-2">
+                        <div className="font-medium text-sm">Rückseite</div>
+                        {selectedSubmission.id_back_path ? (
+                          <>
+                            <IDImageDisplay path={selectedSubmission.id_back_path} alt="Personalausweis Rückseite" />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => downloadImage(
+                                selectedSubmission.id_back_path!,
+                                `${selectedSubmission.first_name}_${selectedSubmission.last_name}_Ausweis_Rueckseite.jpg`
+                              )}
+                              className="w-full"
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Rückseite herunterladen
+                            </Button>
+                          </>
+                        ) : (
+                          <div className="text-muted-foreground text-sm">Nicht verfügbar</div>
+                        )}
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
