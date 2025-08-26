@@ -361,6 +361,15 @@ export const VicsTab = () => {
       )
     );
     
+    // Also update contractSubmissions to immediately reflect the status change
+    setContractSubmissions(prevSubmissions =>
+      prevSubmissions.map(submission =>
+        submission.employee_id === employeeId
+          ? { ...submission, employees: { ...submission.employees, status: 'created' } }
+          : submission
+      )
+    );
+    
     setActiveTab('created');
     setIsDialogOpen(false);
     setSelectedEmployee(null);
