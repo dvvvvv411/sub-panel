@@ -7,10 +7,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Upload, UserCheck, Clock, Trash2, Link, Eye, Download } from 'lucide-react';
+import { Plus, Upload, UserCheck, Clock, Trash2, Link, Eye, Download, UserPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { CreateEmployeeDialog } from '@/components/CreateEmployeeDialog';
+import { AssignToEmployeeDialog } from '@/components/AssignToEmployeeDialog';
 import { FileUploadComponent } from '@/components/FileUploadComponent';
 
 interface Employee {
@@ -172,6 +173,10 @@ export const VicsTab = () => {
   const [employeeAssignments, setEmployeeAssignments] = useState<EmployeeAssignment[]>([]);
   const [employeeEvaluations, setEmployeeEvaluations] = useState<EmployeeEvaluation[]>([]);
   const [detailsLoading, setDetailsLoading] = useState(false);
+  
+  // New states for assign order dialog
+  const [selectedEmployeeForAssign, setSelectedEmployeeForAssign] = useState<Employee | null>(null);
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchEmployees();
@@ -1104,14 +1109,26 @@ export const VicsTab = () => {
                           </TableCell>
                           <TableCell>{formatLastActivity(lastActivity)}</TableCell>
                           <TableCell>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEmployeeDetails(employee)}
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              Details
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEmployeeDetails(employee)}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                Details
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedEmployeeForAssign(employee);
+                                  setIsAssignDialogOpen(true);
+                                }}
+                              >
+                                <UserPlus className="h-4 w-4 mr-1" />
+                                Auftrag zuweisen
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -1499,6 +1516,23 @@ export const VicsTab = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Assign Order to Employee Dialog */}
+      <AssignToEmployeeDialog
+        open={isAssignDialogOpen}
+        onOpenChange={setIsAssignDialogOpen}
+        employee={selectedEmployeeForAssign}
+        onAssignmentComplete={() => {
+          // Refresh statistics for updated employee data
+          fetchCreatedEmployeesStats();
+          // If employee details dialog is open for the same employee, refresh its data
+          if (selectedEmployeeForDetails?.id === selectedEmployeeForAssign?.id) {
+            handleEmployeeDetails(selectedEmployeeForDetails);
+          }
+          setIsAssignDialogOpen(false);
+          setSelectedEmployeeForAssign(null);
+        }}
+      />
     </div>
   );
 };
