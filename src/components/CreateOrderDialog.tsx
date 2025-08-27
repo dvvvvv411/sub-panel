@@ -7,10 +7,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, X, Briefcase, Edit2, Trash2, Save } from 'lucide-react';
+import { Plus, X, Briefcase } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { ManageWhatsAppAccountsDialog } from './ManageWhatsAppAccountsDialog';
 
 interface WhatsAppAccount {
   id: string;
@@ -37,14 +38,6 @@ export function CreateOrderDialog({ onOrderCreated }: CreateOrderDialogProps) {
   const [premium, setPremium] = useState('');
   const [whatsappAccountId, setWhatsappAccountId] = useState('');
   const [evaluationQuestions, setEvaluationQuestions] = useState<string[]>(['']);
-  
-  // WhatsApp account management state
-  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
-  const [editingAccountName, setEditingAccountName] = useState('');
-  const [editingAccountInfo, setEditingAccountInfo] = useState('');
-  const [newAccountName, setNewAccountName] = useState('');
-  const [newAccountInfo, setNewAccountInfo] = useState('');
-  const [showAddAccount, setShowAddAccount] = useState(false);
 
   const resetForm = () => {
     setTitle('');
@@ -102,112 +95,6 @@ export function CreateOrderDialog({ onOrderCreated }: CreateOrderDialogProps) {
     const updated = [...evaluationQuestions];
     updated[index] = value;
     setEvaluationQuestions(updated);
-  };
-
-  // WhatsApp account management functions
-  const handleAddWhatsAppAccount = async () => {
-    if (!newAccountName.trim()) {
-      toast.error('Name ist erforderlich');
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('whatsapp_accounts')
-        .insert({
-          name: newAccountName.trim(),
-          account_info: newAccountInfo.trim() || null
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error adding WhatsApp account:', error);
-        toast.error('Fehler beim Hinzufügen des WhatsApp-Kontos');
-        return;
-      }
-
-      setWhatsappAccounts([...whatsappAccounts, data]);
-      setNewAccountName('');
-      setNewAccountInfo('');
-      setShowAddAccount(false);
-      toast.success('WhatsApp-Konto erfolgreich hinzugefügt');
-    } catch (error) {
-      console.error('Error adding WhatsApp account:', error);
-      toast.error('Fehler beim Hinzufügen des WhatsApp-Kontos');
-    }
-  };
-
-  const handleEditWhatsAppAccount = async (accountId: string) => {
-    if (!editingAccountName.trim()) {
-      toast.error('Name ist erforderlich');
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('whatsapp_accounts')
-        .update({
-          name: editingAccountName.trim(),
-          account_info: editingAccountInfo.trim() || null
-        })
-        .eq('id', accountId);
-
-      if (error) {
-        console.error('Error updating WhatsApp account:', error);
-        toast.error('Fehler beim Bearbeiten des WhatsApp-Kontos');
-        return;
-      }
-
-      setWhatsappAccounts(whatsappAccounts.map(account =>
-        account.id === accountId
-          ? { ...account, name: editingAccountName.trim(), account_info: editingAccountInfo.trim() || null }
-          : account
-      ));
-      setEditingAccountId(null);
-      setEditingAccountName('');
-      setEditingAccountInfo('');
-      toast.success('WhatsApp-Konto erfolgreich bearbeitet');
-    } catch (error) {
-      console.error('Error updating WhatsApp account:', error);
-      toast.error('Fehler beim Bearbeiten des WhatsApp-Kontos');
-    }
-  };
-
-  const handleDeleteWhatsAppAccount = async (accountId: string) => {
-    try {
-      const { error } = await supabase
-        .from('whatsapp_accounts')
-        .delete()
-        .eq('id', accountId);
-
-      if (error) {
-        console.error('Error deleting WhatsApp account:', error);
-        toast.error('Fehler beim Löschen des WhatsApp-Kontos');
-        return;
-      }
-
-      setWhatsappAccounts(whatsappAccounts.filter(account => account.id !== accountId));
-      if (whatsappAccountId === accountId) {
-        setWhatsappAccountId('');
-      }
-      toast.success('WhatsApp-Konto erfolgreich gelöscht');
-    } catch (error) {
-      console.error('Error deleting WhatsApp account:', error);
-      toast.error('Fehler beim Löschen des WhatsApp-Kontos');
-    }
-  };
-
-  const startEditingAccount = (account: WhatsAppAccount) => {
-    setEditingAccountId(account.id);
-    setEditingAccountName(account.name);
-    setEditingAccountInfo(account.account_info || '');
-  };
-
-  const cancelEditingAccount = () => {
-    setEditingAccountId(null);
-    setEditingAccountName('');
-    setEditingAccountInfo('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -351,152 +238,23 @@ export function CreateOrderDialog({ onOrderCreated }: CreateOrderDialogProps) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="whatsappAccount">WhatsApp-Account</Label>
-              <Select value={whatsappAccountId} onValueChange={setWhatsappAccountId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={loadingAccounts ? "Lädt..." : "WhatsApp-Account auswählen"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {!loadingAccounts && whatsappAccounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
-                      {account.name} {account.account_info && `(${account.account_info})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={whatsappAccountId} onValueChange={setWhatsappAccountId}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder={loadingAccounts ? "Lädt..." : "WhatsApp-Account auswählen"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {!loadingAccounts && whatsappAccounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.name} {account.account_info && `(${account.account_info})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <ManageWhatsAppAccountsDialog onAccountsUpdated={fetchWhatsAppAccounts} />
+              </div>
             </div>
           </div>
-
-          {/* WhatsApp Account Management */}
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-base">WhatsApp-Konten verwalten</CardTitle>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAddAccount(!showAddAccount)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Neues Konto
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {/* Add new account form */}
-              {showAddAccount && (
-                <div className="border rounded-lg p-3 bg-muted/50">
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input
-                        placeholder="Name des Kontos"
-                        value={newAccountName}
-                        onChange={(e) => setNewAccountName(e.target.value)}
-                      />
-                      <Input
-                        placeholder="Telefonnummer/Info (optional)"
-                        value={newAccountInfo}
-                        onChange={(e) => setNewAccountInfo(e.target.value)}
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={handleAddWhatsAppAccount}
-                      >
-                        <Save className="h-4 w-4 mr-1" />
-                        Speichern
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setShowAddAccount(false);
-                          setNewAccountName('');
-                          setNewAccountInfo('');
-                        }}
-                      >
-                        Abbrechen
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Existing accounts list */}
-              <div className="space-y-2">
-                {whatsappAccounts.map((account) => (
-                  <div key={account.id} className="flex items-center gap-2 p-2 border rounded">
-                    {editingAccountId === account.id ? (
-                      <>
-                        <div className="grid grid-cols-2 gap-2 flex-1">
-                          <Input
-                            value={editingAccountName}
-                            onChange={(e) => setEditingAccountName(e.target.value)}
-                            placeholder="Name des Kontos"
-                          />
-                          <Input
-                            value={editingAccountInfo}
-                            onChange={(e) => setEditingAccountInfo(e.target.value)}
-                            placeholder="Telefonnummer/Info (optional)"
-                          />
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() => handleEditWhatsAppAccount(account.id)}
-                        >
-                          <Save className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={cancelEditingAccount}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex-1">
-                          <span className="font-medium">{account.name}</span>
-                          {account.account_info && (
-                            <span className="text-sm text-muted-foreground ml-2">
-                              ({account.account_info})
-                            </span>
-                          )}
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => startEditingAccount(account)}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteWhatsAppAccount(account.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                ))}
-                {whatsappAccounts.length === 0 && !loadingAccounts && (
-                  <p className="text-sm text-muted-foreground text-center py-2">
-                    Noch keine WhatsApp-Konten vorhanden
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
 
           <Card>
             <CardHeader>
