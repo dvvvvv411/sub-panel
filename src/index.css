@@ -101,6 +101,66 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-inter;
+    background-image: 
+      radial-gradient(circle at 25% 25%, hsl(var(--primary)) 0%, transparent 50%), 
+      radial-gradient(circle at 75% 75%, hsl(var(--primary)) 0%, transparent 50%);
+    background-attachment: fixed;
+    background-size: 100% 100%;
+    background-opacity: 0.02;
+  }
+}
+
+@layer utilities {
+  .professional-bg {
+    @apply bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50;
+  }
+  
+  .glass-card {
+    @apply bg-white/95 backdrop-blur-sm border border-white/20;
+  }
+  
+  .form-section {
+    @apply space-y-6 p-6 rounded-xl bg-gradient-to-r from-slate-50/50 to-blue-50/30 border border-slate-200/50;
+  }
+  
+  .input-with-icon {
+    @apply relative;
+  }
+  
+  .input-with-icon svg {
+    @apply absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 pointer-events-none;
+  }
+  
+  .input-with-icon input {
+    @apply pl-10;
+  }
+  
+  .step-indicator {
+    @apply transition-all duration-300 ease-in-out;
+  }
+  
+  .step-indicator.active {
+    @apply bg-primary text-primary-foreground shadow-lg scale-110;
+  }
+  
+  .step-indicator.completed {
+    @apply bg-green-500 text-white shadow-md;
+  }
+  
+  .step-indicator.inactive {
+    @apply bg-slate-200 text-slate-500;
+  }
+  
+  .upload-zone {
+    @apply relative border-2 border-dashed border-slate-300 rounded-xl transition-all duration-200 ease-in-out hover:border-primary hover:bg-slate-50/50 cursor-pointer;
+  }
+  
+  .upload-zone.has-file {
+    @apply border-green-400 bg-green-50/30;
+  }
+  
+  .sticky-nav {
+    @apply sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-slate-200/50 rounded-t-xl;
   }
 }

@@ -6,7 +6,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { CheckCircle, Upload, FileText, User, Calendar, Heart, CreditCard, Camera } from 'lucide-react';
+import { 
+  CheckCircle, 
+  Upload, 
+  FileText, 
+  User, 
+  Calendar, 
+  Heart, 
+  CreditCard, 
+  Camera, 
+  Shield,
+  Mail,
+  Phone,
+  Building,
+  Hash,
+  UserCheck,
+  Banknote,
+  Eye
+} from 'lucide-react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -214,12 +231,27 @@ export default function Arbeitsvertrag() {
     }
   };
 
+  const getPhotoPreviewUrl = (file: File | null) => {
+    return file ? URL.createObjectURL(file) : null;
+  };
+
+  const stepTitles = [
+    'Persönliche Daten',
+    'Steuer & Soziales', 
+    'Bankverbindung',
+    'Personalausweis'
+  ];
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Lade Arbeitsvertrag...</p>
+      <div className="min-h-screen professional-bg flex items-center justify-center p-4">
+        <div className="text-center glass-card p-12 rounded-2xl shadow-2xl max-w-md w-full animate-fade-in">
+          <div className="relative mb-8">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/20 border-t-primary mx-auto"></div>
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/10 to-primary/5 animate-pulse"></div>
+          </div>
+          <h3 className="text-xl font-semibold text-slate-800 mb-2">Arbeitsvertrag wird geladen</h3>
+          <p className="text-slate-600">Bitte haben Sie einen Moment Geduld...</p>
         </div>
       </div>
     );
@@ -227,351 +259,512 @@ export default function Arbeitsvertrag() {
 
   if (!contractRequest) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-red-600">Ungültiger Link</CardTitle>
-            <CardDescription>
-              Dieser Link ist ungültig oder abgelaufen. Bitte wenden Sie sich an Ihren Arbeitgeber.
+      <div className="min-h-screen professional-bg flex items-center justify-center p-4">
+        <Card className="w-full max-w-lg glass-card rounded-2xl shadow-2xl border-0 animate-scale-in">
+          <CardHeader className="text-center pb-6 pt-8">
+            <div className="mx-auto mb-4 w-20 h-20 bg-red-100 rounded-full flex items-center justify-center">
+              <Shield className="h-10 w-10 text-red-500" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-red-600 mb-2">Ungültiger Link</CardTitle>
+            <CardDescription className="text-slate-600 text-base leading-relaxed">
+              Dieser Link ist ungültig oder abgelaufen. Bitte wenden Sie sich an Ihren Arbeitgeber 
+              für einen neuen Zugangslink.
             </CardDescription>
           </CardHeader>
+          <div className="px-6 pb-8">
+            <Button 
+              onClick={() => navigate('/')} 
+              className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 rounded-xl transition-all duration-200"
+            >
+              Zurück zur Startseite
+            </Button>
+          </div>
         </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Arbeitsvertrag Informationen</h1>
-          <p className="text-gray-600">Bitte füllen Sie alle erforderlichen Informationen aus</p>
+    <div className="min-h-screen professional-bg py-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Professional Header */}
+        <div className="text-center mb-12 animate-fade-in">
+          <div className="inline-flex items-center gap-3 mb-6 px-4 py-2 bg-white/80 rounded-full shadow-sm border border-slate-200/50">
+            <Shield className="h-5 w-5 text-primary" />
+            <span className="text-sm font-medium text-slate-600">Sichere Datenübertragung</span>
+          </div>
+          <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-3">
+            Arbeitsvertrag
+          </h1>
+          <p className="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
+            Vervollständigen Sie Ihre Arbeitsvertragsunterlagen in wenigen einfachen Schritten
+          </p>
         </div>
 
-        {/* Progress Bar */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
+        {/* Enhanced Progress Stepper */}
+        <div className="mb-12">
+          <div className="flex items-center justify-between mb-6 relative">
+            <div className="absolute top-4 left-0 right-0 h-0.5 bg-slate-200 -z-10"></div>
+            <div 
+              className="absolute top-4 left-0 h-0.5 bg-gradient-to-r from-primary to-primary/80 transition-all duration-500 -z-10"
+              style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
+            ></div>
+            
             {[1, 2, 3, 4].map((step) => (
-              <div key={step} className="flex items-center">
+              <div key={step} className="flex flex-col items-center group">
                 <div className={`
-                  w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
-                  ${currentStep >= step 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-200 text-gray-600'
-                  }
+                  step-indicator w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold mb-3 border-2
+                  ${currentStep > step ? 'completed bg-green-500 border-green-500 text-white' 
+                    : currentStep === step ? 'active bg-primary border-primary text-white' 
+                    : 'inactive bg-white border-slate-300 text-slate-500'}
                 `}>
                   {currentStep > step ? <CheckCircle className="h-5 w-5" /> : step}
                 </div>
-                {step < 4 && (
-                  <div className={`
-                    h-1 w-full mx-2
-                    ${currentStep > step ? 'bg-blue-600' : 'bg-gray-200'}
-                  `} />
-                )}
+                <span className={`text-sm font-medium text-center max-w-[100px] leading-tight
+                  ${currentStep >= step ? 'text-slate-700' : 'text-slate-400'}
+                `}>
+                  {stepTitles[step - 1]}
+                </span>
               </div>
             ))}
           </div>
-          <div className="flex justify-between text-xs text-gray-500 mt-2">
-            <span>Persönliche Daten</span>
-            <span>Steuer & Soziales</span>
-            <span>Bankverbindung</span>
-            <span>Personalausweis</span>
-          </div>
         </div>
 
-        <Card>
-          <CardContent className="p-6">
-            {/* Step 1: Personal Information */}
-            {currentStep === 1 && (
-              <div className="space-y-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <User className="h-5 w-5 text-blue-600" />
-                  <h2 className="text-xl font-semibold">Persönliche Informationen</h2>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="firstName">Vorname *</Label>
-                    <Input
-                      id="firstName"
-                      value={formData.firstName}
-                      onChange={(e) => setFormData({...formData, firstName: e.target.value})}
-                      placeholder="Max"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="lastName">Nachname *</Label>
-                    <Input
-                      id="lastName"
-                      value={formData.lastName}
-                      onChange={(e) => setFormData({...formData, lastName: e.target.value})}
-                      placeholder="Mustermann"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="email">E-Mail-Adresse *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    placeholder="max@example.com"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="phone">Telefonnummer</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                    placeholder="+49 123 456789"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="desiredStartDate">Gewünschtes Startdatum *</Label>
-                  <Input
-                    id="desiredStartDate"
-                    type="date"
-                    value={formData.desiredStartDate}
-                    onChange={(e) => setFormData({...formData, desiredStartDate: e.target.value})}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="employmentType">Anstellungsart *</Label>
-                  <Select 
-                    value={formData.employmentType} 
-                    onValueChange={(value) => setFormData({...formData, employmentType: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Bitte wählen..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="minijob">Minijob</SelectItem>
-                      <SelectItem value="teilzeit">Teilzeit</SelectItem>
-                      <SelectItem value="vollzeit">Vollzeit</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="maritalStatus">Familienstand</Label>
-                  <Select 
-                    value={formData.maritalStatus} 
-                    onValueChange={(value) => setFormData({...formData, maritalStatus: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Bitte wählen..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="single">Ledig</SelectItem>
-                      <SelectItem value="married">Verheiratet</SelectItem>
-                      <SelectItem value="divorced">Geschieden</SelectItem>
-                      <SelectItem value="widowed">Verwitwet</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
-
-            {/* Step 2: Tax and Social Security */}
-            {currentStep === 2 && (
-              <div className="space-y-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <FileText className="h-5 w-5 text-blue-600" />
-                  <h2 className="text-xl font-semibold">Steuer- und Sozialversicherungsdaten</h2>
-                </div>
-
-                <div>
-                  <Label htmlFor="socialSecurityNumber">Sozialversicherungsnummer</Label>
-                  <Input
-                    id="socialSecurityNumber"
-                    value={formData.socialSecurityNumber}
-                    onChange={(e) => setFormData({...formData, socialSecurityNumber: e.target.value})}
-                    placeholder="12 345678 A 123"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="taxNumber">Steuernummer</Label>
-                  <Input
-                    id="taxNumber"
-                    value={formData.taxNumber}
-                    onChange={(e) => setFormData({...formData, taxNumber: e.target.value})}
-                    placeholder="123/456/78901"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="healthInsurance">Krankenkasse</Label>
-                  <Input
-                    id="healthInsurance"
-                    value={formData.healthInsurance}
-                    onChange={(e) => setFormData({...formData, healthInsurance: e.target.value})}
-                    placeholder="AOK, Barmer, TK..."
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: Bank Information */}
-            {currentStep === 3 && (
-              <div className="space-y-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <CreditCard className="h-5 w-5 text-blue-600" />
-                  <h2 className="text-xl font-semibold">Bankverbindung</h2>
-                </div>
-
-                <div>
-                  <Label htmlFor="iban">IBAN *</Label>
-                  <Input
-                    id="iban"
-                    value={formData.iban}
-                    onChange={(e) => setFormData({...formData, iban: e.target.value.toUpperCase()})}
-                    placeholder="DE89 3704 0044 0532 0130 00"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="bic">BIC</Label>
-                  <Input
-                    id="bic"
-                    value={formData.bic}
-                    onChange={(e) => setFormData({...formData, bic: e.target.value.toUpperCase()})}
-                    placeholder="COBADEFFXXX"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="bankName">Bank</Label>
-                  <Input
-                    id="bankName"
-                    value={formData.bankName}
-                    onChange={(e) => setFormData({...formData, bankName: e.target.value})}
-                    placeholder="Commerzbank AG"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Step 4: ID Photos */}
-            {currentStep === 4 && (
-              <div className="space-y-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Camera className="h-5 w-5 text-blue-600" />
-                  <h2 className="text-xl font-semibold">Personalausweis Fotos</h2>
-                </div>
-
-                <p className="text-sm text-gray-600 mb-4">
-                  Bitte laden Sie Fotos von Vorder- und Rückseite Ihres Personalausweises hoch. 
-                  Die Bilder sollten klar und gut lesbar sein.
-                </p>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Front ID */}
-                  <div>
-                    <Label className="text-sm font-medium">Vorderseite</Label>
-                    <div className="mt-2">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handlePhotoUpload(e, 'front')}
-                        className="hidden"
-                        id="id-front"
-                      />
-                      <label
-                        htmlFor="id-front"
-                        className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                      >
-                        {idPhotos.front ? (
-                          <div className="text-center">
-                            <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                            <p className="text-sm text-gray-600">{idPhotos.front.name}</p>
-                          </div>
-                        ) : (
-                          <div className="text-center">
-                            <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                            <p className="text-sm text-gray-600">Vorderseite hochladen</p>
-                          </div>
-                        )}
-                      </label>
+        <Card className="glass-card rounded-2xl shadow-2xl border-0 overflow-hidden animate-scale-in">
+          <CardContent className="p-0">
+            {/* Step Content */}
+            <div className="p-8 lg:p-12">
+              {/* Step 1: Personal Information */}
+              {currentStep === 1 && (
+                <div className="form-section">
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                      <User className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-slate-800">Persönliche Informationen</h2>
+                      <p className="text-slate-600">Grundlegende Informationen für Ihren Arbeitsvertrag</p>
                     </div>
                   </div>
 
-                  {/* Back ID */}
-                  <div>
-                    <Label className="text-sm font-medium">Rückseite</Label>
-                    <div className="mt-2">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handlePhotoUpload(e, 'back')}
-                        className="hidden"
-                        id="id-back"
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="input-with-icon">
+                      <User className="h-5 w-5" />
+                      <Label htmlFor="firstName" className="text-sm font-semibold text-slate-700 mb-2 block">
+                        Vorname *
+                      </Label>
+                      <Input
+                        id="firstName"
+                        value={formData.firstName}
+                        onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                        placeholder="Max"
+                        className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
+                        required
                       />
-                      <label
-                        htmlFor="id-back"
-                        className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                      >
-                        {idPhotos.back ? (
-                          <div className="text-center">
-                            <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                            <p className="text-sm text-gray-600">{idPhotos.back.name}</p>
-                          </div>
-                        ) : (
-                          <div className="text-center">
-                            <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                            <p className="text-sm text-gray-600">Rückseite hochladen</p>
-                          </div>
-                        )}
-                      </label>
+                    </div>
+                    <div className="input-with-icon">
+                      <User className="h-5 w-5" />
+                      <Label htmlFor="lastName" className="text-sm font-semibold text-slate-700 mb-2 block">
+                        Nachname *
+                      </Label>
+                      <Input
+                        id="lastName"
+                        value={formData.lastName}
+                        onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                        placeholder="Mustermann"
+                        className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
+                        required
+                      />
                     </div>
                   </div>
+
+                  <div className="input-with-icon">
+                    <Mail className="h-5 w-5" />
+                    <Label htmlFor="email" className="text-sm font-semibold text-slate-700 mb-2 block">
+                      E-Mail-Adresse *
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      placeholder="max@example.com"
+                      className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
+                      required
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Für wichtige Mitteilungen und Vertragsunterlagen</p>
+                  </div>
+
+                  <div className="input-with-icon">
+                    <Phone className="h-5 w-5" />
+                    <Label htmlFor="phone" className="text-sm font-semibold text-slate-700 mb-2 block">
+                      Telefonnummer
+                    </Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                      placeholder="+49 123 456789"
+                      className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
+                    />
+                  </div>
+
+                  <div className="input-with-icon">
+                    <Calendar className="h-5 w-5" />
+                    <Label htmlFor="desiredStartDate" className="text-sm font-semibold text-slate-700 mb-2 block">
+                      Gewünschtes Startdatum *
+                    </Label>
+                    <Input
+                      id="desiredStartDate"
+                      type="date"
+                      value={formData.desiredStartDate}
+                      onChange={(e) => setFormData({...formData, desiredStartDate: e.target.value})}
+                      className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="employmentType" className="text-sm font-semibold text-slate-700 mb-2 block">
+                      Anstellungsart *
+                    </Label>
+                    <Select 
+                      value={formData.employmentType} 
+                      onValueChange={(value) => setFormData({...formData, employmentType: value})}
+                    >
+                      <SelectTrigger className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20 bg-white">
+                        <SelectValue placeholder="Bitte wählen..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border-slate-200 rounded-xl shadow-xl z-50">
+                        <SelectItem value="minijob">Minijob (450€ Basis)</SelectItem>
+                        <SelectItem value="teilzeit">Teilzeit</SelectItem>
+                        <SelectItem value="vollzeit">Vollzeit</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="maritalStatus" className="text-sm font-semibold text-slate-700 mb-2 block">
+                      Familienstand
+                    </Label>
+                    <Select 
+                      value={formData.maritalStatus} 
+                      onValueChange={(value) => setFormData({...formData, maritalStatus: value})}
+                    >
+                      <SelectTrigger className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20 bg-white">
+                        <SelectValue placeholder="Bitte wählen..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border-slate-200 rounded-xl shadow-xl z-50">
+                        <SelectItem value="single">Ledig</SelectItem>
+                        <SelectItem value="married">Verheiratet</SelectItem>
+                        <SelectItem value="divorced">Geschieden</SelectItem>
+                        <SelectItem value="widowed">Verwitwet</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              </div>
-            )}
-
-            <Separator className="my-6" />
-
-            {/* Navigation Buttons */}
-            <div className="flex justify-between">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentStep === 1}
-              >
-                Zurück
-              </Button>
-
-              {currentStep < 4 ? (
-                <Button
-                  type="button"
-                  onClick={handleNext}
-                  disabled={!validateCurrentStep()}
-                >
-                  Weiter
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={isSubmitting || !validateCurrentStep()}
-                >
-                  {isSubmitting ? 'Wird eingereicht...' : 'Arbeitsvertrag einreichen'}
-                </Button>
               )}
+
+              {/* Step 2: Tax and Social Security */}
+              {currentStep === 2 && (
+                <div className="form-section">
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                      <FileText className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-slate-800">Steuer- und Sozialversicherungsdaten</h2>
+                      <p className="text-slate-600">Informationen für die Lohnabrechnung (optional)</p>
+                    </div>
+                  </div>
+
+                  <div className="input-with-icon">
+                    <Hash className="h-5 w-5" />
+                    <Label htmlFor="socialSecurityNumber" className="text-sm font-semibold text-slate-700 mb-2 block">
+                      Sozialversicherungsnummer
+                    </Label>
+                    <Input
+                      id="socialSecurityNumber"
+                      value={formData.socialSecurityNumber}
+                      onChange={(e) => setFormData({...formData, socialSecurityNumber: e.target.value})}
+                      placeholder="12 345678 A 123"
+                      className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Falls vorhanden - finden Sie auf Ihrem Sozialversicherungsausweis</p>
+                  </div>
+
+                  <div className="input-with-icon">
+                    <Hash className="h-5 w-5" />
+                    <Label htmlFor="taxNumber" className="text-sm font-semibold text-slate-700 mb-2 block">
+                      Steuernummer
+                    </Label>
+                    <Input
+                      id="taxNumber"
+                      value={formData.taxNumber}
+                      onChange={(e) => setFormData({...formData, taxNumber: e.target.value})}
+                      placeholder="123/456/78901"
+                      className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Falls bekannt - finden Sie auf Ihrem letzten Steuerbescheid</p>
+                  </div>
+
+                  <div className="input-with-icon">
+                    <Heart className="h-5 w-5" />
+                    <Label htmlFor="healthInsurance" className="text-sm font-semibold text-slate-700 mb-2 block">
+                      Krankenkasse
+                    </Label>
+                    <Input
+                      id="healthInsurance"
+                      value={formData.healthInsurance}
+                      onChange={(e) => setFormData({...formData, healthInsurance: e.target.value})}
+                      placeholder="AOK, Barmer, Techniker Krankenkasse..."
+                      className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Name Ihrer aktuellen Krankenkasse</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Bank Information */}
+              {currentStep === 3 && (
+                <div className="form-section">
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                      <CreditCard className="h-6 w-6 text-purple-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-slate-800">Bankverbindung</h2>
+                      <p className="text-slate-600">Für die Überweisung Ihres Gehalts</p>
+                    </div>
+                  </div>
+
+                  <div className="input-with-icon">
+                    <Banknote className="h-5 w-5" />
+                    <Label htmlFor="iban" className="text-sm font-semibold text-slate-700 mb-2 block">
+                      IBAN * 
+                    </Label>
+                    <Input
+                      id="iban"
+                      value={formData.iban}
+                      onChange={(e) => setFormData({...formData, iban: e.target.value.toUpperCase()})}
+                      placeholder="DE89 3704 0044 0532 0130 00"
+                      className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20 font-mono"
+                      required
+                    />
+                    <p className="text-xs text-slate-500 mt-1">22-stellige internationale Bankkontonummer</p>
+                  </div>
+
+                  <div className="input-with-icon">
+                    <Hash className="h-5 w-5" />
+                    <Label htmlFor="bic" className="text-sm font-semibold text-slate-700 mb-2 block">
+                      BIC (optional)
+                    </Label>
+                    <Input
+                      id="bic"
+                      value={formData.bic}
+                      onChange={(e) => setFormData({...formData, bic: e.target.value.toUpperCase()})}
+                      placeholder="COBADEFFXXX"
+                      className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20 font-mono"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Bank Identifier Code - meist automatisch erkannt</p>
+                  </div>
+
+                  <div className="input-with-icon">
+                    <Building className="h-5 w-5" />
+                    <Label htmlFor="bankName" className="text-sm font-semibold text-slate-700 mb-2 block">
+                      Bank (optional)
+                    </Label>
+                    <Input
+                      id="bankName"
+                      value={formData.bankName}
+                      onChange={(e) => setFormData({...formData, bankName: e.target.value})}
+                      placeholder="Sparkasse, Volksbank, Deutsche Bank..."
+                      className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Step 4: ID Photos */}
+              {currentStep === 4 && (
+                <div className="form-section">
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                      <Camera className="h-6 w-6 text-orange-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-slate-800">Personalausweis Fotos</h2>
+                      <p className="text-slate-600">Für die Identitätsprüfung und Dokumentation</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-8">
+                    <div className="flex items-start gap-3">
+                      <Eye className="h-5 w-5 text-blue-600 mt-0.5" />
+                      <div>
+                        <h4 className="font-semibold text-blue-800 mb-1">Foto-Hinweise</h4>
+                        <ul className="text-sm text-blue-700 space-y-1">
+                          <li>• Fotos sollten gut beleuchtet und scharf sein</li>
+                          <li>• Alle Texte müssen klar lesbar sein</li>
+                          <li>• Keine Schatten oder Reflexionen</li>
+                          <li>• Akzeptierte Formate: JPG, PNG (max. 10MB)</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Front ID */}
+                    <div>
+                      <Label className="text-sm font-semibold text-slate-700 mb-3 block">
+                        Vorderseite *
+                      </Label>
+                      <div className="space-y-3">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handlePhotoUpload(e, 'front')}
+                          className="hidden"
+                          id="id-front"
+                        />
+                        <label
+                          htmlFor="id-front"
+                          className={`upload-zone ${idPhotos.front ? 'has-file' : ''} flex flex-col items-center justify-center h-48 p-6`}
+                        >
+                          {idPhotos.front ? (
+                            <div className="text-center space-y-3">
+                              <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
+                              <div>
+                                <p className="font-medium text-green-700">{idPhotos.front.name}</p>
+                                <p className="text-sm text-green-600">Datei erfolgreich ausgewählt</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center space-y-3">
+                              <Upload className="h-12 w-12 text-slate-400 mx-auto" />
+                              <div>
+                                <p className="font-medium text-slate-600">Vorderseite hochladen</p>
+                                <p className="text-sm text-slate-500">Klicken oder Datei hierher ziehen</p>
+                              </div>
+                            </div>
+                          )}
+                        </label>
+                        
+                        {idPhotos.front && getPhotoPreviewUrl(idPhotos.front) && (
+                          <div className="relative">
+                            <img 
+                              src={getPhotoPreviewUrl(idPhotos.front)!} 
+                              alt="Personalausweis Vorderseite"
+                              className="w-full h-32 object-cover rounded-lg border border-slate-200"
+                            />
+                            <div className="absolute top-2 right-2 bg-green-500 text-white p-1 rounded-full">
+                              <CheckCircle className="h-4 w-4" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Back ID */}
+                    <div>
+                      <Label className="text-sm font-semibold text-slate-700 mb-3 block">
+                        Rückseite *
+                      </Label>
+                      <div className="space-y-3">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handlePhotoUpload(e, 'back')}
+                          className="hidden"
+                          id="id-back"
+                        />
+                        <label
+                          htmlFor="id-back"
+                          className={`upload-zone ${idPhotos.back ? 'has-file' : ''} flex flex-col items-center justify-center h-48 p-6`}
+                        >
+                          {idPhotos.back ? (
+                            <div className="text-center space-y-3">
+                              <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
+                              <div>
+                                <p className="font-medium text-green-700">{idPhotos.back.name}</p>
+                                <p className="text-sm text-green-600">Datei erfolgreich ausgewählt</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center space-y-3">
+                              <Upload className="h-12 w-12 text-slate-400 mx-auto" />
+                              <div>
+                                <p className="font-medium text-slate-600">Rückseite hochladen</p>
+                                <p className="text-sm text-slate-500">Klicken oder Datei hierher ziehen</p>
+                              </div>
+                            </div>
+                          )}
+                        </label>
+                        
+                        {idPhotos.back && getPhotoPreviewUrl(idPhotos.back) && (
+                          <div className="relative">
+                            <img 
+                              src={getPhotoPreviewUrl(idPhotos.back)!} 
+                              alt="Personalausweis Rückseite"
+                              className="w-full h-32 object-cover rounded-lg border border-slate-200"
+                            />
+                            <div className="absolute top-2 right-2 bg-green-500 text-white p-1 rounded-full">
+                              <CheckCircle className="h-4 w-4" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Sticky Navigation Footer */}
+            <div className="sticky-nav p-6 lg:p-8">
+              <div className="flex justify-between items-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handlePrevious}
+                  disabled={currentStep === 1}
+                  className="px-8 py-3 h-auto rounded-xl border-slate-300 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                >
+                  Zurück
+                </Button>
+
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <span>Schritt {currentStep} von 4</span>
+                </div>
+
+                {currentStep < 4 ? (
+                  <Button
+                    type="button"
+                    onClick={handleNext}
+                    disabled={!validateCurrentStep()}
+                    className="px-8 py-3 h-auto rounded-xl bg-primary hover:bg-primary/90 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition-all duration-200"
+                  >
+                    Weiter
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={isSubmitting || !validateCurrentStep()}
+                    className="px-8 py-3 h-auto rounded-xl bg-green-600 hover:bg-green-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition-all duration-200"
+                  >
+                    {isSubmitting ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></div>
+                        Wird eingereicht...
+                      </div>
+                    ) : (
+                      'Arbeitsvertrag einreichen'
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
