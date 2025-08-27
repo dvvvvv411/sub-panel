@@ -1,146 +1,91 @@
-import { useEffect, useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { LogOut, Home, Settings, User, BarChart3, Gift, MessageSquare, Target, TrendingUp, Star, Crown, Briefcase } from 'lucide-react';
+import { 
+  Users, 
+  User, 
+  Award, 
+  ClipboardList, 
+  BarChart3, 
+  LogOut, 
+  Briefcase,
+  Star,
+  Euro,
+  CheckCircle,
+  Loader2
+} from 'lucide-react';
 import { OverviewTab } from '@/components/employee/OverviewTab';
 import { TasksTab } from '@/components/employee/TasksTab';
+import { PersonalDataTab } from '@/components/employee/PersonalDataTab';
 import { ReviewsTab } from '@/components/employee/ReviewsTab';
 import { RewardsTab } from '@/components/employee/RewardsTab';
-import { PersonalDataTab } from '@/components/employee/PersonalDataTab';
+
+interface Employee {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  status: string;
+}
 
 interface AssignedOrder {
   id: string;
   title: string;
   order_number: string;
+  premium: number;
   provider: string;
   project_goal: string;
-  premium: number;
-  created_at: string;
-  assignment_status: 'assigned' | 'in_progress' | 'completed';
-  whatsapp_accounts: {
-    id: string;
-    name: string;
-    account_info: string | null;
-  } | null;
-  order_evaluation_questions: Array<{
-    id: string;
-    question: string;
-  }>;
+  assignment_status: 'assigned' | 'in_progress' | 'evaluated' | 'completed';
+  assignment_id: string;
+  assigned_at: string;
+  evaluation_questions?: string;
+}
+
+interface Stats {
+  totalAssignments: number;
+  completedAssignments: number;
+  totalEarnings: number;
+  averageRating: number;
 }
 
 const Mitarbeiter = () => {
-  const { user, profile, signOut, loading } = useAuth();
-  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const [employee, setEmployee] = useState<Employee | null>(null);
   const [assignedOrders, setAssignedOrders] = useState<AssignedOrder[]>([]);
-  const [loadingOrders, setLoadingOrders] = useState(true);
-  const [employeeProfile, setEmployeeProfile] = useState<{
-    id: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-    phone: string | null;
-  } | null>(null);
+  const [stats, setStats] = useState<Stats>({
+    totalAssignments: 0,
+    completedAssignments: 0,
+    totalEarnings: 0,
+    averageRating: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth');
-    } else if (user) {
-      fetchAssignedOrders();
-    }
-  }, [user, loading, navigate]);
-
-  const fetchAssignedOrders = async () => {
-    if (!user?.email) return;
-
-    try {
-      setLoadingOrders(true);
-      
-      const { data: employeeData, error: employeeError } = await supabase
-        .from('employees')
-        .select('id, first_name, last_name, email, phone')
-        .eq('email', user.email)
-        .maybeSingle();
-
-      if (employeeError) {
-        console.error('Error fetching employee record:', employeeError);
-      }
-
-      if (!employeeData) {
-        console.log('No employee record found for user');
-        setEmployeeProfile(null);
-        setAssignedOrders([]);
-        return;
-      }
-
-      setEmployeeProfile(employeeData);
-
-      const { data, error } = await supabase
-        .from('order_assignments')
-        .select(`
-        status,
-        orders (
-          id,
-          title,
-          order_number,
-          provider,
-          project_goal,
-          premium,
-          created_at,
-          whatsapp_accounts (
-            id,
-            name,
-            account_info
-          ),
-          order_evaluation_questions (
-            id,
-            question
-          )
-        )
-      `)
-        .eq('employee_id', employeeData.id);
-
-      if (error) {
-        console.error('Error fetching assigned orders:', error);
-        toast.error('Fehler beim Laden der zugewiesenen Aufträge');
-        setAssignedOrders([]);
-        return;
-      }
-
-      const orders = (data || [])
-        .map((assignment: any) => {
-          const order = assignment.orders;
-          if (!order) return null;
-          return { ...order, assignment_status: assignment.status };
-        })
-        .filter(Boolean);
-
-      setAssignedOrders(orders as AssignedOrder[]);
-    } catch (error) {
-      console.error('Error fetching assigned orders:', error);
-      toast.error('Fehler beim Laden der zugewiesenen Aufträge');
-    } finally {
-      setLoadingOrders(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!employeeProfile?.id) return;
-
+    if (!user) return;
+    
+    fetchEmployeeData();
+    
+    // Set up real-time subscription for order assignments
     const channel = supabase
-      .channel('order_assignments_changes')
+      .channel('order-assignments-changes')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'order_assignments', filter: `employee_id=eq.${employeeProfile.id}` },
+        {
+          event: '*',
+          schema: 'public',
+          table: 'order_assignments'
+        },
         () => {
-          fetchAssignedOrders();
+          console.log('Order assignments changed, refetching data...');
+          fetchEmployeeData();
         }
       )
       .subscribe();
@@ -148,144 +93,169 @@ const Mitarbeiter = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [employeeProfile?.id]);
+  }, [user]);
 
-  const handleStartOrder = async (orderId: string) => {
-    if (!user) return;
+  const fetchEmployeeData = async () => {
+    if (!user?.email) return;
 
     try {
-      // Update assignment status to 'in_progress'
-      const { data: employeeData } = await supabase
+      setLoading(true);
+
+      // Get employee by email
+      const { data: employeeData, error: employeeError } = await supabase
         .from('employees')
-        .select('id')
+        .select('*')
         .eq('email', user.email)
         .single();
 
-      if (!employeeData) return;
-
-      const { error } = await supabase
-        .from('order_assignments')
-        .update({ status: 'in_progress' })
-        .eq('order_id', orderId)
-        .eq('employee_id', employeeData.id);
-
-      if (error) {
-        console.error('Error starting order:', error);
-        toast.error('Fehler beim Starten des Auftrags');
+      if (employeeError) {
+        console.error('Error fetching employee:', employeeError);
+        toast.error('Fehler beim Laden der Mitarbeiterdaten');
         return;
       }
 
-      toast.success('Auftrag wurde gestartet');
-      fetchAssignedOrders(); // Refresh the list
+      setEmployee(employeeData);
+
+      // Get assigned orders with assignment details
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('order_assignments')
+        .select(`
+          id,
+          status,
+          assigned_at,
+          orders (
+            id,
+            title,
+            order_number,
+            premium,
+            provider,
+            project_goal
+          )
+        `)
+        .eq('employee_id', employeeData.id)
+        .order('assigned_at', { ascending: false });
+
+      if (assignmentsError) {
+        console.error('Error fetching assignments:', assignmentsError);
+        toast.error('Fehler beim Laden der Aufträge');
+        return;
+      }
+
+      // Transform the data to match our interface
+      const transformedOrders: AssignedOrder[] = assignmentsData.map((assignment: any) => ({
+        id: assignment.orders.id,
+        title: assignment.orders.title,
+        order_number: assignment.orders.order_number,
+        premium: assignment.orders.premium,
+        provider: assignment.orders.provider,
+        project_goal: assignment.orders.project_goal,
+        assignment_status: assignment.status,
+        assignment_id: assignment.id,
+        assigned_at: assignment.assigned_at
+      }));
+
+      setAssignedOrders(transformedOrders);
+
+      // Calculate stats
+      const completedCount = transformedOrders.filter(order => order.assignment_status === 'completed').length;
+      const totalEarnings = transformedOrders
+        .filter(order => order.assignment_status === 'completed')
+        .reduce((sum, order) => sum + order.premium, 0);
+
+      // Get average rating from evaluations
+      const { data: evaluationsData } = await supabase
+        .from('order_evaluations')
+        .select('rating')
+        .eq('employee_id', employeeData.id)
+        .eq('status', 'approved');
+
+      const averageRating = evaluationsData && evaluationsData.length > 0 
+        ? evaluationsData.reduce((sum, eval) => sum + eval.rating, 0) / evaluationsData.length
+        : 0;
+
+      setStats({
+        totalAssignments: transformedOrders.length,
+        completedAssignments: completedCount,
+        totalEarnings,
+        averageRating
+      });
+
     } catch (error) {
-      console.error('Error starting order:', error);
-      toast.error('Fehler beim Starten des Auftrags');
+      console.error('Error:', error);
+      toast.error('Ein Fehler ist aufgetreten');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleStartOrder = (orderId: string) => {
+    // Navigation is handled in TasksTab component
   };
 
   const handleSignOut = async () => {
-    const { error } = await signOut();
-    if (!error) {
-      navigate('/auth');
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast.error('Fehler beim Abmelden');
     }
   };
-
-  const handleHomeNavigation = () => {
-    navigate('/');
-  };
-
-  const handleAdminNavigation = () => {
-    if (profile?.role === 'admin') {
-      navigate('/admin');
-    }
-  };
-
-  // Calculate KPIs
-  const pendingOrders = assignedOrders.filter(order => order.assignment_status !== 'completed').length;
-  const completedOrders = assignedOrders.filter(order => order.assignment_status === 'completed').length;
-  const totalPremium = assignedOrders.reduce((sum, order) => sum + (order.premium || 0), 0);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center font-inter">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary border-t-transparent mx-auto"></div>
-          <p className="text-muted-foreground">Lädt Ihr Dashboard...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Lädt Ihre Daten...</p>
         </div>
       </div>
     );
   }
 
-  if (!user) {
-    return null;
+  if (!employee) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6 text-center">
+            <p className="text-muted-foreground mb-4">
+              Mitarbeiterdaten konnten nicht geladen werden.
+            </p>
+            <Button onClick={handleSignOut} variant="outline">
+              <LogOut className="h-4 w-4 mr-2" />
+              Abmelden
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-background font-inter">
-      {/* Hero Header */}
-      <div className="bg-gradient-to-br from-primary/5 via-background to-accent/5 border-b">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-            {/* Profile Section */}
-            <div className="flex items-center gap-6 animate-fade-in">
-              <Avatar className="h-16 w-16 ring-4 ring-primary/10">
-                <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
-                  {employeeProfile ? `${employeeProfile.first_name?.[0]}${employeeProfile.last_name?.[0]}` : 'M'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="space-y-1">
-                <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
-                  Willkommen zurück, {employeeProfile?.first_name || 'Mitarbeiter'}!
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* Header */}
+      <div className="bg-white/80 backdrop-blur-sm border-b border-border/40 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-2 rounded-xl bg-primary/10">
+                <Users className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">
+                  Willkommen, {employee.first_name}!
                 </h1>
-                <p className="text-muted-foreground flex items-center gap-2">
-                  <Briefcase className="h-4 w-4" />
-                  Mitarbeiter Dashboard
+                <p className="text-muted-foreground">
+                  Mitarbeiter-Dashboard
                 </p>
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-green-500/10 text-green-700 hover:bg-green-500/20">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-1.5"></div>
-                    Aktiv
-                  </Badge>
-                  {profile?.role === 'admin' && (
-                    <Badge className="bg-blue-500/10 text-blue-700 hover:bg-blue-500/20">
-                      <Crown className="h-3 w-3 mr-1" />
-                      Administrator
-                    </Badge>
-                  )}
-                </div>
               </div>
             </div>
-
-            {/* Quick Actions */}
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleHomeNavigation}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <Home className="h-4 w-4 mr-2" />
-                Startseite
-              </Button>
-              
-              {profile?.role === 'admin' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleAdminNavigation}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <Settings className="h-4 w-4 mr-2" />
-                  Admin
-                </Button>
-              )}
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSignOut}
-                className="text-destructive hover:text-destructive"
-              >
+            
+            <div className="flex items-center gap-4">
+              <Badge variant="secondary" className="px-3 py-1">
+                <User className="h-3 w-3 mr-1" />
+                {employee.status === 'active' ? 'Aktiv' : 'Inaktiv'}
+              </Badge>
+              <Button onClick={handleSignOut} variant="outline" size="sm">
                 <LogOut className="h-4 w-4 mr-2" />
                 Abmelden
               </Button>
@@ -294,115 +264,120 @@ const Mitarbeiter = () => {
         </div>
       </div>
 
-      {/* KPI Bar */}
-      <div className="bg-card border-b">
-        <div className="container mx-auto px-4 py-6">
-          {loadingOrders ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {Array.from({length: 4}).map((_, i) => (
-                <div key={i} className="space-y-3">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-8 w-16" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in">
-              <div className="text-center space-y-1">
-                <div className="text-2xl md:text-3xl font-bold text-primary">{assignedOrders.length}</div>
-                <div className="text-xs md:text-sm text-muted-foreground font-medium">Zugewiesene Aufträge</div>
-              </div>
-              <div className="text-center space-y-1">
-                <div className="text-2xl md:text-3xl font-bold text-orange-600">{pendingOrders}</div>
-                <div className="text-xs md:text-sm text-muted-foreground font-medium">Offene Aufträge</div>
-              </div>
-              <div className="text-center space-y-1">
-                <div className="text-2xl md:text-3xl font-bold text-green-600">{completedOrders}</div>
-                <div className="text-xs md:text-sm text-muted-foreground font-medium">Abgeschlossen</div>
-              </div>
-              <div className="text-center space-y-1">
-                <div className="text-2xl md:text-3xl font-bold text-yellow-600">€{totalPremium.toFixed(0)}</div>
-                <div className="text-xs md:text-sm text-muted-foreground font-medium">Gesamtprämie</div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 py-6">
-        {/* Modern Tabbed Interface */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b pb-4">
-            <TabsList className="grid w-full grid-cols-5 h-12 bg-muted/50 rounded-lg p-1">
-              <TabsTrigger value="overview" className="flex items-center gap-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                <BarChart3 className="h-4 w-4" />
-                <span className="hidden sm:inline">Übersicht</span>
-              </TabsTrigger>
-              <TabsTrigger value="tasks" className="flex items-center gap-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                <Target className="h-4 w-4" />
-                <span className="hidden sm:inline">Aufgaben</span>
-              </TabsTrigger>
-              <TabsTrigger value="reviews" className="flex items-center gap-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                <MessageSquare className="h-4 w-4" />
-                <span className="hidden sm:inline">Bewertungen</span>
-              </TabsTrigger>
-              <TabsTrigger value="rewards" className="flex items-center gap-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                <Gift className="h-4 w-4" />
-                <span className="hidden sm:inline">Prämien</span>
-              </TabsTrigger>
-              <TabsTrigger value="profile" className="flex items-center gap-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                <User className="h-4 w-4" />
-                <span className="hidden sm:inline">Profil</span>
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          <TabsContent value="overview" className="animate-enter space-y-6 mt-6">
-            <OverviewTab assignedOrders={assignedOrders} user={profile} employeeProfile={employeeProfile} />
-          </TabsContent>
-
-          <TabsContent value="tasks" className="animate-enter space-y-6 mt-6">
-            <TasksTab assignedOrders={assignedOrders} onStartOrder={handleStartOrder} />
-          </TabsContent>
-
-          <TabsContent value="reviews" className="animate-enter space-y-6 mt-6">
-            <ReviewsTab user={user} />
-          </TabsContent>
-
-          <TabsContent value="rewards" className="animate-enter space-y-6 mt-6">
-            <RewardsTab assignedOrders={assignedOrders} user={profile} />
-          </TabsContent>
-
-          <TabsContent value="profile" className="animate-enter space-y-6 mt-6">
-            <PersonalDataTab
-              user={{
-                name: employeeProfile ? `${employeeProfile.first_name} ${employeeProfile.last_name}` : (profile?.full_name || ''),
-                email: employeeProfile?.email || profile?.email || '',
-                phone: employeeProfile?.phone || '',
-                position: 'Mitarbeiter'
-              }}
-            />
-          </TabsContent>
-        </Tabs>
-
-        {/* Admin Notice */}
-        {profile?.role === 'admin' && (
-          <Card className="mt-8 border-blue-200/60 bg-gradient-to-r from-blue-50/80 to-blue-100/50">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-blue-500/10">
-                  <Crown className="h-5 w-5 text-blue-600" />
+      {/* Stats Overview */}
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="grid gap-4 md:grid-cols-4 mb-8">
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200/60">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-blue-500/10">
+                  <Briefcase className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="font-semibold text-blue-900">Administrator-Privilegien</p>
-                  <p className="text-sm text-blue-700">
-                    Sie haben erweiterte Administratorrechte für zusätzliche Systemfunktionen.
-                  </p>
+                  <p className="text-2xl font-bold text-blue-900">{stats.totalAssignments}</p>
+                  <p className="text-sm font-medium text-blue-700">Gesamt Aufträge</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-        )}
+          
+          <Card className="bg-gradient-to-br from-green-50 to-green-100/50 border-green-200/60">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-green-500/10">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-green-900">{stats.completedAssignments}</p>
+                  <p className="text-sm font-medium text-green-700">Abgeschlossen</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100/50 border-yellow-200/60">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-yellow-500/10">
+                  <Euro className="h-6 w-6 text-yellow-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-yellow-900">€{stats.totalEarnings.toFixed(2)}</p>
+                  <p className="text-sm font-medium text-yellow-700">Verdienst</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100/50 border-purple-200/60">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-purple-500/10">
+                  <Star className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-purple-900">
+                    {stats.averageRating > 0 ? stats.averageRating.toFixed(1) : '—'}
+                  </p>
+                  <p className="text-sm font-medium text-purple-700">Ø Bewertung</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5 bg-white/60 backdrop-blur-sm">
+            <TabsTrigger value="overview" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              <span className="hidden sm:inline">Übersicht</span>
+            </TabsTrigger>
+            <TabsTrigger value="tasks" className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4" />
+              <span className="hidden sm:inline">Aufträge</span>
+            </TabsTrigger>
+            <TabsTrigger value="reviews" className="flex items-center gap-2">
+              <Star className="h-4 w-4" />
+              <span className="hidden sm:inline">Bewertungen</span>
+            </TabsTrigger>
+            <TabsTrigger value="rewards" className="flex items-center gap-2">
+              <Award className="h-4 w-4" />
+              <span className="hidden sm:inline">Belohnungen</span>
+            </TabsTrigger>
+            <TabsTrigger value="personal" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              <span className="hidden sm:inline">Persönlich</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            <OverviewTab 
+              stats={stats} 
+              assignedOrders={assignedOrders} 
+              employee={employee}
+            />
+          </TabsContent>
+
+          <TabsContent value="tasks" className="space-y-6">
+            <TasksTab 
+              assignedOrders={assignedOrders} 
+              onStartOrder={handleStartOrder}
+            />
+          </TabsContent>
+
+          <TabsContent value="reviews" className="space-y-6">
+            <ReviewsTab employee={employee} />
+          </TabsContent>
+
+          <TabsContent value="rewards" className="space-y-6">
+            <RewardsTab employee={employee} />
+          </TabsContent>
+
+          <TabsContent value="personal" className="space-y-6">
+            <PersonalDataTab employee={employee} onUpdate={fetchEmployeeData} />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

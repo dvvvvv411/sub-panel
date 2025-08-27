@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Calendar as CalendarIcon, Clock, MessageCircle, CheckCircle2, ArrowLeft, ChevronLeft, Star } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MessageCircle, CheckCircle2, ArrowLeft, ChevronLeft, Star, AlertCircle } from 'lucide-react';
 import { format, isToday, isBefore, startOfDay } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
@@ -237,7 +237,7 @@ const AuftragWhatsapp = () => {
         // If feedback is requested, load evaluation questions
         if (existingAppointment.feedback_requested) {
           fetchEvaluationQuestions();
-          fetchExistingEvaluation(employeeData.id, orderId);
+          fetchExistingEvaluation(employeeData.id, orderId, assignmentData.id);
         }
       }
 
@@ -277,14 +277,13 @@ const AuftragWhatsapp = () => {
     }
   };
 
-  const fetchExistingEvaluation = async (employeeId: string, orderId: string) => {
+  const fetchExistingEvaluation = async (employeeId: string, orderId: string, assignmentId: string) => {
     try {
       const { data } = await supabase
         .from('order_evaluations')
         .select('*')
-        .eq('order_id', orderId)
-        .eq('employee_id', employeeId)
-        .single();
+        .eq('assignment_id', assignmentId)
+        .maybeSingle();
 
       if (data) {
         setEvaluation(data as OrderEvaluation);
@@ -407,17 +406,7 @@ const AuftragWhatsapp = () => {
         return;
       }
 
-      // Update assignment status to 'evaluated'
-      const { error: assignmentError } = await supabase
-        .from('order_assignments')
-        .update({ status: 'evaluated' })
-        .eq('id', assignmentId);
-
-      if (assignmentError) {
-        console.error('Error updating assignment status:', assignmentError);
-        // Don't return, evaluation was successful
-      }
-
+      // The trigger will automatically update assignment status to 'evaluated'
       toast.success('Bewertung erfolgreich eingereicht!');
       navigate('/mitarbeiter');
 
@@ -490,6 +479,66 @@ const AuftragWhatsapp = () => {
     }));
   };
 
+  const getEvaluationStatusBanner = () => {
+    if (!evaluation) return null;
+
+    switch (evaluation.status) {
+      case 'pending':
+        return (
+          <Card className="border-yellow-200 bg-yellow-50 mb-6">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="h-5 w-5 text-yellow-600" />
+                <div>
+                  <h4 className="font-semibold text-yellow-900">Bewertung eingereicht</h4>
+                  <p className="text-sm text-yellow-700">
+                    Ihre Bewertung wurde erfolgreich eingereicht und wird geprüft. Sie können die Bewertung nicht mehr bearbeiten.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      case 'approved':
+        return (
+          <Card className="border-green-200 bg-green-50 mb-6">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <div>
+                  <h4 className="font-semibold text-green-900">Bewertung genehmigt</h4>
+                  <p className="text-sm text-green-700">
+                    Ihre Bewertung wurde genehmigt. Der Auftrag ist abgeschlossen.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      case 'rejected':
+        return (
+          <Card className="border-red-200 bg-red-50 mb-6">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+                <div>
+                  <h4 className="font-semibold text-red-900">Bewertung abgelehnt</h4>
+                  <p className="text-sm text-red-700">
+                    Ihre Bewertung wurde abgelehnt. Bitte überarbeiten Sie Ihre Bewertung und reichen Sie sie erneut ein.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const isFormDisabled = evaluation && ['pending', 'approved'].includes(evaluation.status);
+  const isFormEditable = !evaluation || evaluation.status === 'rejected';
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
@@ -538,6 +587,9 @@ const AuftragWhatsapp = () => {
             </p>
           </div>
         </div>
+
+        {/* Status Banner */}
+        {getEvaluationStatusBanner()}
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* Auftragsinformationen */}
@@ -701,7 +753,7 @@ const AuftragWhatsapp = () => {
             <CardHeader>
               <CardTitle>Bewertung erforderlich</CardTitle>
               <CardDescription>
-                Bitte bewerten Sie Ihre Erfahrung mit diesem Auftrag.
+                {isFormDisabled ? 'Ihre eingereichte Bewertung:' : 'Bitte bewerten Sie Ihre Erfahrung mit diesem Auftrag.'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -712,6 +764,7 @@ const AuftragWhatsapp = () => {
                   <StarRating
                     rating={rating}
                     onRatingChange={setRating}
+                    disabled={isFormDisabled}
                   />
                 </div>
               </div>
@@ -725,8 +778,9 @@ const AuftragWhatsapp = () => {
                   value={overallComment}
                   onChange={(e) => setOverallComment(e.target.value)}
                   placeholder="Zusätzliche Anmerkungen zum Auftrag..."
-                  className="mt-2"
+                  className={`mt-2 ${isFormDisabled ? 'bg-muted' : ''}`}
                   rows={3}
+                  disabled={isFormDisabled}
                 />
               </div>
 
@@ -745,6 +799,7 @@ const AuftragWhatsapp = () => {
                             <StarRating
                               rating={questionResponses[question.id]?.rating || 0}
                               onRatingChange={(rating) => updateQuestionResponse(question.id, 'rating', rating)}
+                              disabled={isFormDisabled}
                             />
                           </div>
                           
@@ -755,6 +810,8 @@ const AuftragWhatsapp = () => {
                               onChange={(e) => updateQuestionResponse(question.id, 'comment', e.target.value)}
                               placeholder="Erläutern Sie Ihre Bewertung..."
                               rows={2}
+                              disabled={isFormDisabled}
+                              className={isFormDisabled ? 'bg-muted' : ''}
                             />
                           </div>
                         </div>
@@ -764,15 +821,18 @@ const AuftragWhatsapp = () => {
                 </div>
               )}
 
-              <div className="flex gap-3 pt-4">
-                <Button
-                  onClick={submitEvaluation}
-                  disabled={rating === 0 || submittingEvaluation}
-                  className="flex-1"
-                >
-                  {submittingEvaluation ? 'Wird eingereicht...' : 'Bewertung einreichen'}
-                </Button>
-              </div>
+              {isFormEditable && (
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    onClick={submitEvaluation}
+                    disabled={rating === 0 || submittingEvaluation}
+                    className="flex-1"
+                  >
+                    {submittingEvaluation ? 'Wird eingereicht...' : 
+                     evaluation?.status === 'rejected' ? 'Erneut einreichen' : 'Bewertung einreichen'}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

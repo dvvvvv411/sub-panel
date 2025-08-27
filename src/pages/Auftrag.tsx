@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Star, ArrowLeft, Send, FileText, Download, Users, Settings, Clock, Target } from 'lucide-react';
+import { Star, ArrowLeft, Send, FileText, Download, Users, Settings, Clock, Target, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -37,6 +38,14 @@ interface Assignment {
   status: string;
 }
 
+interface ExistingEvaluation {
+  id: string;
+  rating: number;
+  overall_comment: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  details: Record<string, any> | null;
+}
+
 const Auftrag = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
@@ -49,6 +58,7 @@ const Auftrag = () => {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [questions, setQuestions] = useState<EvaluationQuestion[]>([]);
+  const [existingEvaluation, setExistingEvaluation] = useState<ExistingEvaluation | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   
@@ -118,6 +128,17 @@ const Auftrag = () => {
 
       setAssignment(assignmentData);
 
+      // Check for existing evaluation
+      const { data: evaluationData } = await supabase
+        .from('order_evaluations')
+        .select('*')
+        .eq('assignment_id', assignmentData.id)
+        .maybeSingle();
+
+      if (evaluationData) {
+        setExistingEvaluation(evaluationData as ExistingEvaluation);
+      }
+
       // Get evaluation questions
       const { data: questionsData, error: questionsError } = await supabase
         .from('order_evaluation_questions')
@@ -136,7 +157,15 @@ const Auftrag = () => {
       // Initialize question responses
       const initialResponses: Record<string, { rating: number; comment: string }> = {};
       questionsData?.forEach(q => {
-        initialResponses[q.id] = { rating: 0, comment: '' };
+        // If existing evaluation has details, prefill from there
+        if (evaluationData?.details && evaluationData.details[q.id]) {
+          initialResponses[q.id] = {
+            rating: evaluationData.details[q.id].rating || 0,
+            comment: evaluationData.details[q.id].comment || ''
+          };
+        } else {
+          initialResponses[q.id] = { rating: 0, comment: '' };
+        }
       });
       setQuestionResponses(initialResponses);
 
@@ -257,17 +286,7 @@ const Auftrag = () => {
         return;
       }
 
-      // Update assignment status to 'evaluated'
-      const { error: assignmentError } = await supabase
-        .from('order_assignments')
-        .update({ status: 'evaluated' })
-        .eq('id', assignment.id);
-
-      if (assignmentError) {
-        console.error('Error updating assignment status:', assignmentError);
-        // Don't return, evaluation was successful
-      }
-
+      // The trigger will automatically update assignment status to 'evaluated'
       toast.success('Bewertung erfolgreich eingereicht!');
       navigate('/mitarbeiter');
 
@@ -278,6 +297,66 @@ const Auftrag = () => {
       setSubmitting(false);
     }
   };
+
+  const getEvaluationStatusBanner = () => {
+    if (!existingEvaluation) return null;
+
+    switch (existingEvaluation.status) {
+      case 'pending':
+        return (
+          <Card className="border-yellow-200 bg-yellow-50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="h-5 w-5 text-yellow-600" />
+                <div>
+                  <h4 className="font-semibold text-yellow-900">Bewertung eingereicht</h4>
+                  <p className="text-sm text-yellow-700">
+                    Ihre Bewertung wurde erfolgreich eingereicht und wird geprüft. Sie können die Bewertung nicht mehr bearbeiten.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      case 'approved':
+        return (
+          <Card className="border-green-200 bg-green-50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <div>
+                  <h4 className="font-semibold text-green-900">Bewertung genehmigt</h4>
+                  <p className="text-sm text-green-700">
+                    Ihre Bewertung wurde genehmigt. Der Auftrag ist abgeschlossen.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      case 'rejected':
+        return (
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+                <div>
+                  <h4 className="font-semibold text-red-900">Bewertung abgelehnt</h4>
+                  <p className="text-sm text-red-700">
+                    Ihre Bewertung wurde abgelehnt. Bitte überarbeiten Sie Ihre Bewertung und reichen Sie sie erneut ein.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const isFormDisabled = existingEvaluation && ['pending', 'approved'].includes(existingEvaluation.status);
+  const isFormEditable = !existingEvaluation || existingEvaluation.status === 'rejected';
 
   if (loading) {
     return (
@@ -325,6 +404,9 @@ const Auftrag = () => {
         </div>
 
         <div className="grid gap-6">
+          {/* Status Banner */}
+          {getEvaluationStatusBanner()}
+
           {/* Order Information */}
           <Card>
             <CardHeader>
@@ -383,7 +465,7 @@ const Auftrag = () => {
               <CardHeader>
                 <CardTitle>Bewertungsfragen</CardTitle>
                 <CardDescription>
-                  Bitte bewerten Sie jeden Aspekt des Auftrags
+                  {isFormDisabled ? 'Ihre eingereichte Bewertung:' : 'Bitte bewerten Sie jeden Aspekt des Auftrags'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -397,6 +479,7 @@ const Auftrag = () => {
                         <StarRating
                           rating={questionResponses[question.id]?.rating || 0}
                           onRatingChange={(rating) => updateQuestionResponse(question.id, 'rating', rating)}
+                          disabled={isFormDisabled}
                         />
                       </div>
                       
@@ -407,6 +490,8 @@ const Auftrag = () => {
                           onChange={(e) => updateQuestionResponse(question.id, 'comment', e.target.value)}
                           placeholder="Erläutern Sie Ihre Bewertung..."
                           rows={2}
+                          disabled={isFormDisabled}
+                          className={isFormDisabled ? 'bg-muted' : ''}
                         />
                       </div>
                     </div>
@@ -419,23 +504,30 @@ const Auftrag = () => {
 
         {/* Submit Button */}
         <div className="mt-6 flex justify-end">
-          <Button
-            onClick={submitEvaluation}
-            disabled={submitting || questions.some(q => (questionResponses[q.id]?.rating || 0) === 0)}
-            size="lg"
-          >
-            {submitting ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                Wird eingereicht...
-              </>
-            ) : (
-              <>
-                <Send className="h-4 w-4 mr-2" />
-                Bewertung einreichen
-              </>
-            )}
-          </Button>
+          {isFormEditable && (
+            <Button
+              onClick={submitEvaluation}
+              disabled={submitting || questions.some(q => (questionResponses[q.id]?.rating || 0) === 0)}
+              size="lg"
+            >
+              {submitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Wird eingereicht...
+                </>
+              ) : existingEvaluation?.status === 'rejected' ? (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Erneut einreichen
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Bewertung einreichen
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </div>
