@@ -9,8 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Shield, Users, LogOut, Crown, UserPlus } from 'lucide-react';
+import { Shield, Users, LogOut, Crown, UserPlus, Briefcase } from 'lucide-react';
 import { VicsTab } from '@/components/VicsTab';
+import { OrdersTab } from '@/components/OrdersTab';
 
 interface UserProfile {
   id: string;
@@ -195,7 +196,7 @@ const Admin = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Benutzerverwaltung
@@ -203,6 +204,10 @@ const Admin = () => {
             <TabsTrigger value="vics" className="flex items-center gap-2">
               <UserPlus className="h-4 w-4" />
               Vics
+            </TabsTrigger>
+            <TabsTrigger value="orders" className="flex items-center gap-2">
+              <Briefcase className="h-4 w-4" />
+              Aufträge
             </TabsTrigger>
           </TabsList>
 
@@ -268,6 +273,10 @@ const Admin = () => {
 
           <TabsContent value="vics">
             <VicsTab />
+          </TabsContent>
+
+          <TabsContent value="orders">
+            <OrdersTab />
           </TabsContent>
         </Tabs>
       </main>

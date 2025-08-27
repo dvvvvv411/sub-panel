@@ -169,6 +169,127 @@ export type Database = {
           },
         ]
       }
+      order_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          employee_id: string
+          id: string
+          order_id: string
+          status: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          employee_id: string
+          id?: string
+          order_id: string
+          status?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          employee_id?: string
+          id?: string
+          order_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_assignments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_assignments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_evaluation_questions: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string
+          question: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id: string
+          question: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string
+          question?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_evaluation_questions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          order_number: string
+          premium: number
+          project_goal: string
+          provider: string
+          title: string
+          updated_at: string
+          whatsapp_account_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          order_number: string
+          premium: number
+          project_goal: string
+          provider: string
+          title: string
+          updated_at?: string
+          whatsapp_account_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          order_number?: string
+          premium?: number
+          project_goal?: string
+          provider?: string
+          title?: string
+          updated_at?: string
+          whatsapp_account_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_whatsapp_account_id_fkey"
+            columns: ["whatsapp_account_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_profiles: {
         Row: {
           created_at: string
@@ -196,6 +317,30 @@ export type Database = {
           role?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      whatsapp_accounts: {
+        Row: {
+          account_info: string | null
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_info?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_info?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }
