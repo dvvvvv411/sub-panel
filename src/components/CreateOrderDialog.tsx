@@ -44,7 +44,9 @@ export function CreateOrderDialog({ onOrderCreated }: CreateOrderDialogProps) {
   
   // Placeholder order specific fields
   const [isPlaceholder, setIsPlaceholder] = useState(false);
-  const [downloadLinks, setDownloadLinks] = useState<string[]>(['']);
+  const [showDownloadLinks, setShowDownloadLinks] = useState(false);
+  const [appStoreLink, setAppStoreLink] = useState('');
+  const [googlePlayLink, setGooglePlayLink] = useState('');
   const [instructions, setInstructions] = useState<Instruction[]>([
     { title: '', icon: 'FileText', content: '' }
   ]);
@@ -57,7 +59,9 @@ export function CreateOrderDialog({ onOrderCreated }: CreateOrderDialogProps) {
     setPremium('');
     setEvaluationQuestions(['']);
     setIsPlaceholder(false);
-    setDownloadLinks(['']);
+    setShowDownloadLinks(false);
+    setAppStoreLink('');
+    setGooglePlayLink('');
     setInstructions([{ title: '', icon: 'FileText', content: '' }]);
   };
 
@@ -83,22 +87,6 @@ export function CreateOrderDialog({ onOrderCreated }: CreateOrderDialogProps) {
     const updated = [...evaluationQuestions];
     updated[index] = value;
     setEvaluationQuestions(updated);
-  };
-
-  const addDownloadLink = () => {
-    setDownloadLinks([...downloadLinks, '']);
-  };
-
-  const removeDownloadLink = (index: number) => {
-    if (downloadLinks.length > 1) {
-      setDownloadLinks(downloadLinks.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateDownloadLink = (index: number, value: string) => {
-    const updated = [...downloadLinks];
-    updated[index] = value;
-    setDownloadLinks(updated);
   };
 
   const addInstruction = () => {
@@ -138,7 +126,7 @@ export function CreateOrderDialog({ onOrderCreated }: CreateOrderDialogProps) {
           project_goal: projectGoal,
           premium: parseFloat(premium),
           is_placeholder: isPlaceholder,
-          download_links: isPlaceholder ? downloadLinks.filter(link => link.trim() !== '') : null,
+          download_links: isPlaceholder && showDownloadLinks ? [appStoreLink, googlePlayLink].filter(link => link.trim() !== '') : null,
           instructions: isPlaceholder ? instructions.filter(inst => inst.title.trim() !== '') as any : null,
           created_by: user.id
         })
@@ -278,47 +266,56 @@ export function CreateOrderDialog({ onOrderCreated }: CreateOrderDialogProps) {
           {/* Placeholder Order Fields */}
           {isPlaceholder && (
             <div className="space-y-6 border-t pt-6">
+              {/* Download Links Toggle */}
+              <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/30">
+                <Switch
+                  id="download-links-toggle"
+                  checked={showDownloadLinks}
+                  onCheckedChange={setShowDownloadLinks}
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="download-links-toggle" className="text-sm font-medium cursor-pointer">
+                    Download Links anzeigen
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    App Store und Google Play Links für mobile Apps
+                  </p>
+                </div>
+              </div>
+
               {/* Download Links */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Download className="h-4 w-4" />
-                    Download Links
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {downloadLinks.map((link, index) => (
-                    <div key={index} className="flex gap-2">
-                      <Input
-                        value={link}
-                        onChange={(e) => updateDownloadLink(index, e.target.value)}
-                        placeholder={`Download Link ${index + 1}`}
-                        className="flex-1"
-                      />
-                      {downloadLinks.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          onClick={() => removeDownloadLink(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
+              {showDownloadLinks && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Download className="h-4 w-4" />
+                      Download Links
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="app-store-link">App Store Link</Label>
+                        <Input
+                          id="app-store-link"
+                          value={appStoreLink}
+                          onChange={(e) => setAppStoreLink(e.target.value)}
+                          placeholder="https://apps.apple.com/..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="google-play-link">Google Play Link</Label>
+                        <Input
+                          id="google-play-link"
+                          value={googlePlayLink}
+                          onChange={(e) => setGooglePlayLink(e.target.value)}
+                          placeholder="https://play.google.com/..."
+                        />
+                      </div>
                     </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addDownloadLink}
-                    className="w-full"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Weiteren Link hinzufügen
-                  </Button>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Instructions */}
               <Card>
