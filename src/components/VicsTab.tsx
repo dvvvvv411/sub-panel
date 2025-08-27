@@ -162,7 +162,7 @@ export const VicsTab = () => {
   const [selectedSubmission, setSelectedSubmission] = useState<ContractSubmission | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('imported');
+  const [activeTab, setActiveTab] = useState('created');
 
   // New states for employee details
   const [createdStatsByEmployee, setCreatedStatsByEmployee] = useState<Record<string, EmployeeStats>>({});
@@ -854,14 +854,14 @@ export const VicsTab = () => {
       {/* Employee Lists */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="imported">
-            Importierte Mitarbeiter ({importedEmployees.length})
+          <TabsTrigger value="created">
+            Erstellte Mitarbeiter ({createdEmployees.length})
           </TabsTrigger>
           <TabsTrigger value="contracts">
             Arbeitsverträge ({contractRequestedEmployees.length + contractSubmissions.length})
           </TabsTrigger>
-          <TabsTrigger value="created">
-            Erstellte Mitarbeiter ({createdEmployees.length})
+          <TabsTrigger value="imported">
+            Importierte Mitarbeiter ({importedEmployees.length})
           </TabsTrigger>
         </TabsList>
 
