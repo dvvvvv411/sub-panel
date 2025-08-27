@@ -54,6 +54,9 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 222 84% 4.9%;
     --sidebar-border: 214 32% 91%;
     --sidebar-ring: 221 83% 53%;
+
+    /* Gold/Yellow for ratings */
+    --rating-star: 45 93% 58%;
   }
 
   .dark {
@@ -92,6 +95,9 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Gold/Yellow for ratings */
+    --rating-star: 45 93% 58%;
   }
 }
 

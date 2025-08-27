@@ -166,6 +166,7 @@ export const VicsTab = () => {
   // New states for employee details
   const [createdStatsByEmployee, setCreatedStatsByEmployee] = useState<Record<string, EmployeeStats>>({});
   const [lastActivityByEmployee, setLastActivityByEmployee] = useState<Record<string, string | null>>({});
+  const [averageRatingByEmployee, setAverageRatingByEmployee] = useState<Record<string, number>>({});
   const [selectedEmployeeForDetails, setSelectedEmployeeForDetails] = useState<Employee | null>(null);
   const [isEmployeeDetailsOpen, setIsEmployeeDetailsOpen] = useState(false);
   const [employeeAssignments, setEmployeeAssignments] = useState<EmployeeAssignment[]>([]);
@@ -570,10 +571,10 @@ export const VicsTab = () => {
         return;
       }
 
-      // Fetch all evaluations for created employees for last activity
+      // Fetch all evaluations for created employees for last activity and ratings
       const { data: evaluations, error: evaluationsError } = await supabase
         .from('order_evaluations')
-        .select('employee_id, updated_at, approved_at')
+        .select('employee_id, updated_at, approved_at, status, rating')
         .in('employee_id', createdEmployeeIds);
 
       if (evaluationsError) {
@@ -584,6 +585,7 @@ export const VicsTab = () => {
       // Aggregate stats per employee
       const statsMap: Record<string, EmployeeStats> = {};
       const lastActivityMap: Record<string, string | null> = {};
+      const averageRatingMap: Record<string, number> = {};
 
       // Initialize stats for all created employees
       createdEmployeeIds.forEach(empId => {
@@ -594,6 +596,7 @@ export const VicsTab = () => {
           evaluated: 0
         };
         lastActivityMap[empId] = null;
+        averageRatingMap[empId] = 0;
       });
 
       // Process assignments
@@ -623,7 +626,9 @@ export const VicsTab = () => {
         }
       });
 
-      // Process evaluations for last activity
+      // Process evaluations for last activity and average ratings
+      const ratingsByEmployee: Record<string, number[]> = {};
+      
       evaluations?.forEach(evaluation => {
         const latestDate = evaluation.approved_at || evaluation.updated_at;
         const evaluationDate = new Date(latestDate);
@@ -632,10 +637,26 @@ export const VicsTab = () => {
         if (!currentLastActivity || evaluationDate > new Date(currentLastActivity)) {
           lastActivityMap[evaluation.employee_id] = latestDate;
         }
+        
+        // Collect ratings for approved evaluations only
+        if (evaluation.status === 'approved' && evaluation.rating) {
+          if (!ratingsByEmployee[evaluation.employee_id]) {
+            ratingsByEmployee[evaluation.employee_id] = [];
+          }
+          ratingsByEmployee[evaluation.employee_id].push(evaluation.rating);
+        }
+      });
+
+      // Calculate average ratings
+      Object.entries(ratingsByEmployee).forEach(([empId, ratings]) => {
+        if (ratings.length > 0) {
+          averageRatingMap[empId] = ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+        }
       });
 
       setCreatedStatsByEmployee(statsMap);
       setLastActivityByEmployee(lastActivityMap);
+      setAverageRatingByEmployee(averageRatingMap);
     } catch (error) {
       console.error('Error fetching created employees stats:', error);
     }
@@ -1030,23 +1051,24 @@ export const VicsTab = () => {
                   Noch keine Accounts erstellt
                 </p>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>E-Mail</TableHead>
-                      <TableHead>Telefon</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Zugewiesen</TableHead>
-                      <TableHead>Abgeschlossen</TableHead>
-                      <TableHead>Letzte Aktivität</TableHead>
-                      <TableHead>Aktionen</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>E-Mail</TableHead>
+                        <TableHead>Telefon</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Abgeschlossen</TableHead>
+                        <TableHead>Ø Bewertung</TableHead>
+                        <TableHead>Letzte Aktivität</TableHead>
+                        <TableHead>Aktionen</TableHead>
+                      </TableRow>
+                    </TableHeader>
                   <TableBody>
                     {createdEmployees.map((employee) => {
                       const stats = createdStatsByEmployee[employee.id];
                       const lastActivity = lastActivityByEmployee[employee.id];
+                      const avgRating = averageRatingByEmployee[employee.id] || 0;
                       
                       return (
                         <TableRow key={employee.id}>
@@ -1058,13 +1080,27 @@ export const VicsTab = () => {
                           <TableCell>{getStatusBadge(employee.status)}</TableCell>
                           <TableCell>
                             <Badge variant="secondary">
-                              {stats?.totalAssigned || 0}
+                              {stats?.completedAssigned || 0}/{stats?.totalAssigned || 0}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="default">
-                              {stats?.completedAssigned || 0}
-                            </Badge>
+                            {avgRating > 0 ? (
+                              <div className="flex items-center gap-1">
+                                <span className="text-sm font-medium">{avgRating.toFixed(1)}</span>
+                                <div className="flex">
+                                  {[...Array(5)].map((_, i) => (
+                                    <div
+                                      key={i}
+                                      className={`w-3 h-3 rounded-full ${
+                                        i < Math.round(avgRating) ? 'bg-rating-star' : 'bg-muted'
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
                           </TableCell>
                           <TableCell>{formatLastActivity(lastActivity)}</TableCell>
                           <TableCell>
@@ -1292,8 +1328,24 @@ export const VicsTab = () => {
                             <>
                               <div className="text-sm">
                                 <span className="text-muted-foreground">Durchschnittsbewertung:</span>
-                                <div className="font-medium text-lg">
-                                  {avgRating > 0 ? `${avgRating.toFixed(1)}/5` : '-'}
+                                <div className="flex items-center gap-2 mt-1">
+                                  {avgRating > 0 ? (
+                                    <>
+                                      <span className="font-medium text-lg">{avgRating.toFixed(1)}/5</span>
+                                      <div className="flex">
+                                        {[...Array(5)].map((_, i) => (
+                                          <div
+                                            key={i}
+                                            className={`w-4 h-4 rounded-full ${
+                                              i < Math.round(avgRating) ? 'bg-rating-star' : 'bg-muted'
+                                            }`}
+                                          />
+                                        ))}
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <span className="font-medium text-lg">-</span>
+                                  )}
                                 </div>
                               </div>
                               <div className="text-sm">
@@ -1405,7 +1457,7 @@ export const VicsTab = () => {
                                         <div
                                           key={i}
                                           className={`w-3 h-3 rounded-full ${
-                                            i < evaluation.rating ? 'bg-primary' : 'bg-muted'
+                                            i < evaluation.rating ? 'bg-rating-star' : 'bg-muted'
                                           }`}
                                         />
                                       ))}

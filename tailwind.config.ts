@@ -72,7 +72,8 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				'rating-star': 'hsl(var(--rating-star))'
 			},
 			backgroundImage: {
 				'hero-gradient': 'var(--hero-gradient)',
