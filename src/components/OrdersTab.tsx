@@ -295,17 +295,15 @@ export function OrdersTab() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {availableEmployees.length > 0 && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleOpenAssignDialog(order)}
-                            className="flex items-center gap-2"
-                          >
-                            <UserPlus className="h-4 w-4" />
-                            Zuweisen
-                          </Button>
-                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenAssignDialog(order)}
+                          className="flex items-center gap-2"
+                        >
+                          <UserPlus className="h-4 w-4" />
+                          {availableEmployees.length > 0 ? 'Zuweisen' : 'Mitarbeiter'}
+                        </Button>
                       </TableCell>
                     </TableRow>
                   );
