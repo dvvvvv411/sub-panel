@@ -368,7 +368,50 @@ const Arbeitsvertrag = () => {
             )}
 
             {currentStep === 3 && (
-              <div className="space-y-4">
+              <div className="space-y-6">
+                {/* Bank Card Visualization */}
+                <div className="flex justify-center">
+                  <div className="w-80 h-48 bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 rounded-xl shadow-2xl p-6 text-white relative overflow-hidden">
+                    {/* Card Background Pattern */}
+                    <div className="absolute inset-0 opacity-10">
+                      <div className="absolute top-4 right-4 w-12 h-12 border-2 border-white/30 rounded-full"></div>
+                      <div className="absolute top-6 right-6 w-8 h-8 border-2 border-white/20 rounded-full"></div>
+                    </div>
+                    
+                    {/* Card Content */}
+                    <div className="relative z-10 h-full flex flex-col justify-between">
+                      <div>
+                        <div className="text-sm font-medium opacity-80 mb-1">Bank</div>
+                        <div className="text-lg font-semibold">
+                          {formData.bankName || 'Ihre Bank'}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div>
+                          <div className="text-xs opacity-70 mb-1">IBAN</div>
+                          <div className="font-mono text-sm tracking-wider">
+                            {formData.iban || 'DE__ ____ ____ ____ ____ __'}
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-between items-end">
+                          <div>
+                            <div className="text-xs opacity-70 mb-1">BIC</div>
+                            <div className="font-mono text-sm">
+                              {formData.bic || 'XXXXXXXX'}
+                            </div>
+                          </div>
+                          <div className="text-xs opacity-60">
+                            BANKCARD
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Input Fields */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h3 className="font-medium text-blue-900 mb-3">Bankverbindung</h3>
                   <div className="space-y-3">
