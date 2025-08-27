@@ -293,7 +293,7 @@ const Mitarbeiter = () => {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            <OverviewTab assignedOrders={assignedOrders} user={profile} />
+            <OverviewTab assignedOrders={assignedOrders} user={profile} employeeProfile={employeeProfile} />
           </TabsContent>
 
           <TabsContent value="tasks" className="space-y-6">

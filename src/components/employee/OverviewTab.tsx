@@ -8,9 +8,16 @@ import { supabase } from '@/integrations/supabase/client';
 interface OverviewTabProps {
   assignedOrders: any[];
   user: any;
+  employeeProfile: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string | null;
+  } | null;
 }
 
-export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user }) => {
+export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user, employeeProfile }) => {
   const [approvedEvaluations, setApprovedEvaluations] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
 
@@ -128,7 +135,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user }
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              Willkommen zurück, {user?.name || 'Mitarbeiter'}!
+              Willkommen zurück, {employeeProfile?.first_name || 'Mitarbeiter'}!
             </h1>
             <p className="text-muted-foreground">
               Hier ist dein persönliches Dashboard mit deinen aktuellen Aufgaben und Fortschritten.
