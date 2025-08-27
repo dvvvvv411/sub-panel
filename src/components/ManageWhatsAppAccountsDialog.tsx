@@ -1,18 +1,22 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, X, Edit2, Trash2, Save, MessageSquare } from 'lucide-react';
+import { Plus, X, Edit2, Trash2, Save, MessageSquare, Star } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { usePreventUnload } from '@/hooks/use-prevent-unload';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 interface WhatsAppAccount {
   id: string;
   name: string;
   account_info: string | null;
   chat_link: string | null;
+  is_default: boolean;
 }
 
 interface ManageWhatsAppAccountsDialogProps {
@@ -35,9 +39,11 @@ export function ManageWhatsAppAccountsDialog({
   const [editingAccountName, setEditingAccountName] = useState('');
   const [editingAccountInfo, setEditingAccountInfo] = useState('');
   const [editingAccountLink, setEditingAccountLink] = useState('');
+  const [editingAccountDefault, setEditingAccountDefault] = useState(false);
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountInfo, setNewAccountInfo] = useState('');
   const [newAccountLink, setNewAccountLink] = useState('');
+  const [newAccountDefault, setNewAccountDefault] = useState(false);
   const [showAddAccount, setShowAddAccount] = useState(false);
 
   const isOpen = open !== undefined ? open : internalOpen;
@@ -57,6 +63,7 @@ export function ManageWhatsAppAccountsDialog({
       const { data, error } = await supabase
         .from('whatsapp_accounts')
         .select('*')
+        .order('is_default', { ascending: false })
         .order('name');
 
       if (error) {
@@ -86,7 +93,8 @@ export function ManageWhatsAppAccountsDialog({
         .insert({
           name: newAccountName.trim(),
           account_info: newAccountInfo.trim() || null,
-          chat_link: newAccountLink.trim() || null
+          chat_link: newAccountLink.trim() || null,
+          is_default: newAccountDefault
         })
         .select()
         .single();
@@ -97,10 +105,11 @@ export function ManageWhatsAppAccountsDialog({
         return;
       }
 
-      setWhatsappAccounts([...whatsappAccounts, data]);
+      await fetchWhatsAppAccounts(); // Refresh to get updated order
       setNewAccountName('');
       setNewAccountInfo('');
       setNewAccountLink('');
+      setNewAccountDefault(false);
       setShowAddAccount(false);
       toast.success('WhatsApp-Konto erfolgreich hinzugefügt');
       onAccountsUpdated();
@@ -122,7 +131,8 @@ export function ManageWhatsAppAccountsDialog({
         .update({
           name: editingAccountName.trim(),
           account_info: editingAccountInfo.trim() || null,
-          chat_link: editingAccountLink.trim() || null
+          chat_link: editingAccountLink.trim() || null,
+          is_default: editingAccountDefault
         })
         .eq('id', accountId);
 
@@ -132,20 +142,12 @@ export function ManageWhatsAppAccountsDialog({
         return;
       }
 
-      setWhatsappAccounts(whatsappAccounts.map(account =>
-        account.id === accountId
-          ? { 
-              ...account, 
-              name: editingAccountName.trim(), 
-              account_info: editingAccountInfo.trim() || null,
-              chat_link: editingAccountLink.trim() || null
-            }
-          : account
-      ));
+      await fetchWhatsAppAccounts(); // Refresh to get updated order
       setEditingAccountId(null);
       setEditingAccountName('');
       setEditingAccountInfo('');
       setEditingAccountLink('');
+      setEditingAccountDefault(false);
       toast.success('WhatsApp-Konto erfolgreich bearbeitet');
       onAccountsUpdated();
     } catch (error) {
@@ -176,11 +178,34 @@ export function ManageWhatsAppAccountsDialog({
     }
   };
 
+  const handleToggleDefault = async (accountId: string, newDefaultState: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('whatsapp_accounts')
+        .update({ is_default: newDefaultState })
+        .eq('id', accountId);
+
+      if (error) {
+        console.error('Error updating default status:', error);
+        toast.error('Fehler beim Ändern des Standard-Status');
+        return;
+      }
+
+      await fetchWhatsAppAccounts(); // Refresh to get updated order
+      toast.success(newDefaultState ? 'Als Standard-Konto gesetzt' : 'Standard-Status entfernt');
+      onAccountsUpdated();
+    } catch (error) {
+      console.error('Error updating default status:', error);
+      toast.error('Fehler beim Ändern des Standard-Status');
+    }
+  };
+
   const startEditingAccount = (account: WhatsAppAccount) => {
     setEditingAccountId(account.id);
     setEditingAccountName(account.name);
     setEditingAccountInfo(account.account_info || '');
     setEditingAccountLink(account.chat_link || '');
+    setEditingAccountDefault(account.is_default);
   };
 
   const cancelEditingAccount = () => {
@@ -188,6 +213,7 @@ export function ManageWhatsAppAccountsDialog({
     setEditingAccountName('');
     setEditingAccountInfo('');
     setEditingAccountLink('');
+    setEditingAccountDefault(false);
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -198,6 +224,7 @@ export function ManageWhatsAppAccountsDialog({
       setNewAccountName('');
       setNewAccountInfo('');
       setNewAccountLink('');
+      setNewAccountDefault(false);
       cancelEditingAccount();
     }
   };
@@ -265,6 +292,17 @@ export function ManageWhatsAppAccountsDialog({
                           value={newAccountLink}
                           onChange={(e) => setNewAccountLink(e.target.value)}
                         />
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            id="new-default"
+                            checked={newAccountDefault}
+                            onCheckedChange={setNewAccountDefault}
+                          />
+                          <Label htmlFor="new-default" className="flex items-center gap-1">
+                            <Star className="h-4 w-4" />
+                            Als Standard-Konto setzen
+                          </Label>
+                        </div>
                         <div className="flex gap-2">
                           <Button
                             type="button"
@@ -283,6 +321,7 @@ export function ManageWhatsAppAccountsDialog({
                               setNewAccountName('');
                               setNewAccountInfo('');
                               setNewAccountLink('');
+                              setNewAccountDefault(false);
                             }}
                           >
                             Abbrechen
@@ -316,6 +355,17 @@ export function ManageWhatsAppAccountsDialog({
                                 onChange={(e) => setEditingAccountLink(e.target.value)}
                                 placeholder="WhatsApp Chat-Link (z.B. https://wa.me/491784171510)"
                               />
+                              <div className="flex items-center space-x-2">
+                                <Switch
+                                  id={`edit-default-${account.id}`}
+                                  checked={editingAccountDefault}
+                                  onCheckedChange={setEditingAccountDefault}
+                                />
+                                <Label htmlFor={`edit-default-${account.id}`} className="flex items-center gap-1">
+                                  <Star className="h-4 w-4" />
+                                  Als Standard-Konto setzen
+                                </Label>
+                              </div>
                             </div>
                             <Button
                               type="button"
@@ -336,10 +386,16 @@ export function ManageWhatsAppAccountsDialog({
                         ) : (
                           <>
                             <div className="flex-1">
-                              <div>
+                              <div className="flex items-center gap-2">
                                 <span className="font-medium">{account.name}</span>
+                                {account.is_default && (
+                                  <div className="flex items-center gap-1 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                                    <Star className="h-3 w-3" />
+                                    Standard
+                                  </div>
+                                )}
                                 {account.account_info && (
-                                  <span className="text-sm text-muted-foreground ml-2">
+                                  <span className="text-sm text-muted-foreground">
                                     ({account.account_info})
                                   </span>
                                 )}
@@ -350,6 +406,15 @@ export function ManageWhatsAppAccountsDialog({
                                 </div>
                               )}
                             </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleToggleDefault(account.id, !account.is_default)}
+                              title={account.is_default ? "Standard entfernen" : "Als Standard setzen"}
+                            >
+                              <Star className={`h-4 w-4 ${account.is_default ? 'fill-current text-yellow-500' : ''}`} />
+                            </Button>
                             <Button
                               type="button"
                               variant="outline"

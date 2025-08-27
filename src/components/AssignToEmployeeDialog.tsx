@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ interface WhatsAppAccount {
   id: string;
   name: string;
   account_info: string | null;
+  is_default: boolean;
 }
 
 interface Order {
@@ -32,6 +34,7 @@ interface Order {
   title: string;
   order_number: string;
   provider: string;
+  project_goal: string;
   premium: number;
   is_placeholder: boolean;
   whatsapp_account_id: string | null;
@@ -64,54 +67,96 @@ export function AssignToEmployeeDialog({
 
   useEffect(() => {
     if (open && employee) {
-      fetchOrders();
-      fetchWhatsAppAccounts();
+      fetchOrdersAndAccounts();
       setSelectedOrderId('');
       setSelectedWhatsAppId('');
       setOrderSearchOpen(false);
     }
   }, [open, employee]);
 
-  const fetchOrders = async () => {
+  // Reset WhatsApp selection when order changes
+  useEffect(() => {
+    if (selectedOrderId) {
+      const selectedOrder = orders.find(order => order.id === selectedOrderId);
+      if (selectedOrder && !selectedOrder.is_placeholder) {
+        // Pre-select default WhatsApp account for non-placeholder orders
+        const defaultAccount = whatsappAccounts.find(account => account.is_default);
+        if (defaultAccount) {
+          setSelectedWhatsAppId(defaultAccount.id);
+        } else {
+          setSelectedWhatsAppId('');
+        }
+      } else {
+        setSelectedWhatsAppId('');
+      }
+    } else {
+      setSelectedWhatsAppId('');
+    }
+  }, [selectedOrderId, orders, whatsappAccounts]);
+
+  const fetchOrdersAndAccounts = async () => {
     if (!employee) return;
-    
+
     try {
       setLoadingOrders(true);
-      
-      // Get already assigned order IDs for this employee
-      const { data: assignedOrders, error: assignedError } = await supabase
-        .from('order_assignments')
-        .select('order_id')
-        .eq('employee_id', employee.id);
+      setLoadingAccounts(true);
 
-      if (assignedError) {
-        console.error('Error fetching assigned orders:', assignedError);
-        toast.error('Fehler beim Laden der zugewiesenen Aufträge');
-        return;
-      }
-
-      const assignedOrderIds = assignedOrders?.map(a => a.order_id) || [];
-
-      // Get all orders excluding already assigned ones
-      const { data, error } = await supabase
+      // Fetch all orders
+      const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
-        .select('id, order_number, title, provider, premium, is_placeholder, whatsapp_account_id')
-        .not('id', 'in', `(${assignedOrderIds.join(',')})`)
+        .select('id, order_number, title, provider, project_goal, premium, is_placeholder, whatsapp_account_id, created_at')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching orders:', error);
+      if (ordersError) {
+        console.error('Error fetching orders:', ordersError);
         toast.error('Fehler beim Laden der Aufträge');
         return;
       }
 
-      setOrders(data || []);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      toast.error('Fehler beim Laden der Aufträge');
-    } finally {
+      // Fetch assignments for this employee
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('order_assignments')
+        .select('order_id')
+        .eq('employee_id', employee.id);
+
+      if (assignmentsError) {
+        console.error('Error fetching assignments:', assignmentsError);
+        toast.error('Fehler beim Laden der Zuweisungen');
+        return;
+      }
+
+      // Filter out already assigned orders
+      const assignedOrderIds = new Set(assignmentsData.map(assignment => assignment.order_id));
+      const availableOrders = ordersData.filter(order => !assignedOrderIds.has(order.id));
+      
+      setOrders(availableOrders);
       setLoadingOrders(false);
+
+      // Fetch WhatsApp accounts
+      const { data: accountsData, error: accountsError } = await supabase
+        .from('whatsapp_accounts')
+        .select('*')
+        .order('is_default', { ascending: false })
+        .order('name');
+
+      if (accountsError) {
+        console.error('Error fetching WhatsApp accounts:', accountsError);
+        toast.error('Fehler beim Laden der WhatsApp-Konten');
+        return;
+      }
+
+      setWhatsappAccounts(accountsData || []);
+      setLoadingAccounts(false);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast.error('Fehler beim Laden der Daten');
+      setLoadingOrders(false);
+      setLoadingAccounts(false);
     }
+  };
+
+  const handleWhatsAppAccountsUpdated = () => {
+    fetchWhatsAppAccounts();
   };
 
   const fetchWhatsAppAccounts = async () => {
@@ -120,6 +165,7 @@ export function AssignToEmployeeDialog({
       const { data, error } = await supabase
         .from('whatsapp_accounts')
         .select('*')
+        .order('is_default', { ascending: false })
         .order('name');
 
       if (error) {
@@ -135,10 +181,6 @@ export function AssignToEmployeeDialog({
     } finally {
       setLoadingAccounts(false);
     }
-  };
-
-  const handleWhatsAppAccountsUpdated = () => {
-    fetchWhatsAppAccounts();
   };
 
   const selectedOrder = orders.find(order => order.id === selectedOrderId);
@@ -257,8 +299,6 @@ export function AssignToEmployeeDialog({
                           onSelect={() => {
                             setSelectedOrderId(order.id);
                             setOrderSearchOpen(false);
-                            // Reset WhatsApp selection when order changes
-                            setSelectedWhatsAppId('');
                           }}
                         >
                           <Check
@@ -267,15 +307,14 @@ export function AssignToEmployeeDialog({
                               selectedOrderId === order.id ? "opacity-100" : "opacity-0"
                             )}
                           />
-                          <div className="flex flex-col">
+                          <div className="flex flex-col flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium">{order.order_number}</span>
+                              <span>{order.order_number} - {order.title}</span>
                               <Badge variant={order.is_placeholder ? "secondary" : "default"} className="text-xs">
                                 {order.is_placeholder ? "Platzhalter" : "Standard"}
                               </Badge>
                             </div>
-                            <span className="text-sm text-muted-foreground">{order.title}</span>
-                            <span className="text-xs text-muted-foreground">{order.provider} • {order.premium.toFixed(2)}€</span>
+                            <span className="text-sm text-muted-foreground">{order.provider} • {order.premium.toFixed(2)}€</span>
                           </div>
                         </CommandItem>
                       ))}
@@ -304,7 +343,14 @@ export function AssignToEmployeeDialog({
                 <SelectContent className="bg-popover border">
                   {whatsappAccounts.map((account) => (
                     <SelectItem key={account.id} value={account.id}>
-                      {account.name} {account.account_info && `(${account.account_info})`}
+                      <div className="flex items-center gap-2">
+                        {account.name} {account.account_info && `(${account.account_info})`}
+                        {account.is_default && (
+                          <span className="text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded">
+                            Standard
+                          </span>
+                        )}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>

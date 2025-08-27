@@ -26,6 +26,7 @@ interface WhatsAppAccount {
   id: string;
   name: string;
   account_info: string | null;
+  is_default: boolean;
 }
 
 interface Order {
@@ -79,6 +80,7 @@ export function AssignOrderDialog({
       const { data, error } = await supabase
         .from('whatsapp_accounts')
         .select('*')
+        .order('is_default', { ascending: false })
         .order('name');
 
       if (error) {
@@ -88,6 +90,14 @@ export function AssignOrderDialog({
       }
 
       setWhatsappAccounts(data || []);
+      
+      // Pre-select default WhatsApp account if available and order is not a placeholder
+      if (data && order && !order.is_placeholder) {
+        const defaultAccount = data.find(account => account.is_default);
+        if (defaultAccount) {
+          setSelectedWhatsAppId(defaultAccount.id);
+        }
+      }
     } catch (error) {
       console.error('Error fetching WhatsApp accounts:', error);
       toast.error('Fehler beim Laden der WhatsApp-Konten');
@@ -269,7 +279,14 @@ export function AssignOrderDialog({
                 <SelectContent className="bg-popover border">
                   {whatsappAccounts.map((account) => (
                     <SelectItem key={account.id} value={account.id}>
-                      {account.name} {account.account_info && `(${account.account_info})`}
+                      <div className="flex items-center gap-2">
+                        {account.name} {account.account_info && `(${account.account_info})`}
+                        {account.is_default && (
+                          <span className="text-xs bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded">
+                            Standard
+                          </span>
+                        )}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>

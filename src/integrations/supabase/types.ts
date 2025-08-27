@@ -510,6 +510,7 @@ export type Database = {
           chat_link: string | null
           created_at: string
           id: string
+          is_default: boolean
           name: string
           updated_at: string
         }
@@ -518,6 +519,7 @@ export type Database = {
           chat_link?: string | null
           created_at?: string
           id?: string
+          is_default?: boolean
           name: string
           updated_at?: string
         }
@@ -526,6 +528,7 @@ export type Database = {
           chat_link?: string | null
           created_at?: string
           id?: string
+          is_default?: boolean
           name?: string
           updated_at?: string
         }
