@@ -47,6 +47,8 @@ interface Order {
   order_assignments: Array<{
     id: string;
     employee_id: string;
+    status: string;
+    assigned_at: string;
     employees: Employee;
   }>;
 }
@@ -84,6 +86,8 @@ export function OrdersTab() {
           order_assignments (
             id,
             employee_id,
+            status,
+            assigned_at,
             employees (
               id,
               first_name,
@@ -150,7 +154,11 @@ export function OrdersTab() {
   };
 
   const getAssignedEmployees = (order: Order) => {
-    return order.order_assignments.map(assignment => assignment.employees);
+    return order.order_assignments.map(assignment => ({
+      ...assignment.employees,
+      assignment_status: assignment.status,
+      assigned_at: assignment.assigned_at
+    }));
   };
 
   const getAvailableEmployees = (order: Order) => {
@@ -258,7 +266,6 @@ export function OrdersTab() {
                   <TableHead>Anbieter</TableHead>
                   <TableHead>Prämie</TableHead>
                   <TableHead>Platzhalter</TableHead>
-                  <TableHead>Bewertungsfragen</TableHead>
                   <TableHead>Zugewiesene Mitarbeiter</TableHead>
                   <TableHead>Aktionen</TableHead>
                 </TableRow>
@@ -300,11 +307,6 @@ export function OrdersTab() {
                             {order.is_placeholder ? "Platzhalterauftrag" : "Kein Platzhalterauftrag"}
                           </span>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {order.order_evaluation_questions.length} Fragen
-                        </Badge>
                       </TableCell>
                       <TableCell>
                         {assignedEmployees.length > 0 ? (

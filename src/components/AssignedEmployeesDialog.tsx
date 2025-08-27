@@ -9,6 +9,8 @@ interface Employee {
   first_name: string;
   last_name: string;
   email: string;
+  assignment_status?: string;
+  assigned_at?: string;
 }
 
 interface Order {
@@ -34,6 +36,23 @@ export function AssignedEmployeesDialog({
   if (!order) return null;
 
   usePreventUnload(open);
+
+  const getStatusBadge = (status?: string) => {
+    if (!status) return <Badge variant="secondary">Zugewiesen</Badge>;
+    
+    switch (status) {
+      case 'assigned':
+        return <Badge variant="secondary">Zugewiesen</Badge>;
+      case 'in_progress':
+        return <Badge variant="default">In Bearbeitung</Badge>;
+      case 'evaluated':
+        return <Badge variant="outline">Bewertet</Badge>;
+      case 'completed':
+        return <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-200">Abgeschlossen</Badge>;
+      default:
+        return <Badge variant="secondary">Zugewiesen</Badge>;
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -72,7 +91,7 @@ export function AssignedEmployeesDialog({
                     </TableCell>
                     <TableCell>{employee.email}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary">Zugewiesen</Badge>
+                      {getStatusBadge(employee.assignment_status)}
                     </TableCell>
                   </TableRow>
                 ))}
