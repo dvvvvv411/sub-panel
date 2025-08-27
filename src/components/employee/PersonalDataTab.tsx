@@ -14,6 +14,13 @@ interface PersonalDataTabProps {
   user: any;
 }
 
+interface AccountStat {
+  label: string;
+  value: string;
+  icon: React.ComponentType<{ className?: string }>;
+  isStatus?: boolean;
+}
+
 export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState({
@@ -224,7 +231,7 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
     return formatIban(cleaned.substring(0, 4) + '••••••••••••' + cleaned.substring(cleaned.length - 4));
   };
 
-  const accountStats = [
+  const accountStats: AccountStat[] = [
     { label: 'Mitglied seit', value: 'Januar 2024', icon: Calendar },
     { label: 'Letzte Anmeldung', value: 'Heute', icon: User },
     { label: 'Status', value: 'Aktiv', icon: User, isStatus: true }
@@ -347,23 +354,26 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {accountStats.map((stat, index) => (
-              <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                <div className="p-2 rounded-full bg-primary/10">
-                  <stat.icon className="h-4 w-4 text-primary" />
+            {accountStats.map((stat, index) => {
+              const IconComponent = stat.icon;
+              return (
+                <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <div className="p-2 rounded-full bg-primary/10">
+                    <IconComponent className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <p className="font-medium">
+                      {stat.isStatus ? (
+                        <Badge className="bg-green-100 text-green-800">{stat.value}</Badge>
+                      ) : (
+                        stat.value
+                      )}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="font-medium">
-                    {stat.isStatus ? (
-                      <Badge className="bg-green-100 text-green-800">{stat.value}</Badge>
-                    ) : (
-                      stat.value
-                    )}
-                  </p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
       </div>
