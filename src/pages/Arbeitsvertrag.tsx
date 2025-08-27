@@ -76,12 +76,9 @@ export default function Arbeitsvertrag() {
       }
 
       try {
-        const { data, error } = await supabase
-          .from('employment_contract_requests')
-          .select('*')
-          .eq('token', token)
-          .eq('status', 'pending')
-          .single();
+        const { data, error } = await supabase.functions.invoke('get-contract-request', {
+          body: { token }
+        });
 
         if (error) {
           console.error('Error fetching contract request:', error);
@@ -90,13 +87,46 @@ export default function Arbeitsvertrag() {
           return;
         }
 
-        if (!data) {
-          toast.error('Ungültige oder abgelaufene Anfrage');
+        if (data?.submitted) {
+          toast.error('Diese Anfrage wurde bereits eingereicht');
           setLoading(false);
           return;
         }
 
-        setContractRequest(data);
+        if (data?.error) {
+          toast.error(data.error);
+          setLoading(false);
+          return;
+        }
+
+        if (data?.requestId) {
+          // Create contract request object for compatibility
+          const contractRequestData: ContractRequest = {
+            id: data.requestId,
+            employee_id: data.employee?.id || '',
+            token: token,
+            status: 'pending',
+            created_at: '',
+            expires_at: data.expiresAt || ''
+          };
+          
+          setContractRequest(contractRequestData);
+          
+          // Pre-fill form with employee data if available
+          if (data.employee) {
+            setFormData(prev => ({
+              ...prev,
+              firstName: data.employee.first_name || '',
+              lastName: data.employee.last_name || '',
+              email: data.employee.email || '',
+              phone: data.employee.phone || ''
+            }));
+          }
+        } else {
+          toast.error('Ungültige oder abgelaufene Anfrage');
+          setLoading(false);
+          return;
+        }
       } catch (error) {
         console.error('Error fetching contract request:', error);
         toast.error('Unerwarteter Fehler beim Abrufen der Anfrage');
