@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { ManageWhatsAppAccountsDialog } from './ManageWhatsAppAccountsDialog';
+import { usePreventUnload } from '@/hooks/use-prevent-unload';
 
 interface WhatsAppAccount {
   id: string;
@@ -34,6 +35,7 @@ export function CreateOrderDialog({ onOrderCreated }: CreateOrderDialogProps) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  usePreventUnload(open);
   // Form data
   const [title, setTitle] = useState('');
   const [orderNumber, setOrderNumber] = useState('');

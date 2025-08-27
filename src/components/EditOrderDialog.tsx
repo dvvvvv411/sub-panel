@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, X, Edit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { usePreventUnload } from '@/hooks/use-prevent-unload';
 
 interface Order {
   id: string;
@@ -39,6 +40,9 @@ export function EditOrderDialog({
   onOrderUpdated 
 }: EditOrderDialogProps) {
   const [loading, setLoading] = useState(false);
+  
+  // Prevent accidental reload while editing
+  usePreventUnload(open);
   
   // Form data
   const [title, setTitle] = useState('');

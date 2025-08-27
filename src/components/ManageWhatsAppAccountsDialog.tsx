@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, X, Edit2, Trash2, Save, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { usePreventUnload } from '@/hooks/use-prevent-unload';
 
 interface WhatsAppAccount {
   id: string;
@@ -38,6 +39,8 @@ export function ManageWhatsAppAccountsDialog({
 
   const isOpen = open !== undefined ? open : internalOpen;
   const setIsOpen = onOpenChange || setInternalOpen;
+
+  usePreventUnload(isOpen);
 
   useEffect(() => {
     if (isOpen) {

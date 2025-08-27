@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Users } from 'lucide-react';
+import { usePreventUnload } from '@/hooks/use-prevent-unload';
 
 interface Employee {
   id: string;
@@ -31,6 +32,8 @@ export function AssignedEmployeesDialog({
   assignedEmployees 
 }: AssignedEmployeesDialogProps) {
   if (!order) return null;
+
+  usePreventUnload(open);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

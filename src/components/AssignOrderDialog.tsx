@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ManageWhatsAppAccountsDialog } from './ManageWhatsAppAccountsDialog';
 import { cn } from '@/lib/utils';
+import { usePreventUnload } from '@/hooks/use-prevent-unload';
 
 interface Employee {
   id: string;
@@ -60,6 +61,8 @@ export function AssignOrderDialog({
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [employeeSearchOpen, setEmployeeSearchOpen] = useState(false);
   const [manageWhatsAppOpen, setManageWhatsAppOpen] = useState(false);
+
+  usePreventUnload(open);
 
   useEffect(() => {
     if (open) {
