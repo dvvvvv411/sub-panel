@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Shield, Users, LogOut, Crown, UserPlus, Briefcase, MessageSquare, Calendar, TrendingUp } from 'lucide-react';
+import { Shield, Users, LogOut, Crown, UserPlus, Briefcase, MessageSquare, Calendar, TrendingUp, Home } from 'lucide-react';
 import { VicsTab } from '@/components/VicsTab';
 import { OrdersTab } from '@/components/OrdersTab';
 import { ReviewsManagementTab } from '@/components/ReviewsManagementTab';
@@ -122,30 +123,53 @@ const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Header */}
-      <header className="bg-white border-b shadow-sm">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 font-inter">
+      {/* Modern Hero Header */}
+      <header className="bg-white border-b border-border shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <Crown className="h-8 w-8 text-primary mr-3" />
-              <h1 className="text-xl font-bold text-primary">Innovatech Admin</h1>
+          <div className="flex justify-between items-center h-20">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Crown className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-semibold text-foreground">Innovatech Admin</h1>
+                  <p className="text-sm text-muted-foreground">Verwaltungsbereich</p>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <Badge variant="secondary" className="bg-primary/10 text-primary">
-                <Shield className="h-3 w-3 mr-1" />
-                Administrator
-              </Badge>
-              <span className="text-sm text-muted-foreground">
-                {profile?.full_name || profile?.email}
-              </span>
-              <Button variant="outline" size="sm" onClick={handleHomeNavigation}>
-                Zur Startseite
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleSignOut}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Abmelden
-              </Button>
+            
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-9 w-9">
+                  <AvatarFallback className="bg-primary/10 text-primary font-medium text-sm">
+                    {profile?.full_name ? profile.full_name.split(' ').map(n => n[0]).join('').toUpperCase() : 'A'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="hidden sm:block">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 font-medium">
+                      <Shield className="h-3 w-3 mr-1" />
+                      Admin
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {profile?.full_name || profile?.email}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={handleHomeNavigation} className="text-muted-foreground hover:text-foreground">
+                  <Home className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Startseite</span>
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground hover:text-foreground">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Abmelden</span>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -153,56 +177,68 @@ const Admin = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-foreground mb-2">Admin Dashboard</h2>
-          <p className="text-muted-foreground">
-            Überblick über alle Systembereiche und aktuelle Aktivitäten
-          </p>
+        {/* Sticky Tabs Navigation */}
+        <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/50 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 mb-8">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+            <TabsList className="h-12 bg-card/50 border border-border/50 rounded-lg p-1 grid w-full grid-cols-5 gap-1">
+              <TabsTrigger 
+                value="overview" 
+                className="flex items-center gap-2 h-10 px-4 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border transition-all duration-200"
+              >
+                <TrendingUp className="h-4 w-4" />
+                <span className="hidden sm:inline">Übersicht</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="vics" 
+                className="flex items-center gap-2 h-10 px-4 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border transition-all duration-200"
+              >
+                <UserPlus className="h-4 w-4" />
+                <span className="hidden sm:inline">Vics</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="orders" 
+                className="flex items-center gap-2 h-10 px-4 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border transition-all duration-200"
+              >
+                <Briefcase className="h-4 w-4" />
+                <span className="hidden sm:inline">Aufträge</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="reviews" 
+                className="flex items-center gap-2 h-10 px-4 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border transition-all duration-200"
+              >
+                <MessageSquare className="h-4 w-4" />
+                <span className="hidden sm:inline">Bewertungen</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="appointments" 
+                className="flex items-center gap-2 h-10 px-4 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border transition-all duration-200"
+              >
+                <Calendar className="h-4 w-4" />
+                <span className="hidden sm:inline">Termine</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
-
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="overview" className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Übersicht
-            </TabsTrigger>
-            <TabsTrigger value="vics" className="flex items-center gap-2">
-              <UserPlus className="h-4 w-4" />
-              Vics
-            </TabsTrigger>
-            <TabsTrigger value="orders" className="flex items-center gap-2">
-              <Briefcase className="h-4 w-4" />
-              Aufträge
-            </TabsTrigger>
-            <TabsTrigger value="reviews" className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Bewertungen
-            </TabsTrigger>
-            <TabsTrigger value="appointments" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Terminübersicht
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview">
+        {/* Tab Content with animations */}
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
+          <TabsContent value="overview" className="animate-fade-in">
             <AdminOverviewTab />
           </TabsContent>
 
-          <TabsContent value="vics">
+          <TabsContent value="vics" className="animate-fade-in">
             <VicsTab />
           </TabsContent>
 
-          <TabsContent value="orders">
+          <TabsContent value="orders" className="animate-fade-in">
             <OrdersTab />
           </TabsContent>
 
-          <TabsContent value="reviews">
+          <TabsContent value="reviews" className="animate-fade-in">
             <ReviewsManagementTab />
           </TabsContent>
 
-          <TabsContent value="appointments">
+          <TabsContent value="appointments" className="animate-fade-in">
             <AppointmentsOverviewTab />
           </TabsContent>
         </Tabs>

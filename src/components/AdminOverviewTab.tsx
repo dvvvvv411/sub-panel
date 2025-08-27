@@ -382,7 +382,7 @@ export const AdminOverviewTab = () => {
                   <TableRow key={order.id}>
                     <TableCell className="font-medium">{order.order_number}</TableCell>
                     <TableCell className="max-w-[200px] truncate">{order.title}</TableCell>
-                    <TableCell>€{parseFloat(order.premium).toFixed(2)}</TableCell>
+                    <TableCell>€{Number(order.premium).toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

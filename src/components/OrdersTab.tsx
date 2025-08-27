@@ -10,6 +10,7 @@ import { AssignedEmployeesDialog } from './AssignedEmployeesDialog';
 import { EditOrderDialog } from './EditOrderDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { formatCurrencyEUR } from '@/lib/utils';
 import { Briefcase, Users, Euro, UserPlus, Edit, Eye } from 'lucide-react';
 
 interface WhatsAppAccount {
@@ -169,68 +170,81 @@ export function OrdersTab() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-8">
+      {/* Modern Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-2xl font-bold text-foreground">Aufträge</h3>
-          <p className="text-muted-foreground">
+          <h3 className="text-2xl font-semibold text-foreground">Aufträge</h3>
+          <p className="text-muted-foreground mt-1">
             Verwalten Sie Aufträge und weisen Sie diese Mitarbeitern zu
           </p>
         </div>
         <CreateOrderDialog onOrderCreated={fetchOrders} />
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gesamt Aufträge</CardTitle>
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
+      {/* Enhanced Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Gesamt Aufträge</CardTitle>
+            <div className="p-2 rounded-lg bg-blue-500/10">
+              <Briefcase className="h-4 w-4 text-blue-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{orders.length}</div>
+            <div className="text-2xl font-bold text-foreground">{orders.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Alle Aufträge</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Zugewiesene Aufträge</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Zugewiesene Aufträge</CardTitle>
+            <div className="p-2 rounded-lg bg-green-500/10">
+              <Users className="h-4 w-4 text-green-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-foreground">
               {orders.filter(order => order.order_assignments.length > 0).length}
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              von {orders.length} Aufträgen
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gesamt Prämien</CardTitle>
-            <Euro className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Gesamt Prämien</CardTitle>
+            <div className="p-2 rounded-lg bg-purple-500/10">
+              <Euro className="h-4 w-4 text-purple-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {orders.reduce((sum, order) => sum + order.premium, 0).toFixed(2)}€
+            <div className="text-2xl font-bold text-foreground">
+              {formatCurrencyEUR(orders.reduce((sum, order) => sum + order.premium, 0))}
             </div>
+            <p className="text-xs text-muted-foreground mt-1">Gesamtwert</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Orders Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Alle Aufträge</CardTitle>
+      <Card className="border-border/50">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg">Alle Aufträge</CardTitle>
           <CardDescription>
             Übersicht aller Aufträge mit Zuweisungsmöglichkeiten
           </CardDescription>
         </CardHeader>
         <CardContent>
           {orders.length === 0 ? (
-            <div className="text-center py-8">
-              <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">Noch keine Aufträge vorhanden</p>
+            <div className="text-center py-16">
+              <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
+                <Briefcase className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h4 className="font-medium text-foreground mb-2">Noch keine Aufträge vorhanden</h4>
               <p className="text-sm text-muted-foreground">
                 Erstellen Sie Ihren ersten Auftrag mit dem Button oben
               </p>
@@ -268,8 +282,8 @@ export function OrdersTab() {
                       </TableCell>
                       <TableCell>{order.provider}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary">
-                          {order.premium.toFixed(2)}€
+                        <Badge variant="secondary" className="font-medium">
+                          {formatCurrencyEUR(order.premium)}
                         </Badge>
                       </TableCell>
                       <TableCell>

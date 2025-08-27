@@ -485,16 +485,18 @@ export const VicsTab = () => {
   const createdEmployees = employees.filter(emp => emp.status === 'created' || emp.status === 'verified');
 
   return (
-    <div className="space-y-6">
-      {/* Header with Action Buttons */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <Card className="flex-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5 text-primary" />
+    <div className="space-y-8">
+      {/* Modern Header */}
+      <div className="flex flex-col sm:flex-row gap-6">
+        <Card className="flex-1 border-border/50">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <div className="p-1.5 rounded-lg bg-primary/10">
+                <Plus className="h-4 w-4 text-primary" />
+              </div>
               Mitarbeiter verwalten
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="mt-1">
               Erstellen Sie Mitarbeiter-Accounts einzeln oder per Datei-Upload
             </CardDescription>
           </CardHeader>

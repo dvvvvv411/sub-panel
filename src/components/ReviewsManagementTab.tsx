@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { formatCurrencyEUR } from '@/lib/utils';
 import { MessageSquare, Check, X, Star, Eye } from 'lucide-react';
 
 interface OrderEvaluation {
@@ -229,69 +230,81 @@ export function ReviewsManagementTab() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-8">
+      {/* Modern Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-2xl font-bold text-foreground">Bewertungen verwalten</h3>
-          <p className="text-muted-foreground">
+          <h3 className="text-2xl font-semibold text-foreground">Bewertungen verwalten</h3>
+          <p className="text-muted-foreground mt-1">
             Überprüfen und genehmigen Sie Mitarbeiterbewertungen
           </p>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ausstehende Bewertungen</CardTitle>
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+      {/* Enhanced Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Ausstehende Bewertungen</CardTitle>
+            <div className="p-2 rounded-lg bg-yellow-500/10">
+              <MessageSquare className="h-4 w-4 text-yellow-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-foreground">
               {evaluations.filter(e => e.status === 'pending').length}
             </div>
+            <p className="text-xs text-muted-foreground mt-1">Warten auf Genehmigung</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Genehmigte Bewertungen</CardTitle>
-            <Check className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Genehmigte Bewertungen</CardTitle>
+            <div className="p-2 rounded-lg bg-green-500/10">
+              <Check className="h-4 w-4 text-green-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-foreground">
               {evaluations.filter(e => e.status === 'approved').length}
             </div>
+            <p className="text-xs text-muted-foreground mt-1">Erfolgreich genehmigt</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gesamtprämien genehmigt</CardTitle>
-            <Star className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-border/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Gesamtprämien</CardTitle>
+            <div className="p-2 rounded-lg bg-purple-500/10">
+              <Star className="h-4 w-4 text-purple-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              €{evaluations.filter(e => e.status === 'approved').reduce((sum, e) => sum + e.premium_awarded, 0).toFixed(2)}
+            <div className="text-2xl font-bold text-foreground">
+              {formatCurrencyEUR(evaluations.filter(e => e.status === 'approved').reduce((sum, e) => sum + e.premium_awarded, 0))}
             </div>
+            <p className="text-xs text-muted-foreground mt-1">Ausgezahlte Prämien</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Evaluations Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Alle Bewertungen</CardTitle>
+      <Card className="border-border/50">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg">Alle Bewertungen</CardTitle>
           <CardDescription>
             Übersicht aller eingereichten Bewertungen mit Genehmigungsmöglichkeiten
           </CardDescription>
         </CardHeader>
         <CardContent>
           {evaluations.length === 0 ? (
-            <div className="text-center py-8">
-              <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">Noch keine Bewertungen vorhanden</p>
+            <div className="text-center py-16">
+              <div className="p-4 rounded-full bg-muted/50 w-fit mx-auto mb-4">
+                <MessageSquare className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h4 className="font-medium text-foreground mb-2">Noch keine Bewertungen vorhanden</h4>
+              <p className="text-sm text-muted-foreground">Bewertungen erscheinen hier nach der Einreichung</p>
             </div>
           ) : (
             <Table>
@@ -341,11 +354,11 @@ export function ReviewsManagementTab() {
                     <TableCell>
                       <div>
                         <div className="font-medium">
-                          €{evaluation.premium_awarded.toFixed(2)}
+                          {formatCurrencyEUR(evaluation.premium_awarded)}
                         </div>
                         {evaluation.premium_awarded !== evaluation.orders.premium && (
                           <div className="text-sm text-muted-foreground">
-                            (Original: €{evaluation.orders.premium.toFixed(2)})
+                            (Original: {formatCurrencyEUR(evaluation.orders.premium)})
                           </div>
                         )}
                       </div>
