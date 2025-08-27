@@ -186,7 +186,7 @@ export function ManageWhatsAppAccountsDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      {!open && (
+      {open === undefined && (
         <DialogTrigger asChild>
           <Button variant="outline" size="sm" type="button">
             <MessageSquare className="h-4 w-4 mr-2" />
