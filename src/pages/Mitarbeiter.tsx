@@ -4,10 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { User, LogOut, Briefcase, Calendar, Euro, Play, MessageSquare } from 'lucide-react';
+import { LogOut, Home, Settings, User, BarChart3, Gift, MessageSquare, Target } from 'lucide-react';
+import { OverviewTab } from '@/components/employee/OverviewTab';
+import { TasksTab } from '@/components/employee/TasksTab';
+import { ReviewsTab } from '@/components/employee/ReviewsTab';
+import { RewardsTab } from '@/components/employee/RewardsTab';
+import { PersonalDataTab } from '@/components/employee/PersonalDataTab';
 
 interface AssignedOrder {
   id: string;
@@ -167,257 +172,122 @@ const Mitarbeiter = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Header */}
-      <header className="bg-white border-b shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <Briefcase className="h-8 w-8 text-primary mr-3" />
-              <h1 className="text-xl font-bold text-primary">Innovatech Mitarbeiter</h1>
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
+      <div className="container mx-auto px-4 py-8">
+        {/* Modern Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
+              <BarChart3 className="h-7 w-7 text-primary" />
             </div>
-            <div className="flex items-center space-x-4">
-              <Badge variant="secondary" className="bg-primary/10 text-primary">
-                <User className="h-3 w-3 mr-1" />
-                {profile?.role === 'admin' ? 'Administrator' : 'Mitarbeiter'}
-              </Badge>
-              <span className="text-sm text-muted-foreground">
-                {profile?.full_name || profile?.email}
-              </span>
-              <Button variant="outline" size="sm" onClick={handleHomeNavigation}>
-                Zur Startseite
-              </Button>
-              {profile?.role === 'admin' && (
-                <Button variant="outline" size="sm" onClick={handleAdminNavigation}>
-                  Admin Panel
-                </Button>
-              )}
-              <Button variant="outline" size="sm" onClick={handleSignOut}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Abmelden
-              </Button>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                Dashboard
+              </h1>
+              <p className="text-muted-foreground">
+                Verwalten Sie Ihre Aufträge und verfolgen Sie Ihren Fortschritt
+              </p>
             </div>
           </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-foreground mb-2">
-            Willkommen, {profile?.full_name || 'Mitarbeiter'}!
-          </h2>
-          <p className="text-muted-foreground">
-            Ihr persönlicher Arbeitsbereich für Projekte und Aufgaben
-          </p>
-        </div>
-
-        {/* Profile Card */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <User className="h-5 w-5 mr-2" />
-                Profil
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Name</label>
-                <p className="text-sm">{profile?.full_name || 'Nicht angegeben'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">E-Mail</label>
-                <p className="text-sm">{profile?.email}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Rolle</label>
-                <p className="text-sm">
-                  <Badge variant={profile?.role === 'admin' ? 'default' : 'secondary'}>
-                    {profile?.role === 'admin' ? 'Administrator' : 'Mitarbeiter'}
-                  </Badge>
-                </p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Mitglied seit</label>
-                <p className="text-sm">
-                  {profile?.created_at 
-                    ? new Date(profile.created_at).toLocaleDateString('de-DE')
-                    : 'Unbekannt'
-                  }
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Stats */}
-          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Zugewiesene Aufträge</CardTitle>
-                <Briefcase className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{assignedOrders.length}</div>
-                <p className="text-xs text-muted-foreground">
-                  {assignedOrders.length === 0 ? 'Noch keine Aufträge zugewiesen' : 'Bereit zum Bearbeiten'}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Gesamtprämie</CardTitle>
-                <Euro className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {assignedOrders.reduce((sum, order) => sum + order.premium, 0).toFixed(2)}€
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Aus {assignedOrders.length} Aufträgen
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Termine heute</CardTitle>
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">0</div>
-                <p className="text-xs text-muted-foreground">
-                  Keine Termine für heute
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Benachrichtigungen</CardTitle>
-                <div className="h-4 w-4 text-muted-foreground">🔔</div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">0</div>
-                <p className="text-xs text-muted-foreground">
-                  Keine neuen Benachrichtigungen
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Assigned Orders */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Briefcase className="h-5 w-5" />
-              Meine zugewiesenen Aufträge
-            </CardTitle>
-            <CardDescription>
-              Aufträge, die Ihnen zugewiesen wurden und bereit zur Bearbeitung sind
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loadingOrders ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-muted-foreground">Lädt Aufträge...</p>
-                </div>
-              </div>
-            ) : assignedOrders.length === 0 ? (
-              <div className="text-center py-8">
-                <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Noch keine Aufträge zugewiesen</p>
-                <p className="text-sm text-muted-foreground">
-                  Aufträge werden hier erscheinen, sobald sie Ihnen zugewiesen werden
-                </p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Auftragsnummer</TableHead>
-                    <TableHead>Titel</TableHead>
-                    <TableHead>Anbieter</TableHead>
-                    <TableHead>Prämie</TableHead>
-                    <TableHead>WhatsApp</TableHead>
-                    <TableHead>Fragen</TableHead>
-                    <TableHead>Aktion</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {assignedOrders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">
-                        {order.order_number}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{order.title}</div>
-                          <div className="text-sm text-muted-foreground truncate max-w-xs">
-                            {order.project_goal}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{order.provider}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
-                          {order.premium.toFixed(2)}€
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {order.whatsapp_accounts ? (
-                          <Badge variant="outline" className="flex items-center gap-1">
-                            <MessageSquare className="h-3 w-3" />
-                            {order.whatsapp_accounts.name}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {order.order_evaluation_questions.length} Fragen
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          onClick={() => handleStartOrder(order.id)}
-                          className="flex items-center gap-2"
-                        >
-                          <Play className="h-4 w-4" />
-                          Beginnen
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+          
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleHomeNavigation}
+              className="flex items-center gap-2"
+            >
+              <Home className="h-4 w-4" />
+              Startseite
+            </Button>
+            
+            {profile?.role === 'admin' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAdminNavigation}
+                className="flex items-center gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                Admin
+              </Button>
             )}
-          </CardContent>
-        </Card>
+            
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleSignOut}
+              className="flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Abmelden
+            </Button>
+          </div>
+        </div>
 
-        {/* Welcome Message */}
+        {/* Modern Tabbed Interface */}
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5 lg:w-fit lg:grid-cols-5">
+            <TabsTrigger value="overview" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              <span className="hidden sm:inline">Übersicht</span>
+            </TabsTrigger>
+            <TabsTrigger value="tasks" className="flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              <span className="hidden sm:inline">Aufgaben</span>
+            </TabsTrigger>
+            <TabsTrigger value="reviews" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">Bewertungen</span>
+            </TabsTrigger>
+            <TabsTrigger value="rewards" className="flex items-center gap-2">
+              <Gift className="h-4 w-4" />
+              <span className="hidden sm:inline">Prämien</span>
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              <span className="hidden sm:inline">Profil</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            <OverviewTab assignedOrders={assignedOrders} user={profile} />
+          </TabsContent>
+
+          <TabsContent value="tasks" className="space-y-6">
+            <TasksTab assignedOrders={assignedOrders} onStartOrder={handleStartOrder} />
+          </TabsContent>
+
+          <TabsContent value="reviews" className="space-y-6">
+            <ReviewsTab assignedOrders={assignedOrders} />
+          </TabsContent>
+
+          <TabsContent value="rewards" className="space-y-6">
+            <RewardsTab assignedOrders={assignedOrders} user={profile} />
+          </TabsContent>
+
+          <TabsContent value="profile" className="space-y-6">
+            <PersonalDataTab user={profile} />
+          </TabsContent>
+        </Tabs>
+
+        {/* Admin Notice */}
         {profile?.role === 'admin' && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Administrator-Hinweis</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-                <p className="text-sm text-primary font-medium">
-                  💡 Als Administrator haben Sie zusätzlichen Zugriff auf das Admin Panel, 
-                  wo Sie Benutzer verwalten und Systemeinstellungen konfigurieren können.
-                </p>
+          <Card className="mt-6 border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100/50">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <Settings className="h-5 w-5 text-blue-600" />
+                <div>
+                  <p className="font-semibold text-blue-900">Administrator-Privilegien</p>
+                  <p className="text-sm text-blue-700">
+                    Sie haben erweiterte Administratorrechte für zusätzliche Systemfunktionen.
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
         )}
-      </main>
+      </div>
     </div>
   );
 };
