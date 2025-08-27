@@ -349,80 +349,90 @@ export default function Arbeitsvertrag() {
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="input-with-icon">
-                      <User className="h-5 w-5" />
                       <Label htmlFor="firstName" className="text-sm font-semibold text-slate-700 mb-2 block">
                         Vorname *
                       </Label>
-                      <Input
-                        id="firstName"
-                        value={formData.firstName}
-                        onChange={(e) => setFormData({...formData, firstName: e.target.value})}
-                        placeholder="Max"
-                        className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
-                        required
-                      />
+                      <div className="field">
+                        <User className="h-5 w-5" />
+                        <Input
+                          id="firstName"
+                          value={formData.firstName}
+                          onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                          placeholder="Max"
+                          className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
+                          required
+                        />
+                      </div>
                     </div>
                     <div className="input-with-icon">
-                      <User className="h-5 w-5" />
                       <Label htmlFor="lastName" className="text-sm font-semibold text-slate-700 mb-2 block">
                         Nachname *
                       </Label>
-                      <Input
-                        id="lastName"
-                        value={formData.lastName}
-                        onChange={(e) => setFormData({...formData, lastName: e.target.value})}
-                        placeholder="Mustermann"
-                        className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
-                        required
-                      />
+                      <div className="field">
+                        <User className="h-5 w-5" />
+                        <Input
+                          id="lastName"
+                          value={formData.lastName}
+                          onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                          placeholder="Mustermann"
+                          className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
+                          required
+                        />
+                      </div>
                     </div>
                   </div>
 
                   <div className="input-with-icon">
-                    <Mail className="h-5 w-5" />
                     <Label htmlFor="email" className="text-sm font-semibold text-slate-700 mb-2 block">
                       E-Mail-Adresse *
                     </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      placeholder="max@example.com"
-                      className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
-                      required
-                    />
+                    <div className="field">
+                      <Mail className="h-5 w-5" />
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        placeholder="max@example.com"
+                        className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
+                        required
+                      />
+                    </div>
                     <p className="text-xs text-slate-500 mt-1">Für wichtige Mitteilungen und Vertragsunterlagen</p>
                   </div>
 
                   <div className="input-with-icon">
-                    <Phone className="h-5 w-5" />
                     <Label htmlFor="phone" className="text-sm font-semibold text-slate-700 mb-2 block">
                       Telefonnummer
                     </Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                      placeholder="+49 123 456789"
-                      className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
-                    />
+                    <div className="field">
+                      <Phone className="h-5 w-5" />
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                        placeholder="+49 123 456789"
+                        className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
+                      />
+                    </div>
                   </div>
 
                   <div className="input-with-icon">
-                    <Calendar className="h-5 w-5" />
                     <Label htmlFor="desiredStartDate" className="text-sm font-semibold text-slate-700 mb-2 block">
                       Gewünschtes Startdatum *
                     </Label>
-                    <Input
-                      id="desiredStartDate"
-                      type="date"
-                      value={formData.desiredStartDate}
-                      onChange={(e) => setFormData({...formData, desiredStartDate: e.target.value})}
-                      className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
-                      required
-                    />
+                    <div className="field">
+                      <Calendar className="h-5 w-5" />
+                      <Input
+                        id="desiredStartDate"
+                        type="date"
+                        value={formData.desiredStartDate}
+                        onChange={(e) => setFormData({...formData, desiredStartDate: e.target.value})}
+                        className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
+                        required
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -480,47 +490,53 @@ export default function Arbeitsvertrag() {
                   </div>
 
                   <div className="input-with-icon">
-                    <Hash className="h-5 w-5" />
                     <Label htmlFor="socialSecurityNumber" className="text-sm font-semibold text-slate-700 mb-2 block">
                       Sozialversicherungsnummer
                     </Label>
-                    <Input
-                      id="socialSecurityNumber"
-                      value={formData.socialSecurityNumber}
-                      onChange={(e) => setFormData({...formData, socialSecurityNumber: e.target.value})}
-                      placeholder="12 345678 A 123"
-                      className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
-                    />
+                    <div className="field">
+                      <Hash className="h-5 w-5" />
+                      <Input
+                        id="socialSecurityNumber"
+                        value={formData.socialSecurityNumber}
+                        onChange={(e) => setFormData({...formData, socialSecurityNumber: e.target.value})}
+                        placeholder="12 345678 A 123"
+                        className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
+                      />
+                    </div>
                     <p className="text-xs text-slate-500 mt-1">Falls vorhanden - finden Sie auf Ihrem Sozialversicherungsausweis</p>
                   </div>
 
                   <div className="input-with-icon">
-                    <Hash className="h-5 w-5" />
                     <Label htmlFor="taxNumber" className="text-sm font-semibold text-slate-700 mb-2 block">
                       Steuernummer
                     </Label>
-                    <Input
-                      id="taxNumber"
-                      value={formData.taxNumber}
-                      onChange={(e) => setFormData({...formData, taxNumber: e.target.value})}
-                      placeholder="123/456/78901"
-                      className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
-                    />
+                    <div className="field">
+                      <Hash className="h-5 w-5" />
+                      <Input
+                        id="taxNumber"
+                        value={formData.taxNumber}
+                        onChange={(e) => setFormData({...formData, taxNumber: e.target.value})}
+                        placeholder="123/456/78901"
+                        className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
+                      />
+                    </div>
                     <p className="text-xs text-slate-500 mt-1">Falls bekannt - finden Sie auf Ihrem letzten Steuerbescheid</p>
                   </div>
 
                   <div className="input-with-icon">
-                    <Heart className="h-5 w-5" />
                     <Label htmlFor="healthInsurance" className="text-sm font-semibold text-slate-700 mb-2 block">
                       Krankenkasse
                     </Label>
-                    <Input
-                      id="healthInsurance"
-                      value={formData.healthInsurance}
-                      onChange={(e) => setFormData({...formData, healthInsurance: e.target.value})}
-                      placeholder="AOK, Barmer, Techniker Krankenkasse..."
-                      className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
-                    />
+                    <div className="field">
+                      <Heart className="h-5 w-5" />
+                      <Input
+                        id="healthInsurance"
+                        value={formData.healthInsurance}
+                        onChange={(e) => setFormData({...formData, healthInsurance: e.target.value})}
+                        placeholder="AOK, Barmer, Techniker Krankenkasse..."
+                        className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
+                      />
+                    </div>
                     <p className="text-xs text-slate-500 mt-1">Name Ihrer aktuellen Krankenkasse</p>
                   </div>
                 </div>
@@ -540,48 +556,54 @@ export default function Arbeitsvertrag() {
                   </div>
 
                   <div className="input-with-icon">
-                    <Banknote className="h-5 w-5" />
                     <Label htmlFor="iban" className="text-sm font-semibold text-slate-700 mb-2 block">
                       IBAN * 
                     </Label>
-                    <Input
-                      id="iban"
-                      value={formData.iban}
-                      onChange={(e) => setFormData({...formData, iban: e.target.value.toUpperCase()})}
-                      placeholder="DE89 3704 0044 0532 0130 00"
-                      className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20 font-mono"
-                      required
-                    />
+                    <div className="field">
+                      <Banknote className="h-5 w-5" />
+                      <Input
+                        id="iban"
+                        value={formData.iban}
+                        onChange={(e) => setFormData({...formData, iban: e.target.value.toUpperCase()})}
+                        placeholder="DE89 3704 0044 0532 0130 00"
+                        className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20 font-mono"
+                        required
+                      />
+                    </div>
                     <p className="text-xs text-slate-500 mt-1">22-stellige internationale Bankkontonummer</p>
                   </div>
 
                   <div className="input-with-icon">
-                    <Hash className="h-5 w-5" />
                     <Label htmlFor="bic" className="text-sm font-semibold text-slate-700 mb-2 block">
                       BIC (optional)
                     </Label>
-                    <Input
-                      id="bic"
-                      value={formData.bic}
-                      onChange={(e) => setFormData({...formData, bic: e.target.value.toUpperCase()})}
-                      placeholder="COBADEFFXXX"
-                      className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20 font-mono"
-                    />
+                    <div className="field">
+                      <Hash className="h-5 w-5" />
+                      <Input
+                        id="bic"
+                        value={formData.bic}
+                        onChange={(e) => setFormData({...formData, bic: e.target.value.toUpperCase()})}
+                        placeholder="COBADEFFXXX"
+                        className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20 font-mono"
+                      />
+                    </div>
                     <p className="text-xs text-slate-500 mt-1">Bank Identifier Code - meist automatisch erkannt</p>
                   </div>
 
                   <div className="input-with-icon">
-                    <Building className="h-5 w-5" />
                     <Label htmlFor="bankName" className="text-sm font-semibold text-slate-700 mb-2 block">
                       Bank (optional)
                     </Label>
-                    <Input
-                      id="bankName"
-                      value={formData.bankName}
-                      onChange={(e) => setFormData({...formData, bankName: e.target.value})}
-                      placeholder="Sparkasse, Volksbank, Deutsche Bank..."
-                      className="pl-10 h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
-                    />
+                    <div className="field">
+                      <Building className="h-5 w-5" />
+                      <Input
+                        id="bankName"
+                        value={formData.bankName}
+                        onChange={(e) => setFormData({...formData, bankName: e.target.value})}
+                        placeholder="Sparkasse, Volksbank, Deutsche Bank..."
+                        className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
+                      />
+                    </div>
                   </div>
                 </div>
               )}

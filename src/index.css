@@ -124,15 +124,16 @@ All colors MUST be HSL.
     @apply space-y-6 p-6 rounded-xl bg-gradient-to-r from-slate-50/50 to-blue-50/30 border border-slate-200/50;
   }
   
-  .input-with-icon {
+  .input-with-icon .field {
     @apply relative;
   }
   
-  .input-with-icon svg {
-    @apply absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 pointer-events-none;
+  .input-with-icon .field svg {
+    @apply absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 pointer-events-none z-10;
   }
   
-  .input-with-icon input {
+  .input-with-icon .field input,
+  .input-with-icon .field .select-trigger {
     @apply pl-10;
   }
   
