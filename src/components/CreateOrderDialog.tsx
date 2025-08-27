@@ -239,18 +239,14 @@ export function CreateOrderDialog({ onOrderCreated }: CreateOrderDialogProps) {
               <Label htmlFor="whatsappAccount">WhatsApp-Account</Label>
               <Select value={whatsappAccountId} onValueChange={setWhatsappAccountId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="WhatsApp-Account auswählen" />
+                  <SelectValue placeholder={loadingAccounts ? "Lädt..." : "WhatsApp-Account auswählen"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {loadingAccounts ? (
-                    <SelectItem value="" disabled>Lädt...</SelectItem>
-                  ) : (
-                    whatsappAccounts.map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        {account.name} {account.account_info && `(${account.account_info})`}
-                      </SelectItem>
-                    ))
-                  )}
+                  {!loadingAccounts && whatsappAccounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.name} {account.account_info && `(${account.account_info})`}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
