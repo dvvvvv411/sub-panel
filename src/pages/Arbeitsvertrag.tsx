@@ -59,6 +59,7 @@ export default function Arbeitsvertrag() {
 
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [contractRequest, setContractRequest] = useState<ContractRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState<FormData>({
@@ -221,7 +222,7 @@ export default function Arbeitsvertrag() {
       }
 
       toast.success('Arbeitsvertrag erfolgreich eingereicht!');
-      navigate('/');
+      setIsSubmitted(true);
       
     } catch (error) {
       console.error('Error submitting contract:', error);
@@ -279,6 +280,26 @@ export default function Arbeitsvertrag() {
               Zurück zur Startseite
             </Button>
           </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show confirmation page after successful submission
+  if (isSubmitted) {
+    return (
+      <div className="min-h-screen professional-bg flex items-center justify-center p-4">
+        <Card className="w-full max-w-lg glass-card rounded-2xl shadow-2xl border-0 animate-scale-in">
+          <CardHeader className="text-center pb-6 pt-8">
+            <div className="mx-auto mb-4 w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+              <CheckCircle className="h-10 w-10 text-green-500" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-green-600 mb-2">Erfolgreich eingereicht!</CardTitle>
+            <CardDescription className="text-slate-600 text-base leading-relaxed">
+              Vielen Dank! Ihr Arbeitsvertrag wurde erfolgreich eingereicht. Sie erhalten in Kürze 
+              Ihren fertigen Arbeitsvertrag per E-Mail.
+            </CardDescription>
+          </CardHeader>
         </Card>
       </div>
     );
