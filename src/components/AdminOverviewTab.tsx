@@ -134,12 +134,12 @@ export const AdminOverviewTab = () => {
       
       const totalOrders = orders?.length || 0;
       const assignedOrders = orders?.filter(o => o.order_assignments?.length > 0).length || 0;
-      const totalPremiums = orders?.reduce((sum, order) => sum + (parseFloat(order.premium) || 0), 0) || 0;
+      const totalPremiums = orders?.reduce((sum, order) => sum + (Number(order.premium) || 0), 0) || 0;
       
       const pendingReviews = reviews?.filter(r => r.status === 'pending').length || 0;
       const approvedReviews = reviews?.filter(r => r.status === 'approved').length || 0;
       const totalReviewPremiums = reviews?.filter(r => r.status === 'approved')
-        .reduce((sum, review) => sum + (parseFloat(review.premium_awarded) || 0), 0) || 0;
+        .reduce((sum, review) => sum + (Number(review.premium_awarded) || 0), 0) || 0;
       
       const now = new Date();
       const pendingAppointments = appointments?.filter(a => a.status === 'pending').length || 0;
