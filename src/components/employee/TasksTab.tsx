@@ -63,11 +63,16 @@ export const TasksTab: React.FC<TasksTabProps> = ({ assignedOrders, onStartOrder
           </Button>
         )}
         
-        {order.status === 'in_progress' && (
-          <div className="flex items-center gap-2 text-blue-600 bg-blue-50 p-3 rounded-lg">
-            <Clock className="h-4 w-4" />
-            <span className="text-sm font-medium">Auftrag läuft gerade...</span>
-          </div>
+        {showStartButton && order.status === 'in_progress' && (
+          <Button 
+            onClick={() => navigate(`/auftrag/${order.id}`)} 
+            className="w-full"
+            size="sm"
+            variant="outline"
+          >
+            <Clock className="h-4 w-4 mr-2" />
+            Auftrag fortsetzen
+          </Button>
         )}
       </CardContent>
     </Card>

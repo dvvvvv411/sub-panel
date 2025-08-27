@@ -71,6 +71,7 @@ const Auftrag = () => {
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [assignmentStatus, setAssignmentStatus] = useState<string>('');
   const [evaluations, setEvaluations] = useState<Record<string, { rating: number; comment: string }>>({});
 
   useEffect(() => {
@@ -155,6 +156,7 @@ const Auftrag = () => {
       }
 
       setOrder(orderData as OrderDetails);
+      setAssignmentStatus(assignmentData.status);
       
       // Initialize evaluations object
       const initialEvaluations: Record<string, { rating: number; comment: string }> = {};
@@ -294,6 +296,12 @@ const Auftrag = () => {
           <Badge className="bg-green-100 text-green-800 px-3 py-1 sm:px-4 sm:py-2 text-sm whitespace-nowrap">
             €{order.premium.toFixed(2)} Prämie
           </Badge>
+          
+          {assignmentStatus === 'in_progress' && (
+            <Badge className="bg-blue-100 text-blue-800 px-3 py-1 sm:px-4 sm:py-2 text-sm whitespace-nowrap">
+              In Bearbeitung
+            </Badge>
+          )}
         </div>
 
         <div className="grid gap-6 lg:gap-8 lg:grid-cols-2">
