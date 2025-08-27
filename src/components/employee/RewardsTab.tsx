@@ -13,6 +13,7 @@ interface RewardsTabProps {
 export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) => {
   const [approvedEvaluations, setApprovedEvaluations] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [activeSince, setActiveSince] = React.useState<string>('');
 
   React.useEffect(() => {
     fetchApprovedEvaluations();
@@ -24,11 +25,21 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
     try {
       const { data: employeeData } = await supabase
         .from('employees')
-        .select('id')
+        .select('id, created_at')
         .eq('email', user.email)
         .maybeSingle();
 
       if (!employeeData) return;
+
+      // Set active since date
+      if (employeeData.created_at) {
+        const createdDate = new Date(employeeData.created_at);
+        const formattedDate = createdDate.toLocaleDateString('de-DE', { 
+          month: 'long', 
+          year: 'numeric' 
+        });
+        setActiveSince(formattedDate);
+      }
 
       const { data, error } = await supabase
         .from('order_evaluations')
@@ -52,6 +63,24 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
       }
 
       setApprovedEvaluations(data || []);
+      
+      // Fallback: if no created_at, use earliest approved evaluation date
+      if (!employeeData.created_at && data && data.length > 0) {
+        const earliestApproval = data.reduce((earliest, evaluation) => {
+          const evalDate = new Date(evaluation.approved_at);
+          const earliestDate = new Date(earliest.approved_at);
+          return evalDate < earliestDate ? evaluation : earliest;
+        });
+        
+        if (earliestApproval.approved_at) {
+          const approvalDate = new Date(earliestApproval.approved_at);
+          const formattedDate = approvalDate.toLocaleDateString('de-DE', { 
+            month: 'long', 
+            year: 'numeric' 
+          });
+          setActiveSince(formattedDate);
+        }
+      }
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -173,7 +202,9 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
             <div className="text-right space-y-2">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-green-600" />
-                <span className="text-sm font-medium text-green-700">Aktiv seit Januar 2024</span>
+                <span className="text-sm font-medium text-green-700">
+                  Aktiv seit {activeSince || 'Januar 2024'}
+                </span>
               </div>
             </div>
           </div>
