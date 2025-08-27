@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Calendar, Clock, User, MessageCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { Calendar, Clock, User, MessageCircle, History } from 'lucide-react';
+import { format, startOfDay, isAfter, isSameDay } from 'date-fns';
 import { de } from 'date-fns/locale';
 
 interface Appointment {
@@ -37,6 +37,7 @@ export const AppointmentsOverviewTab = () => {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [requestingFeedback, setRequestingFeedback] = useState<string | null>(null);
+  const [showPast, setShowPast] = useState(false);
 
   useEffect(() => {
     fetchAppointments();
@@ -62,7 +63,7 @@ export const AppointmentsOverviewTab = () => {
             email
           )
         `)
-        .order('scheduled_at', { ascending: false });
+        .order('scheduled_at', { ascending: true });
 
       if (error) {
         console.error('Error fetching appointments:', error);
@@ -104,10 +105,41 @@ export const AppointmentsOverviewTab = () => {
     }
   };
 
-  const filteredAppointments = appointments.filter(appointment => {
-    if (statusFilter === 'all') return true;
-    return appointment.status === statusFilter;
-  });
+  const filteredAppointments = appointments
+    .filter(appointment => {
+      // Status filter
+      if (statusFilter !== 'all' && appointment.status !== statusFilter) {
+        return false;
+      }
+      
+      // Past appointments filter
+      const appointmentDate = new Date(appointment.scheduled_at);
+      const today = startOfDay(new Date());
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      // If not showing past, hide appointments from yesterday and before
+      if (!showPast && appointmentDate < yesterday) {
+        return false;
+      }
+      
+      return true;
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.scheduled_at);
+      const dateB = new Date(b.scheduled_at);
+      const now = new Date();
+      
+      // First sort by whether they're future or past
+      const aIsFuture = dateA >= now;
+      const bIsFuture = dateB >= now;
+      
+      if (aIsFuture && !bIsFuture) return -1;
+      if (!aIsFuture && bIsFuture) return 1;
+      
+      // Then sort by date (ascending for both)
+      return dateA.getTime() - dateB.getTime();
+    });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -158,6 +190,16 @@ export const AppointmentsOverviewTab = () => {
                 </SelectContent>
               </Select>
             </div>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowPast(!showPast)}
+              className="flex items-center gap-2"
+            >
+              <History className="h-4 w-4" />
+              {showPast ? 'Vergangene ausblenden' : 'Vergangene anzeigen'}
+            </Button>
           </div>
 
           <div className="rounded-md border">
