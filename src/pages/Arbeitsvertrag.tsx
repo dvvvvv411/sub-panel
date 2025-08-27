@@ -343,6 +343,7 @@ const Arbeitsvertrag = () => {
                     id="socialSecurity"
                     value={formData.socialSecurityNumber}
                     onChange={(e) => handleInputChange('socialSecurityNumber', e.target.value)}
+                    placeholder="z.B. 12 345678 A 123"
                   />
                 </div>
                 <div>
@@ -351,6 +352,7 @@ const Arbeitsvertrag = () => {
                     id="taxNumber"
                     value={formData.taxNumber}
                     onChange={(e) => handleInputChange('taxNumber', e.target.value)}
+                    placeholder="z.B. 123/456/78901"
                   />
                 </div>
                 <div>
@@ -359,6 +361,7 @@ const Arbeitsvertrag = () => {
                     id="healthInsurance"
                     value={formData.healthInsurance}
                     onChange={(e) => handleInputChange('healthInsurance', e.target.value)}
+                    placeholder="z.B. AOK Bayern, Techniker Krankenkasse"
                   />
                 </div>
               </>
