@@ -6,9 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { toast } from 'sonner';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { 
   Users, 
   User, 
@@ -20,8 +18,7 @@ import {
   Star,
   Euro,
   CheckCircle,
-  Loader2,
-  Menu
+  Loader2
 } from 'lucide-react';
 import { OverviewTab } from '@/components/employee/OverviewTab';
 import { TasksTab } from '@/components/employee/TasksTab';
@@ -71,8 +68,6 @@ const Mitarbeiter = () => {
   });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!user) {
@@ -266,75 +261,6 @@ const Mitarbeiter = () => {
             </div>
             
             <div className="flex items-center gap-4">
-              {isMobile && (
-                <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-                  <SheetTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Menu className="h-4 w-4" />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="right" className="w-80">
-                    <div className="flex flex-col gap-4 mt-8">
-                      <h3 className="text-lg font-semibold mb-4">Navigation</h3>
-                      <Button
-                        variant={activeTab === 'overview' ? 'default' : 'ghost'}
-                        className="justify-start"
-                        onClick={() => {
-                          setActiveTab('overview');
-                          setMobileMenuOpen(false);
-                        }}
-                      >
-                        <BarChart3 className="h-4 w-4 mr-2" />
-                        Übersicht
-                      </Button>
-                      <Button
-                        variant={activeTab === 'tasks' ? 'default' : 'ghost'}
-                        className="justify-start"
-                        onClick={() => {
-                          setActiveTab('tasks');
-                          setMobileMenuOpen(false);
-                        }}
-                      >
-                        <ClipboardList className="h-4 w-4 mr-2" />
-                        Aufträge
-                      </Button>
-                      <Button
-                        variant={activeTab === 'reviews' ? 'default' : 'ghost'}
-                        className="justify-start"
-                        onClick={() => {
-                          setActiveTab('reviews');
-                          setMobileMenuOpen(false);
-                        }}
-                      >
-                        <Star className="h-4 w-4 mr-2" />
-                        Bewertungen
-                      </Button>
-                      <Button
-                        variant={activeTab === 'rewards' ? 'default' : 'ghost'}
-                        className="justify-start"
-                        onClick={() => {
-                          setActiveTab('rewards');
-                          setMobileMenuOpen(false);
-                        }}
-                      >
-                        <Award className="h-4 w-4 mr-2" />
-                        Belohnungen
-                      </Button>
-                      <Button
-                        variant={activeTab === 'personal' ? 'default' : 'ghost'}
-                        className="justify-start"
-                        onClick={() => {
-                          setActiveTab('personal');
-                          setMobileMenuOpen(false);
-                        }}
-                      >
-                        <User className="h-4 w-4 mr-2" />
-                        Persönlich
-                      </Button>
-                    </div>
-                  </SheetContent>
-                </Sheet>
-              )}
               <Badge variant="secondary" className="px-3 py-1">
                 <User className="h-3 w-3 mr-1" />
                 {employee.status === 'active' ? 'Aktiv' : 'Inaktiv'}
@@ -348,76 +274,71 @@ const Mitarbeiter = () => {
         </div>
       </div>
 
-      {/* Stats Overview - Hidden on Mobile */}
-      {!isMobile && (
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="grid gap-4 md:grid-cols-4 mb-8">
-            <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200/60">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl bg-blue-500/10">
-                    <Briefcase className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-blue-900">{stats.totalAssignments}</p>
-                    <p className="text-sm font-medium text-blue-700">Gesamt Aufträge</p>
-                  </div>
+      {/* Stats Overview */}
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="grid gap-4 md:grid-cols-4 mb-8">
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200/60">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-blue-500/10">
+                  <Briefcase className="h-6 w-6 text-blue-600" />
                 </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-gradient-to-br from-green-50 to-green-100/50 border-green-200/60">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl bg-green-500/10">
-                    <CheckCircle className="h-6 w-6 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-green-900">{stats.completedAssignments}</p>
-                    <p className="text-sm font-medium text-green-700">Abgeschlossen</p>
-                  </div>
+                <div>
+                  <p className="text-2xl font-bold text-blue-900">{stats.totalAssignments}</p>
+                  <p className="text-sm font-medium text-blue-700">Gesamt Aufträge</p>
                 </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100/50 border-yellow-200/60">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl bg-yellow-500/10">
-                    <Euro className="h-6 w-6 text-yellow-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-yellow-900">€{stats.totalEarnings.toFixed(2)}</p>
-                    <p className="text-sm font-medium text-yellow-700">Verdienst</p>
-                  </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-green-50 to-green-100/50 border-green-200/60">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-green-500/10">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
                 </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="bg-gradient-to-br from-purple-50 to-purple-100/50 border-purple-200/60">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl bg-purple-500/10">
-                    <Star className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-purple-900">
-                      {stats.averageRating > 0 ? stats.averageRating.toFixed(1) : '—'}
-                    </p>
-                    <p className="text-sm font-medium text-purple-700">Ø Bewertung</p>
-                  </div>
+                <div>
+                  <p className="text-2xl font-bold text-green-900">{stats.completedAssignments}</p>
+                  <p className="text-sm font-medium text-green-700">Abgeschlossen</p>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100/50 border-yellow-200/60">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-yellow-500/10">
+                  <Euro className="h-6 w-6 text-yellow-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-yellow-900">€{stats.totalEarnings.toFixed(2)}</p>
+                  <p className="text-sm font-medium text-yellow-700">Verdienst</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100/50 border-purple-200/60">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-xl bg-purple-500/10">
+                  <Star className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-purple-900">
+                    {stats.averageRating > 0 ? stats.averageRating.toFixed(1) : '—'}
+                  </p>
+                  <p className="text-sm font-medium text-purple-700">Ø Bewertung</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      )}
 
         {/* Main Content Tabs */}
-        <div className={isMobile ? "px-4" : "max-w-7xl mx-auto px-4 py-6"}>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            {!isMobile && (
-              <TabsList className="grid w-full grid-cols-5 bg-white/60 backdrop-blur-sm">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5 bg-white/60 backdrop-blur-sm">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               <span className="hidden sm:inline">Übersicht</span>
@@ -438,8 +359,7 @@ const Mitarbeiter = () => {
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Persönlich</span>
             </TabsTrigger>
-              </TabsList>
-            )}
+          </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
             <OverviewTab 
@@ -468,7 +388,7 @@ const Mitarbeiter = () => {
             <PersonalDataTab employee={employee} onUpdate={fetchEmployeeData} />
           </TabsContent>
         </Tabs>
-        </div>
+      </div>
     </div>
   );
 };
