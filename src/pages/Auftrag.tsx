@@ -244,7 +244,7 @@ const Auftrag = () => {
     };
     
     const IconComponent = iconMap[iconName];
-    return IconComponent ? <IconComponent className="h-5 w-5 text-primary" /> : <FileText className="h-5 w-5 text-primary" />;
+    return IconComponent ? <IconComponent className="h-4 w-4 text-primary" /> : <FileText className="h-4 w-4 text-primary" />;
   };
 
   if (loading) {
@@ -362,7 +362,7 @@ const Auftrag = () => {
                 <CardContent className="space-y-4">
                   {order.instructions.map((instruction, index) => (
                     <div key={index} className="flex gap-4 p-4 rounded-lg bg-muted/50">
-                      <div className="flex-shrink-0 p-2 rounded-full bg-primary/10">
+                      <div className="flex-shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
                         {getIconComponent(instruction.icon)}
                       </div>
                       <div className="flex-1 min-w-0">
