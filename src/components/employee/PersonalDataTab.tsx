@@ -59,22 +59,37 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
       setBankLoading(true);
       console.log('Fetching bank data for user:', user.email);
       
-      // Get current user's auth ID
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      
-      if (!authUser) {
-        console.error('No authenticated user found');
-        toast.error('Benutzer nicht authentifiziert');
+      // First find the employee record using the email
+      const { data: employeeData, error: employeeError } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('email', user.email)
+        .maybeSingle();
+
+      if (employeeError) {
+        console.error('Error fetching employee data:', employeeError);
+        toast.error('Fehler beim Abrufen der Mitarbeiterdaten: ' + employeeError.message);
         return;
       }
 
-      console.log('Auth user ID:', authUser.id);
+      if (!employeeData) {
+        console.log('No employee record found for user');
+        setBankData({
+          iban: '',
+          bic: '',
+          bankName: '',
+          accountHolder: user?.name || ''
+        });
+        return;
+      }
 
-      // Get the LATEST bank data from contract submissions for this user
+      console.log('Employee ID:', employeeData.id);
+
+      // Get the LATEST bank data from contract submissions for this employee
       const { data: submissionData, error: submissionError } = await supabase
         .from('employment_contract_submissions')
         .select('iban, bic, bank_name, first_name, last_name')
-        .eq('user_id', authUser.id)
+        .eq('employee_id', employeeData.id)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -127,12 +142,16 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
     try {
       console.log('Saving bank data:', bankData);
       
-      // Get current user's auth ID
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      
-      if (!authUser) {
-        console.error('No authenticated user found');
-        toast.error('Benutzer nicht authentifiziert');
+      // First find the employee record using the email
+      const { data: employeeData, error: employeeError } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('email', user.email)
+        .maybeSingle();
+
+      if (employeeError || !employeeData) {
+        console.error('Error fetching employee data:', employeeError);
+        toast.error('Fehler beim Abrufen der Mitarbeiterdaten');
         return;
       }
 
@@ -144,7 +163,7 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
           bic: bankData.bic,
           bank_name: bankData.bankName
         })
-        .eq('user_id', authUser.id);
+        .eq('employee_id', employeeData.id);
 
       if (updateError) {
         console.error('Error updating bank data:', updateError);
