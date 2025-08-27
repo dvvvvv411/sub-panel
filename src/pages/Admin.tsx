@@ -9,11 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Shield, Users, LogOut, Crown, UserPlus, Briefcase, MessageSquare, Calendar } from 'lucide-react';
+import { Shield, Users, LogOut, Crown, UserPlus, Briefcase, MessageSquare, Calendar, TrendingUp } from 'lucide-react';
 import { VicsTab } from '@/components/VicsTab';
 import { OrdersTab } from '@/components/OrdersTab';
 import { ReviewsManagementTab } from '@/components/ReviewsManagementTab';
 import { AppointmentsOverviewTab } from '@/components/AppointmentsOverviewTab';
+import { AdminOverviewTab } from '@/components/AdminOverviewTab';
 
 interface UserProfile {
   id: string;
@@ -32,8 +33,8 @@ const Admin = () => {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
   
-  // Get active tab from URL, default to 'users'
-  const activeTab = searchParams.get('tab') || 'users';
+  // Get active tab from URL, default to 'overview'
+  const activeTab = searchParams.get('tab') || 'overview';
   
   const handleTabChange = (value: string) => {
     setSearchParams({ tab: value });
@@ -155,53 +156,17 @@ const Admin = () => {
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-foreground mb-2">Admin Dashboard</h2>
           <p className="text-muted-foreground">
-            Verwalten Sie Benutzer und deren Rollen im System
+            Überblick über alle Systembereiche und aktuelle Aktivitäten
           </p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Gesamt Benutzer</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{users.length}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Administratoren</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {users.filter(u => u.role === 'admin').length}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Standard Benutzer</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {users.filter(u => u.role === 'user').length}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="users" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Benutzerverwaltung
+            <TabsTrigger value="overview" className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Übersicht
             </TabsTrigger>
             <TabsTrigger value="vics" className="flex items-center gap-2">
               <UserPlus className="h-4 w-4" />
@@ -221,64 +186,8 @@ const Admin = () => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="users">
-            {/* Users Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Benutzerverwaltung</CardTitle>
-                <CardDescription>
-                  Verwalten Sie Benutzerrollen und -berechtigungen
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>E-Mail</TableHead>
-                      <TableHead>Rolle</TableHead>
-                      <TableHead>Erstellt am</TableHead>
-                      <TableHead>Aktionen</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">
-                          {user.full_name || 'Kein Name'}
-                        </TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>
-                          <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                            {user.role === 'admin' ? 'Administrator' : 'Benutzer'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {new Date(user.created_at).toLocaleDateString('de-DE')}
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={user.role}
-                            onValueChange={(value: 'user' | 'admin') => 
-                              updateUserRole(user.user_id, value)
-                            }
-                            disabled={user.user_id === profile?.user_id} // Prevent self role change
-                          >
-                            <SelectTrigger className="w-40">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="user">Benutzer</SelectItem>
-                              <SelectItem value="admin">Administrator</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+          <TabsContent value="overview">
+            <AdminOverviewTab />
           </TabsContent>
 
           <TabsContent value="vics">
