@@ -294,20 +294,18 @@ export function OrdersTab() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleOpenEditDialog(order)}
-                            className="flex items-center gap-2"
-                          >
-                            <Edit className="h-4 w-4" />
-                            Bearbeiten
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
                             onClick={() => handleOpenAssignDialog(order)}
                             className="flex items-center gap-2"
                           >
                             <UserPlus className="h-4 w-4" />
                             {availableEmployees.length > 0 ? 'Zuweisen' : 'Mitarbeiter'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenEditDialog(order)}
+                          >
+                            <Edit className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
