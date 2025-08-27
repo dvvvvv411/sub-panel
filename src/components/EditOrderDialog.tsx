@@ -16,6 +16,9 @@ interface Order {
   provider: string;
   project_goal: string;
   premium: number;
+  is_placeholder: boolean;
+  download_links: any;
+  instructions: any;
   order_evaluation_questions: Array<{
     id: string;
     question: string;

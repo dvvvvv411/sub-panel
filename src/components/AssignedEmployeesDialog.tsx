@@ -14,6 +14,7 @@ interface Order {
   id: string;
   title: string;
   order_number: string;
+  is_placeholder: boolean;
 }
 
 interface AssignedEmployeesDialogProps {

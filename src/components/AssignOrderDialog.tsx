@@ -32,7 +32,10 @@ interface Order {
   title: string;
   order_number: string;
   provider: string;
+  project_goal: string;
   premium: number;
+  is_placeholder: boolean;
+  whatsapp_account_id: string | null;
 }
 
 interface AssignOrderDialogProps {
@@ -97,8 +100,13 @@ export function AssignOrderDialog({
   const selectedEmployee = availableEmployees.find(emp => emp.id === selectedEmployeeId);
 
   const handleAssign = async () => {
-    if (!order || !selectedEmployeeId || !selectedWhatsAppId) {
-      toast.error('Bitte wählen Sie einen Mitarbeiter und ein WhatsApp-Konto aus');
+    // For placeholder orders, WhatsApp account is not required
+    if (!order || !selectedEmployeeId || (!order.is_placeholder && !selectedWhatsAppId)) {
+      const missingFields = [];
+      if (!selectedEmployeeId) missingFields.push('Mitarbeiter');
+      if (!order.is_placeholder && !selectedWhatsAppId) missingFields.push('WhatsApp-Konto');
+      
+      toast.error(`Bitte wählen Sie ${missingFields.join(' und ')} aus`);
       return;
     }
 
@@ -120,18 +128,20 @@ export function AssignOrderDialog({
         return;
       }
 
-      // Update order with WhatsApp account
-      const { error: updateError } = await supabase
-        .from('orders')
-        .update({ whatsapp_account_id: selectedWhatsAppId })
-        .eq('id', order.id);
+      // Update order with WhatsApp account (only for non-placeholder orders)
+      if (!order.is_placeholder && selectedWhatsAppId) {
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({ whatsapp_account_id: selectedWhatsAppId })
+          .eq('id', order.id);
 
-      if (updateError) {
-        console.error('Error updating order with WhatsApp account:', updateError);
-        toast.error('Mitarbeiter zugewiesen, aber Fehler beim WhatsApp-Konto');
-      } else {
-        toast.success('Auftrag erfolgreich zugewiesen');
+        if (updateError) {
+          console.error('Error updating order with WhatsApp account:', updateError);
+          toast.error('Mitarbeiter zugewiesen, aber Fehler beim WhatsApp-Konto');
+        }
       }
+
+      toast.success('Auftrag erfolgreich zugewiesen');
 
       onOpenChange(false);
       onAssignmentComplete();
@@ -173,6 +183,12 @@ export function AssignOrderDialog({
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Anbieter:</span>
                 <span className="font-medium">{order.provider}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Typ:</span>
+                <Badge variant={order.is_placeholder ? "secondary" : "default"}>
+                  {order.is_placeholder ? "Platzhalterauftrag" : "Standard-Auftrag"}
+                </Badge>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Prämie:</span>
@@ -232,41 +248,53 @@ export function AssignOrderDialog({
             </Popover>
           </div>
 
-          {/* WhatsApp Account Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="whatsapp" className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              WhatsApp-Konto auswählen *
-            </Label>
-            <Select 
-              value={selectedWhatsAppId} 
-              onValueChange={setSelectedWhatsAppId}
-              disabled={loadingAccounts}
-            >
-              <SelectTrigger className="bg-background">
-                <SelectValue placeholder={loadingAccounts ? "Lädt..." : "WhatsApp-Konto auswählen"} />
-              </SelectTrigger>
-              <SelectContent className="bg-popover border">
-                {whatsappAccounts.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>
-                    {account.name} {account.account_info && `(${account.account_info})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setManageWhatsAppOpen(true)}
-                className="flex items-center gap-2"
+          {/* WhatsApp Account Selection - Only for non-placeholder orders */}
+          {!order.is_placeholder && (
+            <div className="space-y-2">
+              <Label htmlFor="whatsapp" className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                WhatsApp-Konto auswählen *
+              </Label>
+              <Select 
+                value={selectedWhatsAppId} 
+                onValueChange={setSelectedWhatsAppId}
+                disabled={loadingAccounts}
               >
-                <Settings className="h-4 w-4" />
-                WhatsApp-Konten verwalten
-              </Button>
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder={loadingAccounts ? "Lädt..." : "WhatsApp-Konto auswählen"} />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border">
+                  {whatsappAccounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.name} {account.account_info && `(${account.account_info})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setManageWhatsAppOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  WhatsApp-Konten verwalten
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Info for placeholder orders */}
+          {order.is_placeholder && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                💡 <strong>Platzhalterauftrag:</strong> Dieser Auftrag wird direkt auf der Plattform durchgeführt. 
+                Eine WhatsApp-Zuweisung ist nicht erforderlich.
+              </p>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4">
@@ -280,7 +308,7 @@ export function AssignOrderDialog({
             </Button>
             <Button 
               onClick={handleAssign}
-              disabled={loading || !selectedEmployeeId || !selectedWhatsAppId}
+              disabled={loading || !selectedEmployeeId || (!order.is_placeholder && !selectedWhatsAppId)}
             >
               {loading ? 'Zuweisen...' : 'Zuweisen'}
             </Button>

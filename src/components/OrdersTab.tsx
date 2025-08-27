@@ -32,6 +32,9 @@ interface Order {
   provider: string;
   project_goal: string;
   premium: number;
+  is_placeholder: boolean;
+  download_links: any;
+  instructions: any;
   whatsapp_account_id: string | null;
   created_at: string;
   updated_at: string;

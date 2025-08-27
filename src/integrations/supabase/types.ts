@@ -247,7 +247,10 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          download_links: string[] | null
           id: string
+          instructions: Json | null
+          is_placeholder: boolean
           order_number: string
           premium: number
           project_goal: string
@@ -259,7 +262,10 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
+          download_links?: string[] | null
           id?: string
+          instructions?: Json | null
+          is_placeholder?: boolean
           order_number: string
           premium: number
           project_goal: string
@@ -271,7 +277,10 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string
+          download_links?: string[] | null
           id?: string
+          instructions?: Json | null
+          is_placeholder?: boolean
           order_number?: string
           premium?: number
           project_goal?: string

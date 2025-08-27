@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, X, Briefcase } from 'lucide-react';
+import { Plus, X, Briefcase, Download, FileText, Star, Users, Clock, Target, Settings } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -23,6 +24,12 @@ interface CreateOrderDialogProps {
   onOrderCreated: () => void;
 }
 
+interface Instruction {
+  title: string;
+  icon: string;
+  content: string;
+}
+
 export function CreateOrderDialog({ onOrderCreated }: CreateOrderDialogProps) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
@@ -34,6 +41,13 @@ export function CreateOrderDialog({ onOrderCreated }: CreateOrderDialogProps) {
   const [projectGoal, setProjectGoal] = useState('');
   const [premium, setPremium] = useState('');
   const [evaluationQuestions, setEvaluationQuestions] = useState<string[]>(['']);
+  
+  // Placeholder order specific fields
+  const [isPlaceholder, setIsPlaceholder] = useState(false);
+  const [downloadLinks, setDownloadLinks] = useState<string[]>(['']);
+  const [instructions, setInstructions] = useState<Instruction[]>([
+    { title: '', icon: 'FileText', content: '' }
+  ]);
 
   const resetForm = () => {
     setTitle('');
@@ -42,6 +56,9 @@ export function CreateOrderDialog({ onOrderCreated }: CreateOrderDialogProps) {
     setProjectGoal('');
     setPremium('');
     setEvaluationQuestions(['']);
+    setIsPlaceholder(false);
+    setDownloadLinks(['']);
+    setInstructions([{ title: '', icon: 'FileText', content: '' }]);
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -68,6 +85,38 @@ export function CreateOrderDialog({ onOrderCreated }: CreateOrderDialogProps) {
     setEvaluationQuestions(updated);
   };
 
+  const addDownloadLink = () => {
+    setDownloadLinks([...downloadLinks, '']);
+  };
+
+  const removeDownloadLink = (index: number) => {
+    if (downloadLinks.length > 1) {
+      setDownloadLinks(downloadLinks.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateDownloadLink = (index: number, value: string) => {
+    const updated = [...downloadLinks];
+    updated[index] = value;
+    setDownloadLinks(updated);
+  };
+
+  const addInstruction = () => {
+    setInstructions([...instructions, { title: '', icon: 'FileText', content: '' }]);
+  };
+
+  const removeInstruction = (index: number) => {
+    if (instructions.length > 1) {
+      setInstructions(instructions.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateInstruction = (index: number, field: keyof Instruction, value: string) => {
+    const updated = [...instructions];
+    updated[index] = { ...updated[index], [field]: value };
+    setInstructions(updated);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -88,6 +137,9 @@ export function CreateOrderDialog({ onOrderCreated }: CreateOrderDialogProps) {
           provider,
           project_goal: projectGoal,
           premium: parseFloat(premium),
+          is_placeholder: isPlaceholder,
+          download_links: isPlaceholder ? downloadLinks.filter(link => link.trim() !== '') : null,
+          instructions: isPlaceholder ? instructions.filter(inst => inst.title.trim() !== '') as any : null,
           created_by: user.id
         })
         .select()
@@ -205,6 +257,146 @@ export function CreateOrderDialog({ onOrderCreated }: CreateOrderDialogProps) {
               placeholder="0.00"
             />
           </div>
+
+          {/* Placeholder Order Toggle */}
+          <div className="flex items-center space-x-2 p-4 border rounded-lg bg-muted/50">
+            <Switch
+              id="placeholder-mode"
+              checked={isPlaceholder}
+              onCheckedChange={setIsPlaceholder}
+            />
+            <div className="space-y-1">
+              <Label htmlFor="placeholder-mode" className="text-sm font-medium cursor-pointer">
+                Platzhalterauftrag
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Auftrag wird direkt auf der Plattform durchgeführt (kein WhatsApp erforderlich)
+              </p>
+            </div>
+          </div>
+
+          {/* Placeholder Order Fields */}
+          {isPlaceholder && (
+            <div className="space-y-6 border-t pt-6">
+              {/* Download Links */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Download className="h-4 w-4" />
+                    Download Links
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {downloadLinks.map((link, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        value={link}
+                        onChange={(e) => updateDownloadLink(index, e.target.value)}
+                        placeholder={`Download Link ${index + 1}`}
+                        className="flex-1"
+                      />
+                      {downloadLinks.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => removeDownloadLink(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addDownloadLink}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Weiteren Link hinzufügen
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Instructions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Anweisungen
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {instructions.map((instruction, index) => (
+                    <div key={index} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <Label className="text-sm">Titel</Label>
+                          <Input
+                            value={instruction.title}
+                            onChange={(e) => updateInstruction(index, 'title', e.target.value)}
+                            placeholder="Anweisungstitel"
+                          />
+                        </div>
+                        <div className="w-40">
+                          <Label className="text-sm">Icon</Label>
+                          <Select 
+                            value={instruction.icon} 
+                            onValueChange={(value) => updateInstruction(index, 'icon', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="FileText">📄 Dokument</SelectItem>
+                              <SelectItem value="Download">⬇️ Download</SelectItem>
+                              <SelectItem value="Users">👥 Benutzer</SelectItem>
+                              <SelectItem value="Settings">⚙️ Einstellungen</SelectItem>
+                              <SelectItem value="Clock">🕐 Zeit</SelectItem>
+                              <SelectItem value="Target">🎯 Ziel</SelectItem>
+                              <SelectItem value="Star">⭐ Wichtig</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {instructions.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => removeInstruction(index)}
+                            className="mt-6"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <div>
+                        <Label className="text-sm">Inhalt</Label>
+                        <Textarea
+                          value={instruction.content}
+                          onChange={(e) => updateInstruction(index, 'content', e.target.value)}
+                          placeholder="Detaillierte Anweisungen..."
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addInstruction}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Weitere Anweisung hinzufügen
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           <Card>
             <CardHeader>
