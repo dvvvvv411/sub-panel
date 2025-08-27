@@ -10,11 +10,11 @@ interface RewardsTabProps {
 }
 
 export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) => {
-  const completedOrders = assignedOrders.filter(order => order.status === 'completed').length;
-  const totalPremium = assignedOrders.reduce((sum, order) => sum + (order.premium || 0), 0);
+  const completedOrders = assignedOrders.filter((o: any) => o.assignment_status === 'completed');
+  const completedCount = completedOrders.length;
+  const totalPremium = completedOrders.reduce((sum: number, o: any) => sum + (o.premium || 0), 0);
   
-  // Mock points system
-  const points = completedOrders * 100 + Math.floor(totalPremium);
+  const points = completedCount * 100 + Math.floor(totalPremium);
   const nextLevelPoints = Math.ceil(points / 500) * 500;
   const currentLevelProgress = ((points % 500) / 500) * 100;
   
@@ -38,7 +38,7 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
       title: 'Erster Auftrag',
       description: 'Ersten Auftrag erfolgreich abgeschlossen',
       points: 100,
-      earned: completedOrders > 0,
+      earned: completedCount > 0,
       icon: Target,
       color: 'text-blue-600',
       bgColor: 'bg-blue-100'
@@ -48,7 +48,7 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
       title: 'Fleißiger Arbeiter',
       description: '5 Aufträge abgeschlossen',
       points: 250,
-      earned: completedOrders >= 5,
+      earned: completedCount >= 5,
       icon: Trophy,
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-100'
@@ -58,7 +58,7 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
       title: 'Top Performer',
       description: '10 Aufträge abgeschlossen',
       points: 500,
-      earned: completedOrders >= 10,
+      earned: completedCount >= 10,
       icon: Award,
       color: 'text-purple-600',
       bgColor: 'bg-purple-100'
@@ -78,12 +78,13 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
   const earnedRewards = rewards.filter(reward => reward.earned);
   const availableRewards = rewards.filter(reward => !reward.earned);
 
-  const monthlyEarnings = [
-    { month: 'Januar', amount: 150 },
-    { month: 'Februar', amount: 280 },
-    { month: 'März', amount: 320 },
-    { month: 'April', amount: totalPremium }
-  ];
+  const monthlyEarningsMap = new Map<string, number>();
+  completedOrders.forEach((o: any) => {
+    const date = o.created_at ? new Date(o.created_at) : null;
+    const month = date ? date.toLocaleString('de-DE', { month: 'long' }) : 'Aktuell';
+    monthlyEarningsMap.set(month, (monthlyEarningsMap.get(month) || 0) + (o.premium || 0));
+  });
+  const monthlyEarnings = Array.from(monthlyEarningsMap, ([month, amount]) => ({ month, amount }));
 
   return (
     <div className="space-y-6">

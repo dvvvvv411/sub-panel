@@ -21,6 +21,8 @@ interface AssignedOrder {
   provider: string;
   project_goal: string;
   premium: number;
+  created_at: string;
+  assignment_status: 'assigned' | 'in_progress' | 'completed';
   whatsapp_accounts: {
     id: string;
     name: string;
@@ -37,6 +39,13 @@ const Mitarbeiter = () => {
   const navigate = useNavigate();
   const [assignedOrders, setAssignedOrders] = useState<AssignedOrder[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
+  const [employeeProfile, setEmployeeProfile] = useState<{
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string | null;
+  } | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -47,56 +56,70 @@ const Mitarbeiter = () => {
   }, [user, loading, navigate]);
 
   const fetchAssignedOrders = async () => {
-    if (!user) return;
+    if (!user?.email) return;
 
     try {
       setLoadingOrders(true);
       
-      // Find employee record for this user
       const { data: employeeData, error: employeeError } = await supabase
         .from('employees')
-        .select('id')
+        .select('id, first_name, last_name, email, phone')
         .eq('email', user.email)
-        .single();
+        .maybeSingle();
 
-      if (employeeError || !employeeData) {
+      if (employeeError) {
+        console.error('Error fetching employee record:', employeeError);
+      }
+
+      if (!employeeData) {
         console.log('No employee record found for user');
+        setEmployeeProfile(null);
         setAssignedOrders([]);
         return;
       }
 
-      // Get assigned orders for this employee
+      setEmployeeProfile(employeeData);
+
       const { data, error } = await supabase
         .from('order_assignments')
         .select(`
-          orders (
+        status,
+        orders (
+          id,
+          title,
+          order_number,
+          provider,
+          project_goal,
+          premium,
+          created_at,
+          whatsapp_accounts (
             id,
-            title,
-            order_number,
-            provider,
-            project_goal,
-            premium,
-            whatsapp_accounts (
-              id,
-              name,
-              account_info
-            ),
-            order_evaluation_questions (
-              id,
-              question
-            )
+            name,
+            account_info
+          ),
+          order_evaluation_questions (
+            id,
+            question
           )
-        `)
-        .eq('employee_id', employeeData.id)
-        .eq('status', 'assigned');
+        )
+      `)
+        .eq('employee_id', employeeData.id);
 
       if (error) {
         console.error('Error fetching assigned orders:', error);
         toast.error('Fehler beim Laden der zugewiesenen Aufträge');
+        setAssignedOrders([]);
         return;
       }
 
-      const orders = data?.map(assignment => assignment.orders).filter(Boolean) || [];
+      const orders = (data || [])
+        .map((assignment: any) => {
+          const order = assignment.orders;
+          if (!order) return null;
+          return { ...order, assignment_status: assignment.status };
+        })
+        .filter(Boolean);
+
       setAssignedOrders(orders as AssignedOrder[]);
     } catch (error) {
       console.error('Error fetching assigned orders:', error);
@@ -105,6 +128,25 @@ const Mitarbeiter = () => {
       setLoadingOrders(false);
     }
   };
+
+  useEffect(() => {
+    if (!employeeProfile?.id) return;
+
+    const channel = supabase
+      .channel('order_assignments_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'order_assignments', filter: `employee_id=eq.${employeeProfile.id}` },
+        () => {
+          fetchAssignedOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [employeeProfile?.id]);
 
   const handleStartOrder = async (orderId: string) => {
     if (!user) return;
@@ -267,7 +309,14 @@ const Mitarbeiter = () => {
           </TabsContent>
 
           <TabsContent value="profile" className="space-y-6">
-            <PersonalDataTab user={profile} />
+            <PersonalDataTab
+              user={{
+                name: employeeProfile ? `${employeeProfile.first_name} ${employeeProfile.last_name}` : (profile?.full_name || ''),
+                email: employeeProfile?.email || profile?.email || '',
+                phone: employeeProfile?.phone || '',
+                position: 'Mitarbeiter'
+              }}
+            />
           </TabsContent>
         </Tabs>
 
