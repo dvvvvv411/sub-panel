@@ -1,8 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Gift, Trophy, Star, Target, Coins, Award } from 'lucide-react';
+import { Gift, Trophy, Star, Target, Coins, Award, TrendingUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface RewardsTabProps {
@@ -32,9 +31,19 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
 
       const { data, error } = await supabase
         .from('order_evaluations')
-        .select('premium_awarded, created_at')
+        .select(`
+          premium_awarded, 
+          created_at, 
+          approved_at,
+          orders (
+            title,
+            order_number,
+            provider
+          )
+        `)
         .eq('employee_id', employeeData.id)
-        .eq('status', 'approved');
+        .eq('status', 'approved')
+        .order('approved_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching approved evaluations:', error);
@@ -52,226 +61,196 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
   const completedOrders = assignedOrders.filter((o: any) => o.assignment_status === 'completed');
   const completedCount = completedOrders.length;
   const totalPremium = approvedEvaluations.reduce((sum: number, evaluation: any) => sum + (evaluation.premium_awarded || 0), 0);
-  
-  const points = completedCount * 100 + Math.floor(totalPremium);
-  const nextLevelPoints = Math.ceil(points / 500) * 500;
-  const currentLevelProgress = ((points % 500) / 500) * 100;
-  
-  const level = Math.floor(points / 500) + 1;
-  const levelNames = ['Anfänger', 'Fortgeschritten', 'Experte', 'Profi', 'Meister', 'Legende'];
-  const currentLevelName = levelNames[Math.min(level - 1, levelNames.length - 1)];
 
-  const rewards = [
-    {
-      id: 1,
-      title: 'Willkommensbonus',
-      description: 'Erste Anmeldung abgeschlossen',
-      points: 50,
-      earned: true,
-      icon: Gift,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100'
-    },
-    {
-      id: 2,
-      title: 'Erster Auftrag',
-      description: 'Ersten Auftrag erfolgreich abgeschlossen',
-      points: 100,
+  const achievements = [
+    { 
+      name: 'Erster Auftrag', 
+      description: 'Ersten Auftrag erfolgreich abgeschlossen', 
       earned: completedCount > 0,
       icon: Target,
       color: 'text-blue-600',
       bgColor: 'bg-blue-100'
     },
-    {
-      id: 3,
-      title: 'Fleißiger Arbeiter',
-      description: '5 Aufträge abgeschlossen',
-      points: 250,
+    { 
+      name: 'Fleißiger Arbeiter', 
+      description: '5 Aufträge abgeschlossen', 
       earned: completedCount >= 5,
       icon: Trophy,
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-100'
     },
-    {
-      id: 4,
-      title: 'Top Performer',
-      description: '10 Aufträge abgeschlossen',
-      points: 500,
+    { 
+      name: 'Top Performer', 
+      description: '10 Aufträge abgeschlossen', 
       earned: completedCount >= 10,
       icon: Award,
       color: 'text-purple-600',
       bgColor: 'bg-purple-100'
     },
-    {
-      id: 5,
-      title: 'Prämien-Sammler',
-      description: '€500 an Prämien verdient',
-      points: 300,
+    { 
+      name: 'Prämien-Sammler', 
+      description: '€500 an Prämien verdient', 
       earned: totalPremium >= 500,
       icon: Coins,
       color: 'text-green-600',
       bgColor: 'bg-green-100'
+    },
+    { 
+      name: 'Meister', 
+      description: '20 Aufträge abgeschlossen', 
+      earned: completedCount >= 20,
+      icon: Star,
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-100'
     }
   ];
 
-  const earnedRewards = rewards.filter(reward => reward.earned);
-  const availableRewards = rewards.filter(reward => !reward.earned);
+  const earnedAchievements = achievements.filter(achievement => achievement.earned);
 
   const monthlyEarningsMap = new Map<string, number>();
   approvedEvaluations.forEach((evaluation: any) => {
-    const date = evaluation.created_at ? new Date(evaluation.created_at) : null;
-    const month = date ? date.toLocaleString('de-DE', { month: 'long' }) : 'Aktuell';
+    const date = evaluation.approved_at ? new Date(evaluation.approved_at) : null;
+    const month = date ? date.toLocaleString('de-DE', { month: 'long', year: 'numeric' }) : 'Unbekannt';
     monthlyEarningsMap.set(month, (monthlyEarningsMap.get(month) || 0) + (evaluation.premium_awarded || 0));
   });
   const monthlyEarnings = Array.from(monthlyEarningsMap, ([month, amount]) => ({ month, amount }));
 
   return (
     <div className="space-y-6">
-      {/* Level Progress */}
-      <Card className="bg-gradient-to-r from-primary/10 to-primary/5">
+      {/* Premium Overview Header */}
+      <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
         <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-2xl font-bold text-foreground">Level {level}</h2>
-              <p className="text-lg text-primary font-medium">{currentLevelName}</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-full bg-green-100">
+                <Coins className="h-8 w-8 text-green-600" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-green-800">€{totalPremium.toFixed(2)}</h2>
+                <p className="text-green-600">Gesamtprämien erhalten</p>
+              </div>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-primary">{points}</p>
-              <p className="text-sm text-muted-foreground">Punkte</p>
+              <p className="text-sm text-green-600">Aus {approvedEvaluations.length} genehmigten Bewertungen</p>
+              <p className="text-xs text-green-500">{completedCount} abgeschlossene Aufträge</p>
             </div>
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Fortschritt zum nächsten Level</span>
-              <span>{nextLevelPoints - points} Punkte verbleibend</span>
-            </div>
-            <Progress value={currentLevelProgress} className="h-3" />
           </div>
         </CardContent>
       </Card>
 
-      {/* Earnings Overview */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <Coins className="h-8 w-8 text-green-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-green-600">€{totalPremium.toFixed(2)}</p>
-              <p className="text-sm text-muted-foreground">Gesamtprämien</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <Trophy className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-yellow-600">{earnedRewards.length}</p>
-              <p className="text-sm text-muted-foreground">Belohnungen erhalten</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-center">
-              <Star className="h-8 w-8 text-primary mx-auto mb-2" />
-              <p className="text-2xl font-bold text-primary">{points}</p>
-              <p className="text-sm text-muted-foreground">Gesammelte Punkte</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Earned Rewards */}
-      {earnedRewards.length > 0 && (
-        <div>
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-yellow-600" />
-            Erhaltene Belohnungen
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            {earnedRewards.map((reward) => (
-              <Card key={reward.id} className="border-green-200 bg-green-50/50">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-3 rounded-full ${reward.bgColor}`}>
-                      <reward.icon className={`h-5 w-5 ${reward.color}`} />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-medium">{reward.title}</h3>
-                      <p className="text-sm text-muted-foreground">{reward.description}</p>
-                    </div>
-                    <div className="text-right">
-                      <Badge className="bg-green-100 text-green-800">
-                        +{reward.points} Punkte
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Available Rewards */}
-      {availableRewards.length > 0 && (
-        <div>
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <Gift className="h-5 w-5 text-primary" />
-            Verfügbare Belohnungen
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            {availableRewards.map((reward) => (
-              <Card key={reward.id} className="opacity-75">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-3 rounded-full bg-gray-100`}>
-                      <reward.icon className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-medium text-muted-foreground">{reward.title}</h3>
-                      <p className="text-sm text-muted-foreground">{reward.description}</p>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant="outline">
-                        +{reward.points} Punkte
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Monthly Earnings Chart */}
+      {/* Premium History */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Coins className="h-5 w-5 text-green-600" />
-            Monatliche Prämien-Entwicklung
+            Prämien-Verlauf
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {monthlyEarnings.map((entry, index) => (
-              <div key={index} className="flex items-center gap-4">
-                <div className="w-20 text-sm font-medium">{entry.month}</div>
-                <div className="flex-1 bg-gray-200 rounded-full h-4">
-                  <div 
-                    className="bg-green-500 h-4 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min((entry.amount / 500) * 100, 100)}%` }}
-                  />
+          {approvedEvaluations.length === 0 ? (
+            <div className="text-center py-8">
+              <Coins className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">Noch keine Prämien erhalten</p>
+              <p className="text-sm text-muted-foreground">
+                Vervollständigen Sie Aufträge und lassen Sie diese vom Admin genehmigen
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {approvedEvaluations.map((evaluation, index) => (
+                <div key={index} className="flex items-center justify-between p-4 rounded-lg border bg-green-50/50">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-green-100">
+                      <Trophy className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{evaluation.orders?.title || 'Auftrag'}</p>
+                      <p className="text-sm text-muted-foreground">
+                        #{evaluation.orders?.order_number} • {evaluation.orders?.provider}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Genehmigt am {evaluation.approved_at ? new Date(evaluation.approved_at).toLocaleDateString('de-DE') : 'Unbekannt'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <Badge className="bg-green-100 text-green-800 text-base font-semibold">
+                      €{evaluation.premium_awarded.toFixed(2)}
+                    </Badge>
+                  </div>
                 </div>
-                <div className="w-20 text-right text-sm font-medium">
-                  €{entry.amount.toFixed(2)}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Achievements */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-yellow-600" />
+            Meilensteine & Errungenschaften
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {achievements.map((achievement, index) => (
+            <div key={index} className="flex items-center gap-4 p-4 rounded-lg border">
+              <div className={`p-3 rounded-full ${achievement.earned ? achievement.bgColor : 'bg-gray-100'}`}>
+                <achievement.icon className={`h-5 w-5 ${achievement.earned ? achievement.color : 'text-gray-400'}`} />
+              </div>
+              <div className="flex-1">
+                <h3 className={`font-medium ${achievement.earned ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  {achievement.name}
+                </h3>
+                <p className="text-sm text-muted-foreground">{achievement.description}</p>
+              </div>
+              <div>
+                {achievement.earned ? (
+                  <Badge className="bg-green-100 text-green-800">
+                    Erreicht
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-muted-foreground">
+                    Nicht erreicht
+                  </Badge>
+                )}
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Monthly Earnings Chart */}
+      {monthlyEarnings.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-blue-600" />
+              Monatliche Prämien-Entwicklung
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {monthlyEarnings.map((entry, index) => (
+                <div key={index} className="flex items-center gap-4">
+                  <div className="w-24 text-sm font-medium">{entry.month}</div>
+                  <div className="flex-1 bg-gray-200 rounded-full h-6">
+                    <div 
+                      className="bg-green-500 h-6 rounded-full transition-all duration-300 flex items-center justify-end pr-2"
+                      style={{ width: `${Math.min((entry.amount / Math.max(...monthlyEarnings.map(e => e.amount))) * 100, 100)}%` }}
+                    >
+                      <span className="text-white text-xs font-medium">
+                        €{entry.amount.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
