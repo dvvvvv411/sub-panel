@@ -85,10 +85,10 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
 
       console.log('Employee ID:', employeeData.id);
 
-      // Get bank data from employee_bank_details table
+      // Get bank data from employment_contract_submissions table for now
       const { data: bankDetails, error: bankError } = await supabase
-        .from('employee_bank_details')
-        .select('iban, bic, bank_name, account_holder')
+        .from('employment_contract_submissions')
+        .select('iban, bic, bank_name')
         .eq('employee_id', employeeData.id)
         .maybeSingle();
 
@@ -105,7 +105,7 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
           iban: bankDetails.iban || '',
           bic: bankDetails.bic || '',
           bankName: bankDetails.bank_name || '',
-          accountHolder: bankDetails.account_holder || user?.name || ''
+          accountHolder: user?.name || ''
         });
         console.log('Updated bank data state');
       } else {
@@ -153,20 +153,19 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
         return;
       }
 
-      // Use upsert to insert or update bank details
-      const { error: upsertError } = await supabase
-        .from('employee_bank_details')
-        .upsert({
-          employee_id: employeeData.id,
+      // Use update to modify existing bank details in submissions table for now
+      const { error: updateError } = await supabase
+        .from('employment_contract_submissions')
+        .update({
           iban: bankData.iban,
           bic: bankData.bic,
-          bank_name: bankData.bankName,
-          account_holder: bankData.accountHolder
-        });
+          bank_name: bankData.bankName
+        })
+        .eq('employee_id', employeeData.id);
 
-      if (upsertError) {
-        console.error('Error saving bank data:', upsertError);
-        toast.error('Fehler beim Speichern der Bankdaten: ' + upsertError.message);
+      if (updateError) {
+        console.error('Error saving bank data:', updateError);
+        toast.error('Fehler beim Speichern der Bankdaten: ' + updateError.message);
         return;
       }
 
@@ -181,6 +180,11 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
   };
 
   const handlePasswordChange = async () => {
+    if (!passwordData.currentPassword) {
+      toast.error('Bitte geben Sie Ihr aktuelles Passwort ein');
+      return;
+    }
+
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast.error('Die neuen Passwörter stimmen nicht überein');
       return;
@@ -193,6 +197,19 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
 
     try {
       setPasswordLoading(true);
+      
+      // First verify current password by attempting to sign in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: passwordData.currentPassword
+      });
+
+      if (signInError) {
+        toast.error('Das aktuelle Passwort ist falsch');
+        return;
+      }
+
+      // Now update the password
       const { error } = await supabase.auth.updateUser({
         password: passwordData.newPassword
       });
@@ -567,6 +584,33 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
+                    <Label htmlFor="currentPassword">Aktuelles Passwort</Label>
+                    <div className="relative">
+                      <Input
+                        id="currentPassword"
+                        type={showPasswords.current ? "text" : "password"}
+                        value={passwordData.currentPassword}
+                        onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                        disabled={passwordLoading}
+                        placeholder="Geben Sie Ihr aktuelles Passwort ein"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
+                      >
+                        {showPasswords.current ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="newPassword">Neues Passwort</Label>
                     <div className="relative">
                       <Input
@@ -574,6 +618,7 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
                         type={showPasswords.new ? "text" : "password"}
                         value={passwordData.newPassword}
                         onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                        disabled={passwordLoading}
                         placeholder="Neues Passwort eingeben"
                       />
                       <Button
@@ -593,13 +638,14 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Passwort bestätigen</Label>
+                    <Label htmlFor="confirmPassword">Neues Passwort bestätigen</Label>
                     <div className="relative">
                       <Input
                         id="confirmPassword"
                         type={showPasswords.confirm ? "text" : "password"}
                         value={passwordData.confirmPassword}
                         onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                        disabled={passwordLoading}
                         placeholder="Neues Passwort bestätigen"
                       />
                       <Button
@@ -621,7 +667,7 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
                   <div className="flex gap-2 pt-4">
                     <Button 
                       onClick={handlePasswordChange} 
-                      disabled={passwordLoading || !passwordData.newPassword || !passwordData.confirmPassword}
+                      disabled={passwordLoading || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
                       className="flex-1"
                     >
                       {passwordLoading ? 'Speichere...' : 'Passwort ändern'}
