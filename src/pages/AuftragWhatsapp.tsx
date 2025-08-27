@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Calendar as CalendarIcon, Clock, MessageCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MessageCircle, CheckCircle2, ArrowLeft, ChevronLeft } from 'lucide-react';
 import { format, isToday, isBefore, startOfDay } from 'date-fns';
 import { de } from 'date-fns/locale';
 
@@ -45,18 +45,19 @@ const AuftragWhatsapp = () => {
   
   const [order, setOrder] = useState<OrderWithWhatsApp | null>(null);
   const [employee, setEmployee] = useState<Employee | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
+  const [bookingStep, setBookingStep] = useState<'date' | 'time'>('date');
 
   // Generate time slots from 08:00 to 18:00 in 30-minute intervals
   const generateTimeSlots = () => {
     const slots = [];
-    for (let hour = 8; hour <= 17; hour++) {
+    for (let hour = 8; hour <= 18; hour++) {
       for (let minute of [0, 30]) {
-        if (hour === 17 && minute === 30) break; // Stop at 17:30
+        if (hour === 18 && minute === 30) break; // Stop at 18:00
         const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
         slots.push(timeStr);
       }
@@ -67,13 +68,26 @@ const AuftragWhatsapp = () => {
   const timeSlots = generateTimeSlots();
 
   const isTimeSlotDisabled = (timeStr: string) => {
-    if (!isToday(selectedDate)) return false;
+    if (!selectedDate || !isToday(selectedDate)) return false;
     
     const [hours, minutes] = timeStr.split(':').map(Number);
     const slotTime = new Date();
     slotTime.setHours(hours, minutes, 0, 0);
     
     return isBefore(slotTime, new Date());
+  };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setSelectedDate(date);
+      setSelectedTime('');
+      setBookingStep('time');
+    }
+  };
+
+  const handleBackToDateSelection = () => {
+    setBookingStep('date');
+    setSelectedTime('');
   };
 
   useEffect(() => {
@@ -308,7 +322,7 @@ const AuftragWhatsapp = () => {
                 Auftragsinformationen
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               <div>
                 <p className="text-sm text-muted-foreground">Titel</p>
                 <p className="font-medium">{order.title}</p>
@@ -341,47 +355,70 @@ const AuftragWhatsapp = () => {
                   Termin buchen
                 </CardTitle>
                 <CardDescription>
-                  Wählen Sie einen Termin für die Durchführung des Auftrags
+                  {bookingStep === 'date' 
+                    ? 'Schritt 1/2 – Wählen Sie ein Datum'
+                    : 'Schritt 2/2 – Wählen Sie eine Uhrzeit'
+                  }
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <p className="text-sm font-medium mb-2">Datum auswählen</p>
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(date)}
-                    disabled={isDateDisabled}
-                    locale={de}
-                    className="rounded-md border"
-                  />
-                </div>
-                
-                <div>
-                  <p className="text-sm font-medium mb-2">Uhrzeit auswählen</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {timeSlots.map((time) => (
-                      <Button
-                        key={time}
-                        variant={selectedTime === time ? "default" : "outline"}
-                        size="sm"
-                        disabled={isTimeSlotDisabled(time)}
-                        onClick={() => setSelectedTime(time)}
-                        className="text-xs"
-                      >
-                        {time}
-                      </Button>
-                    ))}
+                {bookingStep === 'date' ? (
+                  <div>
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={handleDateSelect}
+                      disabled={isDateDisabled}
+                      locale={de}
+                      className="rounded-md border p-3 pointer-events-auto"
+                    />
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Gewähltes Datum</p>
+                        <p className="font-medium">
+                          {selectedDate && format(selectedDate, 'dd. MMMM yyyy', { locale: de })}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleBackToDateSelection}
+                      >
+                        <ChevronLeft className="h-4 w-4 mr-1" />
+                        Zurück
+                      </Button>
+                    </div>
+                    
+                    <div>
+                      <p className="text-sm font-medium mb-3">Verfügbare Zeiten</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {timeSlots.map((time) => (
+                          <Button
+                            key={time}
+                            variant={selectedTime === time ? "default" : "outline"}
+                            size="sm"
+                            disabled={isTimeSlotDisabled(time)}
+                            onClick={() => setSelectedTime(time)}
+                            className="text-xs"
+                          >
+                            {time}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
 
-                <Button
-                  onClick={bookAppointment}
-                  disabled={!selectedDate || !selectedTime || booking}
-                  className="w-full"
-                >
-                  {booking ? 'Buche Termin...' : 'Termin buchen'}
-                </Button>
+                    <Button
+                      onClick={bookAppointment}
+                      disabled={!selectedDate || !selectedTime || booking}
+                      className="w-full mt-4"
+                    >
+                      {booking ? 'Buche Termin...' : 'Termin buchen'}
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
           ) : (
