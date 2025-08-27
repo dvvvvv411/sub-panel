@@ -137,8 +137,13 @@ export const AppointmentsOverviewTab = () => {
       if (aIsFuture && !bIsFuture) return -1;
       if (!aIsFuture && bIsFuture) return 1;
       
-      // Then sort by date (ascending for both)
-      return dateA.getTime() - dateB.getTime();
+      // For future appointments: ascending (earliest first)
+      // For past appointments: descending (latest first)
+      if (aIsFuture && bIsFuture) {
+        return dateA.getTime() - dateB.getTime(); // ascending
+      } else {
+        return dateB.getTime() - dateA.getTime(); // descending
+      }
     });
 
   const getStatusBadge = (status: string) => {
