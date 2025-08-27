@@ -1,27 +1,22 @@
-
-import { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { ArrowLeft, ArrowRight, Upload, CheckCircle, Calendar } from 'lucide-react';
+import { CheckCircle, Upload, FileText, User, Calendar, Heart, CreditCard, Camera } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
-interface Employee {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone?: string;
-}
-
 interface ContractRequest {
-  requestId: string;
-  employee: Employee;
-  expiresAt: string;
+  id: string;
+  employee_id: string;
+  token: string;
+  status: string;
+  created_at: string;
+  expires_at: string;
 }
 
 interface FormData {
@@ -30,6 +25,7 @@ interface FormData {
   email: string;
   phone: string;
   desiredStartDate: string;
+  employmentType: string;
   maritalStatus: string;
   socialSecurityNumber: string;
   taxNumber: string;
@@ -39,23 +35,22 @@ interface FormData {
   bankName: string;
 }
 
-const Arbeitsvertrag = () => {
+export default function Arbeitsvertrag() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const token = searchParams.get('token');
+
   const [currentStep, setCurrentStep] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [contractRequest, setContractRequest] = useState<ContractRequest | null>(null);
-  const [idFrontFile, setIdFrontFile] = useState<File | null>(null);
-  const [idBackFile, setIdBackFile] = useState<File | null>(null);
-  const [submitted, setSubmitted] = useState(false);
-  
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState<FormData>({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
     desiredStartDate: '',
+    employmentType: '',
     maritalStatus: '',
     socialSecurityNumber: '',
     taxNumber: '',
@@ -64,164 +59,150 @@ const Arbeitsvertrag = () => {
     bic: '',
     bankName: ''
   });
-
-  const token = searchParams.get('token');
+  const [idPhotos, setIdPhotos] = useState<{
+    front: File | null;
+    back: File | null;
+  }>({
+    front: null,
+    back: null
+  });
 
   useEffect(() => {
-    if (!token) {
-      toast.error('Ungültiger Link');
-      navigate('/');
-      return;
-    }
-    
-    fetchContractRequest();
-  }, [token]);
-
-  const fetchContractRequest = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`https://yvzgszkliqkzfaulpvju.supabase.co/functions/v1/get-contract-request?token=${token}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2emdzemtsaXFremZhdWxwdmp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYxMjkwMDMsImV4cCI6MjA3MTcwNTAwM30.cz09qE_Pem9ViV44Q9W75nNWIUOzx8o3n0_yYL9j9FY`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || data.error) {
-        toast.error(data?.error || 'Fehler beim Laden der Anfrage');
-        navigate('/');
-        return;
-      }
-
-      if (data.submitted) {
-        setSubmitted(true);
+    const fetchContractRequest = async () => {
+      if (!token) {
+        toast.error('Ungültiger Token');
         setLoading(false);
         return;
       }
 
-      setContractRequest(data);
-      
-      // Pre-fill form with employee data
-      setFormData(prev => ({
-        ...prev,
-        firstName: data.employee.first_name || '',
-        lastName: data.employee.last_name || '',
-        email: data.employee.email || '',
-        phone: data.employee.phone || ''
-      }));
-      
-    } catch (error) {
-      console.error('Error fetching contract request:', error);
-      toast.error('Fehler beim Laden der Anfrage');
-      navigate('/');
-    } finally {
-      setLoading(false);
-    }
-  };
+      try {
+        const { data, error } = await supabase
+          .from('employment_contract_requests')
+          .select('*')
+          .eq('token', token)
+          .eq('status', 'pending')
+          .single();
 
-  const handleInputChange = (field: keyof FormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+        if (error) {
+          console.error('Error fetching contract request:', error);
+          toast.error('Fehler beim Abrufen der Vertragsanfrage');
+          setLoading(false);
+          return;
+        }
 
-  const handleFileChange = (type: 'front' | 'back', file: File | null) => {
-    if (type === 'front') {
-      setIdFrontFile(file);
-    } else {
-      setIdBackFile(file);
-    }
-  };
+        if (!data) {
+          toast.error('Ungültige oder abgelaufene Anfrage');
+          setLoading(false);
+          return;
+        }
 
-  const validateStep = (step: number): boolean => {
-    switch (step) {
+        setContractRequest(data);
+      } catch (error) {
+        console.error('Error fetching contract request:', error);
+        toast.error('Unerwarteter Fehler beim Abrufen der Anfrage');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchContractRequest();
+  }, [token]);
+
+  const validateCurrentStep = (): boolean => {
+    switch (currentStep) {
       case 1:
-        return !!(formData.firstName && formData.lastName && formData.email);
+        return !!(formData.firstName && formData.lastName && formData.email && formData.desiredStartDate && formData.employmentType);
       case 2:
-        return true; // Optional fields
+        return true;
       case 3:
-        return true; // Optional fields
+        return !!formData.iban;
       case 4:
-        return !!(idFrontFile && idBackFile);
+        return !!(idPhotos.front && idPhotos.back);
       default:
         return false;
     }
   };
 
   const handleNext = () => {
-    if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 4));
+    if (validateCurrentStep()) {
+      setCurrentStep(currentStep + 1);
     } else {
-      toast.error('Bitte füllen Sie alle Pflichtfelder aus');
+      toast.error('Bitte füllen Sie alle erforderlichen Felder aus');
     }
   };
 
   const handlePrevious = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1));
+    setCurrentStep(currentStep - 1);
+  };
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setIdPhotos(prev => ({ ...prev, [side]: file }));
+    }
   };
 
   const handleSubmit = async () => {
-    if (!validateStep(4)) {
-      toast.error('Bitte laden Sie beide Seiten Ihres Personalausweises hoch');
+    if (!token) {
+      toast.error('Ungültiger Token');
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
-      setSubmitting(true);
+      const formDataToSubmit = new FormData();
+      formDataToSubmit.append('token', token);
+      formDataToSubmit.append('contractData', JSON.stringify(formData));
       
-      const submitFormData = new FormData();
-      submitFormData.append('token', token!);
-      submitFormData.append('contractData', JSON.stringify(formData));
-      
-      if (idFrontFile) {
-        submitFormData.append('idFront', idFrontFile);
+      if (idPhotos.front) {
+        formDataToSubmit.append('idFront', idPhotos.front);
       }
-      if (idBackFile) {
-        submitFormData.append('idBack', idBackFile);
+      if (idPhotos.back) {
+        formDataToSubmit.append('idBack', idPhotos.back);
       }
 
-      const { data, error } = await supabase.functions.invoke('submit-contract', {
-        body: submitFormData
+      const response = await fetch('https://yvzgszkliqkzfaulpvju.supabase.co/functions/v1/submit-contract', {
+        method: 'POST',
+        body: formDataToSubmit
       });
 
-      if (error || data.error) {
-        toast.error(data?.error || 'Fehler beim Einreichen der Daten');
-        return;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Fehler beim Übertragen der Daten');
       }
 
-      toast.success('Ihre Arbeitsvertrag-Informationen wurden erfolgreich eingereicht!');
-      setSubmitted(true);
+      toast.success('Arbeitsvertrag erfolgreich eingereicht!');
+      navigate('/');
       
     } catch (error) {
       console.error('Error submitting contract:', error);
-      toast.error('Fehler beim Einreichen der Daten');
+      toast.error(error instanceof Error ? error.message : 'Unbekannter Fehler aufgetreten');
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Lädt...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Lade Arbeitsvertrag...</p>
         </div>
       </div>
     );
   }
 
-  if (submitted) {
+  if (!contractRequest) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-            <CardTitle className="text-2xl text-green-700">Erfolgreich eingereicht!</CardTitle>
+            <CardTitle className="text-red-600">Ungültiger Link</CardTitle>
             <CardDescription>
-              Ihre Arbeitsvertrag-Informationen wurden erfolgreich übermittelt. 
-              Sie werden in Kürze von uns kontaktiert.
+              Dieser Link ist ungültig oder abgelaufen. Bitte wenden Sie sich an Ihren Arbeitgeber.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -229,55 +210,64 @@ const Arbeitsvertrag = () => {
     );
   }
 
-  const steps = [
-    { number: 1, title: 'Persönliche Daten' },
-    { number: 2, title: 'Steuer & Versicherung' },
-    { number: 3, title: 'Bankverbindung' },
-    { number: 4, title: 'Personalausweis' }
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Arbeitsvertrag-Informationen</h1>
-          <p className="text-muted-foreground">
-            Hallo {contractRequest?.employee.first_name}, bitte füllen Sie die folgenden Informationen aus.
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Arbeitsvertrag Informationen</h1>
+          <p className="text-gray-600">Bitte füllen Sie alle erforderlichen Informationen aus</p>
         </div>
 
-        {/* Progress Steps */}
-        <div className="flex justify-between mb-8">
-          {steps.map((step) => (
-            <div key={step.number} className="flex flex-col items-center">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium mb-2 ${
-                currentStep >= step.number 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'bg-muted text-muted-foreground'
-              }`}>
-                {step.number}
+        {/* Progress Bar */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            {[1, 2, 3, 4].map((step) => (
+              <div key={step} className="flex items-center">
+                <div className={`
+                  w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
+                  ${currentStep >= step 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-200 text-gray-600'
+                  }
+                `}>
+                  {currentStep > step ? <CheckCircle className="h-5 w-5" /> : step}
+                </div>
+                {step < 4 && (
+                  <div className={`
+                    h-1 w-full mx-2
+                    ${currentStep > step ? 'bg-blue-600' : 'bg-gray-200'}
+                  `} />
+                )}
               </div>
-              <span className="text-xs text-center max-w-20">{step.title}</span>
-            </div>
-          ))}
+            ))}
+          </div>
+          <div className="flex justify-between text-xs text-gray-500 mt-2">
+            <span>Persönliche Daten</span>
+            <span>Steuer & Soziales</span>
+            <span>Bankverbindung</span>
+            <span>Personalausweis</span>
+          </div>
         </div>
 
-        {/* Form Content */}
         <Card>
-          <CardHeader>
-            <CardTitle>Schritt {currentStep}: {steps[currentStep - 1].title}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="p-6">
+            {/* Step 1: Personal Information */}
             {currentStep === 1 && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <User className="h-5 w-5 text-blue-600" />
+                  <h2 className="text-xl font-semibold">Persönliche Informationen</h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="firstName">Vorname *</Label>
                     <Input
                       id="firstName"
                       value={formData.firstName}
-                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                      onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                      placeholder="Max"
                       required
                     />
                   </div>
@@ -286,43 +276,72 @@ const Arbeitsvertrag = () => {
                     <Input
                       id="lastName"
                       value={formData.lastName}
-                      onChange={(e) => handleInputChange('lastName', e.target.value)}
+                      onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                      placeholder="Mustermann"
                       required
                     />
                   </div>
                 </div>
+
                 <div>
-                  <Label htmlFor="email">E-Mail *</Label>
+                  <Label htmlFor="email">E-Mail-Adresse *</Label>
                   <Input
                     id="email"
                     type="email"
                     value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    placeholder="max@example.com"
                     required
                   />
                 </div>
+
                 <div>
                   <Label htmlFor="phone">Telefonnummer</Label>
                   <Input
                     id="phone"
+                    type="tel"
                     value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    placeholder="+49 123 456789"
                   />
                 </div>
+
                 <div>
-                  <Label htmlFor="startDate">Gewünschtes Startdatum</Label>
+                  <Label htmlFor="desiredStartDate">Gewünschtes Startdatum *</Label>
                   <Input
-                    id="startDate"
+                    id="desiredStartDate"
                     type="date"
                     value={formData.desiredStartDate}
-                    onChange={(e) => handleInputChange('desiredStartDate', e.target.value)}
+                    onChange={(e) => setFormData({...formData, desiredStartDate: e.target.value})}
+                    required
                   />
                 </div>
+
+                <div>
+                  <Label htmlFor="employmentType">Anstellungsart *</Label>
+                  <Select 
+                    value={formData.employmentType} 
+                    onValueChange={(value) => setFormData({...formData, employmentType: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Bitte wählen..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="minijob">Minijob</SelectItem>
+                      <SelectItem value="teilzeit">Teilzeit</SelectItem>
+                      <SelectItem value="vollzeit">Vollzeit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div>
                   <Label htmlFor="maritalStatus">Familienstand</Label>
-                  <Select value={formData.maritalStatus} onValueChange={(value) => handleInputChange('maritalStatus', value)}>
+                  <Select 
+                    value={formData.maritalStatus} 
+                    onValueChange={(value) => setFormData({...formData, maritalStatus: value})}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Bitte wählen" />
+                      <SelectValue placeholder="Bitte wählen..." />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="single">Ledig</SelectItem>
@@ -332,233 +351,201 @@ const Arbeitsvertrag = () => {
                     </SelectContent>
                   </Select>
                 </div>
-              </>
+              </div>
             )}
 
+            {/* Step 2: Tax and Social Security */}
             {currentStep === 2 && (
-              <>
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                  <h2 className="text-xl font-semibold">Steuer- und Sozialversicherungsdaten</h2>
+                </div>
+
                 <div>
-                  <Label htmlFor="socialSecurity">Sozialversicherungsnummer</Label>
+                  <Label htmlFor="socialSecurityNumber">Sozialversicherungsnummer</Label>
                   <Input
-                    id="socialSecurity"
+                    id="socialSecurityNumber"
                     value={formData.socialSecurityNumber}
-                    onChange={(e) => handleInputChange('socialSecurityNumber', e.target.value)}
-                    placeholder="z.B. 12 345678 A 123"
+                    onChange={(e) => setFormData({...formData, socialSecurityNumber: e.target.value})}
+                    placeholder="12 345678 A 123"
                   />
                 </div>
+
                 <div>
                   <Label htmlFor="taxNumber">Steuernummer</Label>
                   <Input
                     id="taxNumber"
                     value={formData.taxNumber}
-                    onChange={(e) => handleInputChange('taxNumber', e.target.value)}
-                    placeholder="z.B. 123/456/78901"
+                    onChange={(e) => setFormData({...formData, taxNumber: e.target.value})}
+                    placeholder="123/456/78901"
                   />
                 </div>
+
                 <div>
                   <Label htmlFor="healthInsurance">Krankenkasse</Label>
                   <Input
                     id="healthInsurance"
                     value={formData.healthInsurance}
-                    onChange={(e) => handleInputChange('healthInsurance', e.target.value)}
-                    placeholder="z.B. AOK Bayern, Techniker Krankenkasse"
+                    onChange={(e) => setFormData({...formData, healthInsurance: e.target.value})}
+                    placeholder="AOK, Barmer, TK..."
                   />
                 </div>
-              </>
+              </div>
             )}
 
+            {/* Step 3: Bank Information */}
             {currentStep === 3 && (
               <div className="space-y-6">
-                {/* Bank Card Visualization */}
-                <div className="flex justify-center">
-                  <div className="w-80 h-48 bg-gradient-to-r from-blue-600 via-blue-700 to-blue-800 rounded-xl shadow-2xl p-6 text-white relative overflow-hidden">
-                    {/* Card Background Pattern */}
-                    <div className="absolute inset-0 opacity-10">
-                      <div className="absolute top-4 right-4 w-12 h-12 border-2 border-white/30 rounded-full"></div>
-                      <div className="absolute top-6 right-6 w-8 h-8 border-2 border-white/20 rounded-full"></div>
-                    </div>
-                    
-                    {/* Card Content */}
-                    <div className="relative z-10 h-full flex flex-col justify-between">
-                      <div>
-                        <div className="text-sm font-medium opacity-80 mb-1">Bank</div>
-                        <div className="text-lg font-semibold">
-                          {formData.bankName || 'Ihre Bank'}
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-3">
-                        <div>
-                          <div className="text-xs opacity-70 mb-1">IBAN</div>
-                          <div className="font-mono text-sm tracking-wider">
-                            {formData.iban || 'DE__ ____ ____ ____ ____ __'}
-                          </div>
-                        </div>
-                        
-                        <div className="flex justify-between items-end">
-                          <div>
-                            <div className="text-xs opacity-70 mb-1">BIC</div>
-                            <div className="font-mono text-sm">
-                              {formData.bic || 'XXXXXXXX'}
-                            </div>
-                          </div>
-                          <div className="text-xs opacity-60">
-                            BANKCARD
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                <div className="flex items-center gap-2 mb-4">
+                  <CreditCard className="h-5 w-5 text-blue-600" />
+                  <h2 className="text-xl font-semibold">Bankverbindung</h2>
                 </div>
 
-                {/* Input Fields */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h3 className="font-medium text-blue-900 mb-3">Bankverbindung</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <Label htmlFor="iban">IBAN</Label>
-                      <Input
-                        id="iban"
-                        value={formData.iban}
-                        onChange={(e) => handleInputChange('iban', e.target.value)}
-                        placeholder="DE89 3704 0044 0532 0130 00"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="bic">BIC</Label>
-                      <Input
-                        id="bic"
-                        value={formData.bic}
-                        onChange={(e) => handleInputChange('bic', e.target.value)}
-                        placeholder="COBADEFFXXX"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="bankName">Name der Bank</Label>
-                      <Input
-                        id="bankName"
-                        value={formData.bankName}
-                        onChange={(e) => handleInputChange('bankName', e.target.value)}
-                        placeholder="Commerzbank AG"
-                      />
-                    </div>
-                  </div>
+                <div>
+                  <Label htmlFor="iban">IBAN *</Label>
+                  <Input
+                    id="iban"
+                    value={formData.iban}
+                    onChange={(e) => setFormData({...formData, iban: e.target.value.toUpperCase()})}
+                    placeholder="DE89 3704 0044 0532 0130 00"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="bic">BIC</Label>
+                  <Input
+                    id="bic"
+                    value={formData.bic}
+                    onChange={(e) => setFormData({...formData, bic: e.target.value.toUpperCase()})}
+                    placeholder="COBADEFFXXX"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="bankName">Bank</Label>
+                  <Input
+                    id="bankName"
+                    value={formData.bankName}
+                    onChange={(e) => setFormData({...formData, bankName: e.target.value})}
+                    placeholder="Commerzbank AG"
+                  />
                 </div>
               </div>
             )}
 
+            {/* Step 4: ID Photos */}
             {currentStep === 4 && (
               <div className="space-y-6">
-                <div className="text-center">
-                  <h3 className="text-lg font-medium mb-2">Personalausweis hochladen</h3>
-                  <p className="text-sm text-muted-foreground mb-6">
-                    Bitte laden Sie beide Seiten Ihres Personalausweises hoch
-                  </p>
+                <div className="flex items-center gap-2 mb-4">
+                  <Camera className="h-5 w-5 text-blue-600" />
+                  <h2 className="text-xl font-semibold">Personalausweis Fotos</h2>
                 </div>
-                
+
+                <p className="text-sm text-gray-600 mb-4">
+                  Bitte laden Sie Fotos von Vorder- und Rückseite Ihres Personalausweises hoch. 
+                  Die Bilder sollten klar und gut lesbar sein.
+                </p>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label>Vorderseite *</Label>
-                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
-                      {idFrontFile ? (
-                        <div>
-                          <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                          <p className="text-sm text-green-700">{idFrontFile.name}</p>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="mt-2"
-                            onClick={() => handleFileChange('front', null)}
-                          >
-                            Entfernen
-                          </Button>
-                        </div>
-                      ) : (
-                        <div>
-                          <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                          <p className="text-sm text-muted-foreground mb-2">Vorderseite hochladen</p>
-                          <Input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleFileChange('front', e.target.files?.[0] || null)}
-                            className="cursor-pointer"
-                          />
-                        </div>
-                      )}
+                  {/* Front ID */}
+                  <div>
+                    <Label className="text-sm font-medium">Vorderseite</Label>
+                    <div className="mt-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handlePhotoUpload(e, 'front')}
+                        className="hidden"
+                        id="id-front"
+                      />
+                      <label
+                        htmlFor="id-front"
+                        className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                      >
+                        {idPhotos.front ? (
+                          <div className="text-center">
+                            <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                            <p className="text-sm text-gray-600">{idPhotos.front.name}</p>
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                            <p className="text-sm text-gray-600">Vorderseite hochladen</p>
+                          </div>
+                        )}
+                      </label>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Rückseite *</Label>
-                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
-                      {idBackFile ? (
-                        <div>
-                          <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                          <p className="text-sm text-green-700">{idBackFile.name}</p>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="mt-2"
-                            onClick={() => handleFileChange('back', null)}
-                          >
-                            Entfernen
-                          </Button>
-                        </div>
-                      ) : (
-                        <div>
-                          <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                          <p className="text-sm text-muted-foreground mb-2">Rückseite hochladen</p>
-                          <Input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleFileChange('back', e.target.files?.[0] || null)}
-                            className="cursor-pointer"
-                          />
-                        </div>
-                      )}
+                  {/* Back ID */}
+                  <div>
+                    <Label className="text-sm font-medium">Rückseite</Label>
+                    <div className="mt-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handlePhotoUpload(e, 'back')}
+                        className="hidden"
+                        id="id-back"
+                      />
+                      <label
+                        htmlFor="id-back"
+                        className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                      >
+                        {idPhotos.back ? (
+                          <div className="text-center">
+                            <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                            <p className="text-sm text-gray-600">{idPhotos.back.name}</p>
+                          </div>
+                        ) : (
+                          <div className="text-center">
+                            <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                            <p className="text-sm text-gray-600">Rückseite hochladen</p>
+                          </div>
+                        )}
+                      </label>
                     </div>
                   </div>
                 </div>
               </div>
             )}
+
+            <Separator className="my-6" />
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentStep === 1}
+              >
+                Zurück
+              </Button>
+
+              {currentStep < 4 ? (
+                <Button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={!validateCurrentStep()}
+                >
+                  Weiter
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting || !validateCurrentStep()}
+                >
+                  {isSubmitting ? 'Wird eingereicht...' : 'Arbeitsvertrag einreichen'}
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
-
-        {/* Navigation Buttons */}
-        <div className="flex justify-between mt-8">
-          <Button
-            variant="outline"
-            onClick={handlePrevious}
-            disabled={currentStep === 1}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Zurück
-          </Button>
-          
-          {currentStep < 4 ? (
-            <Button onClick={handleNext}>
-              Weiter
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          ) : (
-            <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Wird eingereicht...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Einreichen
-                </>
-              )}
-            </Button>
-          )}
-        </div>
       </div>
     </div>
   );
-};
-
-export default Arbeitsvertrag;
+}

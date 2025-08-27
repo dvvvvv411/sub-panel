@@ -137,6 +137,7 @@ export type Database = {
           desired_start_date: string | null
           email: string
           employee_id: string
+          employment_type: string | null
           first_name: string
           health_insurance: string | null
           iban: string | null
@@ -158,6 +159,7 @@ export type Database = {
           desired_start_date?: string | null
           email: string
           employee_id: string
+          employment_type?: string | null
           first_name: string
           health_insurance?: string | null
           iban?: string | null
@@ -179,6 +181,7 @@ export type Database = {
           desired_start_date?: string | null
           email?: string
           employee_id?: string
+          employment_type?: string | null
           first_name?: string
           health_insurance?: string | null
           iban?: string | null

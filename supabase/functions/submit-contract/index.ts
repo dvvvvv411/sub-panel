@@ -1,5 +1,4 @@
 
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -117,6 +116,7 @@ Deno.serve(async (req) => {
         email: contractData.email,
         phone: contractData.phone,
         desired_start_date: contractData.desiredStartDate,
+        employment_type: contractData.employmentType,
         marital_status: contractData.maritalStatus,
         social_security_number: contractData.socialSecurityNumber,
         tax_number: contractData.taxNumber,
@@ -187,4 +187,3 @@ Deno.serve(async (req) => {
     );
   }
 });
-

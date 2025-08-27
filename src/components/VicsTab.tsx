@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +33,7 @@ interface ContractSubmission {
   email: string;
   phone?: string;
   desired_start_date?: string;
+  employment_type?: string;
   marital_status?: string;
   social_security_number?: string;
   tax_number?: string;
@@ -463,6 +463,21 @@ export const VicsTab = () => {
     }
   };
 
+  const getEmploymentTypeBadge = (employmentType?: string) => {
+    if (!employmentType) return null;
+    
+    switch (employmentType) {
+      case 'minijob':
+        return <Badge variant="outline" className="border-purple-500 text-purple-700 ml-2">Minijob</Badge>;
+      case 'teilzeit':
+        return <Badge variant="outline" className="border-orange-500 text-orange-700 ml-2">Teilzeit</Badge>;
+      case 'vollzeit':
+        return <Badge variant="outline" className="border-emerald-500 text-emerald-700 ml-2">Vollzeit</Badge>;
+      default:
+        return <Badge variant="secondary" className="ml-2">{employmentType}</Badge>;
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'imported':
@@ -731,7 +746,10 @@ export const VicsTab = () => {
                           {contractSubmissions.map((submission) => (
                             <TableRow key={submission.id}>
                               <TableCell className="font-medium">
-                                {submission.first_name} {submission.last_name}
+                                <div className="flex items-center">
+                                  {submission.first_name} {submission.last_name}
+                                  {getEmploymentTypeBadge(submission.employment_type)}
+                                </div>
                               </TableCell>
                               <TableCell>{submission.email}</TableCell>
                               <TableCell>
@@ -843,6 +861,7 @@ export const VicsTab = () => {
                     <div><strong>E-Mail:</strong> {selectedSubmission.email}</div>
                     <div><strong>Telefon:</strong> {selectedSubmission.phone || '-'}</div>
                     <div><strong>Startdatum:</strong> {selectedSubmission.desired_start_date ? new Date(selectedSubmission.desired_start_date).toLocaleDateString('de-DE') : '-'}</div>
+                    <div><strong>Anstellungsart:</strong> {selectedSubmission.employment_type ? getEmploymentTypeBadge(selectedSubmission.employment_type) : '-'}</div>
                     <div><strong>Familienstand:</strong> {getMaritalStatusLabel(selectedSubmission.marital_status || '')}</div>
                   </CardContent>
                 </Card>
