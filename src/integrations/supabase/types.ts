@@ -474,36 +474,6 @@ export type Database = {
           },
         ]
       }
-      premium_adjustments: {
-        Row: {
-          amount: number
-          created_at: string
-          created_by: string
-          employee_id: string
-          id: string
-          reason: string | null
-          updated_at: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          created_by: string
-          employee_id: string
-          id?: string
-          reason?: string | null
-          updated_at?: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          created_by?: string
-          employee_id?: string
-          id?: string
-          reason?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
       user_profiles: {
         Row: {
           created_at: string

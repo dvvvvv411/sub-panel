@@ -23,7 +23,6 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ employee }) => {
   const [loading, setLoading] = React.useState(true);
   const [activeSince, setActiveSince] = React.useState<string>('');
   const [assignedOrders, setAssignedOrders] = React.useState<any[]>([]);
-  const [premiumAdjustments, setPremiumAdjustments] = React.useState<any[]>([]);
 
   React.useEffect(() => {
     fetchData();
@@ -80,15 +79,6 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ employee }) => {
 
       setApprovedEvaluations(data || []);
       
-      // Fetch premium adjustments
-      const { data: adjustmentsData } = await supabase
-        .from('premium_adjustments')
-        .select('*')
-        .eq('employee_id', employee.id)
-        .order('created_at', { ascending: false });
-
-      setPremiumAdjustments(adjustmentsData || []);
-
       // Fallback: if no created_at, use earliest approved evaluation date
       if (!employeeData?.created_at && data && data.length > 0) {
         const earliestApproval = data.reduce((earliest, evaluation) => {
@@ -116,8 +106,6 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ employee }) => {
   const completedOrders = assignedOrders.filter((o: any) => o.status === 'completed');
   const completedCount = completedOrders.length;
   const totalPremium = approvedEvaluations.reduce((sum: number, evaluation: any) => sum + (evaluation.premium_awarded || 0), 0);
-  const manualAdjustmentsTotal = premiumAdjustments.reduce((sum, adj) => sum + adj.amount, 0);
-  const totalPremiumIncludingAdjustments = totalPremium + manualAdjustmentsTotal;
 
   const achievements = [
     { 
@@ -170,13 +158,6 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ employee }) => {
     const month = date ? date.toLocaleString('de-DE', { month: 'long', year: 'numeric' }) : 'Unbekannt';
     monthlyEarningsMap.set(month, (monthlyEarningsMap.get(month) || 0) + (evaluation.premium_awarded || 0));
   });
-
-  premiumAdjustments.forEach((adjustment) => {
-    const date = new Date(adjustment.created_at);
-    const month = date.toLocaleString('de-DE', { month: 'long', year: 'numeric' });
-    monthlyEarningsMap.set(month, (monthlyEarningsMap.get(month) || 0) + adjustment.amount);
-  });
-
   const monthlyEarnings = Array.from(monthlyEarningsMap, ([month, amount]) => ({ month, amount }));
 
   if (loading) {
@@ -224,18 +205,12 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ employee }) => {
                 <Coins className="h-10 w-10 text-green-600" />
               </div>
               <div className="space-y-1">
-                <h2 className="text-3xl font-bold text-green-800">€{totalPremiumIncludingAdjustments.toFixed(2)}</h2>
+                <h2 className="text-3xl font-bold text-green-800">€{totalPremium.toFixed(2)}</h2>
                 <p className="text-green-600 font-medium">Gesamtprämien erhalten</p>
                 <div className="flex items-center gap-4 text-sm text-green-600">
                   <span>Aus {approvedEvaluations.length} genehmigten Bewertungen</span>
                   <span>•</span>
                   <span>{completedCount} abgeschlossene Aufträge</span>
-                  {manualAdjustmentsTotal !== 0 && (
-                    <>
-                      <span>•</span>
-                      <span>€{manualAdjustmentsTotal.toFixed(2)} manuelle Anpassungen</span>
-                    </>
-                  )}
                 </div>
               </div>
             </div>
@@ -250,56 +225,6 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ employee }) => {
           </div>
         </CardContent>
       </Card>
-
-      {/* Manual Premium Adjustments */}
-      {premiumAdjustments.length > 0 && (
-        <Card className="border-muted/50">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-3 text-lg">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <TrendingUp className="h-5 w-5 text-blue-600" />
-              </div>
-              Manuelle Prämien-Anpassungen
-              <Badge variant={manualAdjustmentsTotal >= 0 ? "default" : "destructive"} className="ml-2">
-                Gesamt: {manualAdjustmentsTotal >= 0 ? '+' : ''}€{manualAdjustmentsTotal.toFixed(2)}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {premiumAdjustments.map((adjustment, index) => (
-                <div key={index} className="group flex items-center justify-between p-4 rounded-lg border border-muted/50 bg-blue-50/30 hover:bg-blue-50/50 hover:border-blue-200/60 transition-all duration-300">
-                  <div className="flex items-center gap-4">
-                    <div className={`p-2.5 rounded-lg ${adjustment.amount > 0 ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-                      {adjustment.amount > 0 ? (
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                      ) : (
-                        <TrendingUp className="h-5 w-5 text-red-600 rotate-180" />
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <p className="font-semibold text-foreground group-hover:text-blue-800 transition-colors">
-                        {adjustment.reason || 'Manuelle Anpassung'}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        <span>
-                          {new Date(adjustment.created_at).toLocaleDateString('de-DE')}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <Badge className={`${adjustment.amount > 0 ? 'bg-green-500/10 text-green-800 hover:bg-green-500/20' : 'bg-red-500/10 text-red-800 hover:bg-red-500/20'} text-base font-bold px-3 py-1.5 transition-colors`}>
-                      {adjustment.amount > 0 ? '+' : ''}€{adjustment.amount.toFixed(2)}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Premium History */}
       <Card className="border-muted/50">
