@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { Copy, Eye, EyeOff, RefreshCw, UserCheck } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Copy, Eye, EyeOff, RefreshCw, UserCheck, Edit3 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -29,7 +30,7 @@ interface CreateEmployeeDialogProps {
 
 const generatePassword = (): string => {
   const length = 12;
-  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let password = "";
   for (let i = 0; i < length; i++) {
     password += charset.charAt(Math.floor(Math.random() * charset.length));
@@ -46,16 +47,29 @@ export const CreateEmployeeDialog: React.FC<CreateEmployeeDialogProps> = ({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [useCustomPassword, setUseCustomPassword] = useState(false);
 
   React.useEffect(() => {
     if (isOpen && employee) {
-      setPassword(generatePassword());
+      if (!useCustomPassword) {
+        setPassword(generatePassword());
+      }
       setShowPassword(true);
+      setUseCustomPassword(false);
     }
   }, [isOpen, employee]);
 
   const handleRegeneratePassword = () => {
     setPassword(generatePassword());
+  };
+
+  const handleToggleCustomPassword = (checked: boolean) => {
+    setUseCustomPassword(checked);
+    if (!checked) {
+      setPassword(generatePassword());
+    } else {
+      setPassword('');
+    }
   };
 
   const handleCopyPassword = async () => {
@@ -146,52 +160,79 @@ export const CreateEmployeeDialog: React.FC<CreateEmployeeDialogProps> = ({
             </CardContent>
           </Card>
 
-          {/* Password Section */}
-          <div className="space-y-2">
-            <Label htmlFor="password">Generiertes Passwort</Label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  readOnly
-                  className="pr-20"
-                />
-                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={handleCopyPassword}
-                  >
-                    <Copy className="h-3 w-3" />
-                  </Button>
-                </div>
+          {/* Password Options */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="custom-password">Individuelles Passwort</Label>
+                <p className="text-xs text-muted-foreground">
+                  Eigenes Passwort eingeben statt automatisch generieren
+                </p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleRegeneratePassword}
+              <Switch
+                id="custom-password"
+                checked={useCustomPassword}
+                onCheckedChange={handleToggleCustomPassword}
                 disabled={isCreating}
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
+              />
             </div>
-            <p className="text-xs text-muted-foreground">
-              Notieren Sie sich das Passwort, bevor Sie den Account erstellen.
-            </p>
+
+            {/* Password Section */}
+            <div className="space-y-2">
+              <Label htmlFor="password">
+                {useCustomPassword ? 'Individuelles Passwort' : 'Generiertes Passwort'}
+              </Label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={useCustomPassword ? (e) => setPassword(e.target.value) : undefined}
+                    readOnly={!useCustomPassword}
+                    className="pr-20"
+                    placeholder={useCustomPassword ? "Passwort eingeben..." : ""}
+                  />
+                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={handleCopyPassword}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+                {!useCustomPassword && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRegeneratePassword}
+                    disabled={isCreating}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {useCustomPassword 
+                  ? "Geben Sie ein sicheres Passwort ein (nur Buchstaben und Zahlen empfohlen)."
+                  : "Notieren Sie sich das Passwort, bevor Sie den Account erstellen."
+                }
+              </p>
+            </div>
           </div>
         </div>
 
