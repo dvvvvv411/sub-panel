@@ -88,7 +88,7 @@ export function ReviewsManagementTab() {
     }
   };
 
-  const handleApprove = async (evaluationId: string, premiumOverride?: number) => {
+  const handleApprove = async (evaluation: OrderEvaluation, premiumOverride?: number, adminNote?: string) => {
     try {
       const { error } = await supabase
         .from('order_evaluations')
@@ -96,14 +96,25 @@ export function ReviewsManagementTab() {
           status: 'approved',
           premium_awarded: premiumOverride || undefined,
           reviewed_by: (await supabase.auth.getUser()).data.user?.id,
-          approved_at: new Date().toISOString()
+          approved_at: new Date().toISOString(),
+          overall_comment: adminNote ? `ADMIN: ${adminNote}` : undefined
         })
-        .eq('id', evaluationId);
+        .eq('id', evaluation.id);
 
       if (error) {
         console.error('Error approving evaluation:', error);
         toast.error('Fehler beim Genehmigen der Bewertung');
         return;
+      }
+
+      // Mark assignment as completed
+      const { error: assignErr } = await supabase
+        .from('order_assignments')
+        .update({ status: 'completed' })
+        .eq('id', evaluation.assignment_id);
+
+      if (assignErr) {
+        console.error('Error updating assignment status:', assignErr);
       }
 
       toast.success('Bewertung erfolgreich genehmigt');
@@ -114,7 +125,7 @@ export function ReviewsManagementTab() {
     }
   };
 
-  const handleReject = async (evaluationId: string, reason?: string) => {
+  const handleReject = async (evaluation: OrderEvaluation, reason?: string) => {
     try {
       const { error } = await supabase
         .from('order_evaluations')
@@ -124,12 +135,22 @@ export function ReviewsManagementTab() {
           reviewed_by: (await supabase.auth.getUser()).data.user?.id,
           overall_comment: reason ? `ADMIN: ${reason}` : undefined
         })
-        .eq('id', evaluationId);
+        .eq('id', evaluation.id);
 
       if (error) {
         console.error('Error rejecting evaluation:', error);
         toast.error('Fehler beim Ablehnen der Bewertung');
         return;
+      }
+
+      // Move assignment back to in_progress
+      const { error: assignErr } = await supabase
+        .from('order_assignments')
+        .update({ status: 'in_progress' })
+        .eq('id', evaluation.assignment_id);
+
+      if (assignErr) {
+        console.error('Error updating assignment status:', assignErr);
       }
 
       toast.success('Bewertung erfolgreich abgelehnt');
@@ -325,7 +346,7 @@ export function ReviewsManagementTab() {
                             <Button
                               size="sm"
                               variant="default"
-                              onClick={() => handleApprove(evaluation.id)}
+                              onClick={() => handleApprove(evaluation)}
                               className="bg-green-600 hover:bg-green-700"
                             >
                               <Check className="h-4 w-4" />
@@ -333,7 +354,7 @@ export function ReviewsManagementTab() {
                             <Button
                               size="sm"
                               variant="destructive"
-                              onClick={() => handleReject(evaluation.id)}
+                              onClick={() => handleReject(evaluation)}
                             >
                               <X className="h-4 w-4" />
                             </Button>
@@ -455,7 +476,7 @@ export function ReviewsManagementTab() {
                   <Button
                     variant="destructive"
                     onClick={() => {
-                      handleReject(selectedEvaluation.id, adminComment);
+                      handleReject(selectedEvaluation, adminComment);
                       setDetailsDialogOpen(false);
                     }}
                   >
@@ -464,7 +485,7 @@ export function ReviewsManagementTab() {
                   </Button>
                   <Button
                     onClick={() => {
-                      handleApprove(selectedEvaluation.id, customPremium || undefined);
+                      handleApprove(selectedEvaluation, customPremium || undefined, adminComment);
                       setDetailsDialogOpen(false);
                     }}
                     className="bg-green-600 hover:bg-green-700"

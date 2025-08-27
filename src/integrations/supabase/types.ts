@@ -289,7 +289,29 @@ export type Database = {
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_order_evaluations_assignment"
+            columns: ["assignment_id"]
+            isOneToOne: true
+            referencedRelation: "order_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_order_evaluations_employee"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_order_evaluations_order"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       orders: {
         Row: {

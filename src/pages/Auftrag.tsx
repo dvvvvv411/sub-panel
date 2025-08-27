@@ -213,10 +213,10 @@ const Auftrag = () => {
         return;
       }
 
-      // Update assignment status to completed
+      // Update assignment status to 'evaluated' (waiting for admin approval)
       await supabase
         .from('order_assignments')
-        .update({ status: 'completed' })
+        .update({ status: 'evaluated' })
         .eq('order_id', order.id)
         .eq('employee_id', employeeData.id);
 
@@ -238,7 +238,7 @@ const Auftrag = () => {
       const ratings = Object.values(evaluations).map(e => e.rating);
       const overallRating = Math.round(ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length);
 
-      // Submit evaluation
+      // Submit evaluation (pending)
       const { error: evaluationError } = await supabase
         .from('order_evaluations')
         .insert({
@@ -257,7 +257,7 @@ const Auftrag = () => {
         return;
       }
 
-      toast.success('Bewertung erfolgreich abgesendet! Die Bewertung wird vom Admin geprüft.');
+      toast.success('Bewertung abgesendet! Der Auftrag wird nach Admin-Genehmigung abgeschlossen.');
       navigate('/mitarbeiter');
 
     } catch (error) {
