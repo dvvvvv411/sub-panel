@@ -301,7 +301,7 @@ const Mitarbeiter = () => {
           </TabsContent>
 
           <TabsContent value="reviews" className="space-y-6">
-            <ReviewsTab assignedOrders={assignedOrders} />
+            <ReviewsTab user={user} />
           </TabsContent>
 
           <TabsContent value="rewards" className="space-y-6">
