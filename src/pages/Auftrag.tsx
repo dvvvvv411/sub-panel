@@ -49,8 +49,6 @@ const Auftrag = () => {
   const [submitting, setSubmitting] = useState(false);
   
   // Rating state
-  const [overallRating, setOverallRating] = useState(0);
-  const [overallComment, setOverallComment] = useState('');
   const [questionResponses, setQuestionResponses] = useState<Record<string, { rating: number; comment: string }>>({});
 
   useEffect(() => {
@@ -187,12 +185,6 @@ const Auftrag = () => {
   const submitEvaluation = async () => {
     if (!order || !employee || !assignment) return;
 
-    // Validate overall rating
-    if (overallRating === 0) {
-      toast.error('Bitte geben Sie eine Gesamtbewertung ab');
-      return;
-    }
-
     // Validate question ratings
     for (const question of questions) {
       if (questionResponses[question.id]?.rating === 0) {
@@ -203,6 +195,12 @@ const Auftrag = () => {
 
     try {
       setSubmitting(true);
+
+      // Calculate overall rating as average of question ratings
+      const totalRating = questions.reduce((sum, question) => {
+        return sum + (questionResponses[question.id]?.rating || 0);
+      }, 0);
+      const overallRating = Math.round(totalRating / questions.length);
 
       // Prepare evaluation details
       const evaluationDetails = questions.reduce((acc, question) => {
@@ -221,7 +219,7 @@ const Auftrag = () => {
           order_id: order.id,
           employee_id: employee.id,
           rating: overallRating,
-          overall_comment: overallComment,
+          overall_comment: '',
           details: evaluationDetails,
           status: 'pending'
         });
@@ -318,79 +316,51 @@ const Auftrag = () => {
             </CardContent>
           </Card>
 
-          {/* Overall Rating */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Gesamtbewertung</CardTitle>
-              <CardDescription>
-                Wie bewerten Sie den Auftrag insgesamt?
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm font-medium mb-2">Bewertung (1-5 Sterne)</p>
-                <StarRating
-                  rating={overallRating}
-                  onRatingChange={setOverallRating}
-                />
-              </div>
-              <div>
-                <p className="text-sm font-medium mb-2">Kommentar (optional)</p>
-                <Textarea
-                  value={overallComment}
-                  onChange={(e) => setOverallComment(e.target.value)}
-                  placeholder="Zusätzliche Anmerkungen zum Auftrag..."
-                  rows={3}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Evaluation Questions */}
-        {questions.length > 0 && (
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Bewertungsfragen</CardTitle>
-              <CardDescription>
-                Bitte bewerten Sie jeden Aspekt des Auftrags
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {questions.map((question) => (
-                <div key={question.id} className="border-b border-border pb-6 last:border-b-0">
-                  <p className="font-medium mb-3">{question.question}</p>
-                  
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm font-medium mb-2">Bewertung</p>
-                      <StarRating
-                        rating={questionResponses[question.id]?.rating || 0}
-                        onRatingChange={(rating) => updateQuestionResponse(question.id, 'rating', rating)}
-                      />
-                    </div>
+          {/* Evaluation Questions */}
+          {questions.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Bewertungsfragen</CardTitle>
+                <CardDescription>
+                  Bitte bewerten Sie jeden Aspekt des Auftrags
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {questions.map((question) => (
+                  <div key={question.id} className="border-b border-border pb-6 last:border-b-0">
+                    <p className="font-medium mb-3">{question.question}</p>
                     
-                    <div>
-                      <p className="text-sm font-medium mb-2">Kommentar (optional)</p>
-                      <Textarea
-                        value={questionResponses[question.id]?.comment || ''}
-                        onChange={(e) => updateQuestionResponse(question.id, 'comment', e.target.value)}
-                        placeholder="Erläutern Sie Ihre Bewertung..."
-                        rows={2}
-                      />
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm font-medium mb-2">Bewertung</p>
+                        <StarRating
+                          rating={questionResponses[question.id]?.rating || 0}
+                          onRatingChange={(rating) => updateQuestionResponse(question.id, 'rating', rating)}
+                        />
+                      </div>
+                      
+                      <div>
+                        <p className="text-sm font-medium mb-2">Kommentar (optional)</p>
+                        <Textarea
+                          value={questionResponses[question.id]?.comment || ''}
+                          onChange={(e) => updateQuestionResponse(question.id, 'comment', e.target.value)}
+                          placeholder="Erläutern Sie Ihre Bewertung..."
+                          rows={2}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
         {/* Submit Button */}
         <div className="mt-6 flex justify-end">
           <Button
             onClick={submitEvaluation}
-            disabled={submitting || overallRating === 0}
+            disabled={submitting || questions.some(q => (questionResponses[q.id]?.rating || 0) === 0)}
             size="lg"
           >
             {submitting ? (
