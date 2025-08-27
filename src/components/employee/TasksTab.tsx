@@ -12,8 +12,8 @@ interface TasksTabProps {
 
 export const TasksTab: React.FC<TasksTabProps> = ({ assignedOrders, onStartOrder }) => {
   const navigate = useNavigate();
-  const pendingOrders = assignedOrders.filter(order => order.status !== 'completed');
-  const completedOrders = assignedOrders.filter(order => order.status === 'completed');
+  const pendingOrders = assignedOrders.filter(order => order.assignment_status !== 'completed');
+  const completedOrders = assignedOrders.filter(order => order.assignment_status === 'completed');
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -36,7 +36,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({ assignedOrders, onStartOrder
             <CardTitle className="text-lg">{order.title}</CardTitle>
             <p className="text-sm text-muted-foreground">Auftrag #{order.order_number}</p>
           </div>
-          {getStatusBadge(order.status)}
+          {getStatusBadge(order.assignment_status)}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -52,7 +52,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({ assignedOrders, onStartOrder
           </div>
         )}
 
-        {showStartButton && (order.assignment_status === 'assigned' || order.status === 'assigned') && (
+        {showStartButton && order.assignment_status === 'assigned' && (
           <Button 
             onClick={() => navigate(`/auftrag/${order.id}`)} 
             className="w-full"
@@ -63,7 +63,7 @@ export const TasksTab: React.FC<TasksTabProps> = ({ assignedOrders, onStartOrder
           </Button>
         )}
         
-        {showStartButton && order.status === 'in_progress' && (
+        {showStartButton && order.assignment_status === 'in_progress' && (
           <Button 
             onClick={() => navigate(`/auftrag/${order.id}`)} 
             className="w-full"
