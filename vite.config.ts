@@ -9,6 +9,10 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    allowedHosts: ["web.innovaatech.de", "www.web.innovaatech.de"],
+  },
+  preview: {
+    allowedHosts: ["web.innovaatech.de", "www.web.innovaatech.de"],
   },
   plugins: [
     react(),
