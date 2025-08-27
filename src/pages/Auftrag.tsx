@@ -216,20 +216,43 @@ const Auftrag = () => {
         return acc;
       }, {} as Record<string, any>);
 
-      const { error } = await supabase
+      // Check if evaluation already exists
+      const { data: existingEvaluation } = await supabase
         .from('order_evaluations')
-        .insert({
-          assignment_id: assignment.id,
-          order_id: order.id,
-          employee_id: employee.id,
-          rating: overallRating,
-          overall_comment: '',
-          details: evaluationDetails,
-          status: 'pending'
-        });
+        .select('id')
+        .eq('assignment_id', assignment.id)
+        .maybeSingle();
 
-      if (error) {
-        console.error('Error submitting evaluation:', error);
+      const evaluationData = {
+        assignment_id: assignment.id,
+        order_id: order.id,
+        employee_id: employee.id,
+        rating: overallRating,
+        overall_comment: '',
+        details: evaluationDetails,
+        status: 'pending'
+      };
+
+      let result;
+      if (existingEvaluation) {
+        // Update existing evaluation
+        result = await supabase
+          .from('order_evaluations')
+          .update(evaluationData)
+          .eq('id', existingEvaluation.id)
+          .select()
+          .single();
+      } else {
+        // Create new evaluation
+        result = await supabase
+          .from('order_evaluations')
+          .insert(evaluationData)
+          .select()
+          .single();
+      }
+
+      if (result.error) {
+        console.error('Error submitting evaluation:', result.error);
         toast.error('Fehler beim Einreichen der Bewertung');
         return;
       }
