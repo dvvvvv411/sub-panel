@@ -16,11 +16,17 @@ const Auth = () => {
   const navigate = useNavigate();
 
   // Redirect if already authenticated
+  const { profile } = useAuth();
   useEffect(() => {
-    if (user) {
-      navigate('/');
+    if (user && profile) {
+      // Redirect based on user role
+      if (profile.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/mitarbeiter');
+      }
     }
-  }, [user, navigate]);
+  }, [user, profile, navigate]);
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -40,7 +46,7 @@ const Auth = () => {
       }
     } else {
       toast.success('Erfolgreich angemeldet!');
-      navigate('/');
+      // Redirect will be handled by useEffect when profile loads
     }
 
     setIsLoading(false);

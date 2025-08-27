@@ -42,15 +42,18 @@ const Admin = () => {
   };
 
   useEffect(() => {
-    if (!loading && (!user || !isAdmin)) {
+    if (!loading && user && profile) {
+      if (profile.role !== 'admin') {
+        // Redirect employees to their dashboard
+        navigate('/mitarbeiter');
+        return;
+      }
+      fetchUsers();
+    } else if (!loading && !user) {
       navigate('/auth');
       return;
     }
-
-    if (isAdmin) {
-      fetchUsers();
-    }
-  }, [user, isAdmin, loading, navigate]);
+  }, [user, profile, loading, navigate]);
 
   const fetchUsers = async () => {
     try {

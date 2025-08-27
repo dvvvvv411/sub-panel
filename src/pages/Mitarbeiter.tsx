@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -55,7 +56,8 @@ interface Stats {
 }
 
 const Mitarbeiter = () => {
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
+  const navigate = useNavigate();
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [assignedOrders, setAssignedOrders] = useState<AssignedOrder[]>([]);
   const [stats, setStats] = useState<Stats>({
@@ -68,7 +70,16 @@ const Mitarbeiter = () => {
   const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    
+    // Redirect admins to admin panel
+    if (profile && profile.role === 'admin') {
+      navigate('/admin');
+      return;
+    }
     
     fetchEmployeeData();
     
@@ -92,7 +103,7 @@ const Mitarbeiter = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, profile, navigate]);
 
   const fetchEmployeeData = async () => {
     if (!user?.email) return;

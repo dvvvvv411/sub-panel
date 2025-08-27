@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +9,17 @@ import { Link, useNavigate } from 'react-router-dom';
 const Index = () => {
   const { user, profile, signOut, loading } = useAuth();
   const navigate = useNavigate();
+
+  // Auto-redirect authenticated users based on role
+  useEffect(() => {
+    if (!loading && user && profile) {
+      if (profile.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/mitarbeiter');
+      }
+    }
+  }, [user, profile, loading, navigate]);
 
   const handleSignOut = async () => {
     const { error } = await signOut();
