@@ -25,6 +25,46 @@ interface Employee {
   updated_at?: string;
 }
 
+interface EmployeeStats {
+  totalAssigned: number;
+  completedAssigned: number;
+  inProgress: number;
+  evaluated: number;
+}
+
+interface EmployeeAssignment {
+  id: string;
+  status: string;
+  assigned_at: string;
+  orders: {
+    id: string;
+    title: string;
+    order_number: string;
+    premium: number;
+    provider: string;
+    project_goal: string;
+  };
+}
+
+interface EmployeeEvaluation {
+  id: string;
+  order_id: string;
+  assignment_id: string;
+  status: string;
+  rating: number;
+  premium_awarded: number;
+  overall_comment?: string;
+  approved_at?: string;
+  created_at: string;
+  updated_at: string;
+  orders: {
+    id: string;
+    title: string;
+    order_number: string;
+    premium: number;
+  };
+}
+
 interface ContractSubmission {
   id: string;
   employee_id: string;
@@ -122,6 +162,15 @@ export const VicsTab = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('imported');
+
+  // New states for employee details
+  const [createdStatsByEmployee, setCreatedStatsByEmployee] = useState<Record<string, EmployeeStats>>({});
+  const [lastActivityByEmployee, setLastActivityByEmployee] = useState<Record<string, string | null>>({});
+  const [selectedEmployeeForDetails, setSelectedEmployeeForDetails] = useState<Employee | null>(null);
+  const [isEmployeeDetailsOpen, setIsEmployeeDetailsOpen] = useState(false);
+  const [employeeAssignments, setEmployeeAssignments] = useState<EmployeeAssignment[]>([]);
+  const [employeeEvaluations, setEmployeeEvaluations] = useState<EmployeeEvaluation[]>([]);
+  const [detailsLoading, setDetailsLoading] = useState(false);
 
   useEffect(() => {
     fetchEmployees();
@@ -499,6 +548,185 @@ export const VicsTab = () => {
   const contractRequestedEmployees = employees.filter(emp => emp.status === 'contract_requested' || emp.status === 'contract_received');
   const createdEmployees = employees.filter(emp => emp.status === 'created' || emp.status === 'verified');
 
+  // Aggregate data for created employees
+  useEffect(() => {
+    if (createdEmployees.length > 0) {
+      fetchCreatedEmployeesStats();
+    }
+  }, [createdEmployees.length]);
+
+  const fetchCreatedEmployeesStats = async () => {
+    try {
+      const createdEmployeeIds = createdEmployees.map(emp => emp.id);
+      
+      // Fetch all assignments for created employees
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from('order_assignments')
+        .select('employee_id, status, assigned_at')
+        .in('employee_id', createdEmployeeIds);
+
+      if (assignmentsError) {
+        console.error('Error fetching assignments:', assignmentsError);
+        return;
+      }
+
+      // Fetch all evaluations for created employees for last activity
+      const { data: evaluations, error: evaluationsError } = await supabase
+        .from('order_evaluations')
+        .select('employee_id, updated_at, approved_at')
+        .in('employee_id', createdEmployeeIds);
+
+      if (evaluationsError) {
+        console.error('Error fetching evaluations:', evaluationsError);
+        return;
+      }
+
+      // Aggregate stats per employee
+      const statsMap: Record<string, EmployeeStats> = {};
+      const lastActivityMap: Record<string, string | null> = {};
+
+      // Initialize stats for all created employees
+      createdEmployeeIds.forEach(empId => {
+        statsMap[empId] = {
+          totalAssigned: 0,
+          completedAssigned: 0,
+          inProgress: 0,
+          evaluated: 0
+        };
+        lastActivityMap[empId] = null;
+      });
+
+      // Process assignments
+      assignments?.forEach(assignment => {
+        const stats = statsMap[assignment.employee_id];
+        if (stats) {
+          stats.totalAssigned++;
+          
+          switch (assignment.status) {
+            case 'completed':
+              stats.completedAssigned++;
+              break;
+            case 'in_progress':
+              stats.inProgress++;
+              break;
+            case 'evaluated':
+              stats.evaluated++;
+              break;
+          }
+
+          // Update last activity with assignment date
+          const assignedAt = new Date(assignment.assigned_at);
+          const currentLastActivity = lastActivityMap[assignment.employee_id];
+          if (!currentLastActivity || assignedAt > new Date(currentLastActivity)) {
+            lastActivityMap[assignment.employee_id] = assignment.assigned_at;
+          }
+        }
+      });
+
+      // Process evaluations for last activity
+      evaluations?.forEach(evaluation => {
+        const latestDate = evaluation.approved_at || evaluation.updated_at;
+        const evaluationDate = new Date(latestDate);
+        const currentLastActivity = lastActivityMap[evaluation.employee_id];
+        
+        if (!currentLastActivity || evaluationDate > new Date(currentLastActivity)) {
+          lastActivityMap[evaluation.employee_id] = latestDate;
+        }
+      });
+
+      setCreatedStatsByEmployee(statsMap);
+      setLastActivityByEmployee(lastActivityMap);
+    } catch (error) {
+      console.error('Error fetching created employees stats:', error);
+    }
+  };
+
+  const handleEmployeeDetails = async (employee: Employee) => {
+    setSelectedEmployeeForDetails(employee);
+    setIsEmployeeDetailsOpen(true);
+    setDetailsLoading(true);
+
+    try {
+      // Fetch assignments with order details
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from('order_assignments')
+        .select(`
+          id, status, assigned_at,
+          orders (id, title, order_number, premium, provider, project_goal)
+        `)
+        .eq('employee_id', employee.id)
+        .order('assigned_at', { ascending: false });
+
+      if (assignmentsError) {
+        console.error('Error fetching employee assignments:', assignmentsError);
+        toast.error('Fehler beim Laden der Auftragszuweisungen');
+        return;
+      }
+
+      // Fetch evaluations with order details
+      const { data: evaluations, error: evaluationsError } = await supabase
+        .from('order_evaluations')
+        .select(`
+          id, order_id, assignment_id, status, rating, premium_awarded, 
+          overall_comment, approved_at, created_at, updated_at,
+          orders (id, title, order_number, premium)
+        `)
+        .eq('employee_id', employee.id)
+        .order('created_at', { ascending: false });
+
+      if (evaluationsError) {
+        console.error('Error fetching employee evaluations:', evaluationsError);
+        toast.error('Fehler beim Laden der Bewertungen');
+        return;
+      }
+
+      setEmployeeAssignments(assignments || []);
+      setEmployeeEvaluations(evaluations || []);
+    } catch (error) {
+      console.error('Error fetching employee details:', error);
+      toast.error('Fehler beim Laden der Mitarbeiter-Details');
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  const formatLastActivity = (dateString: string | null) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
+  const getAssignmentStatusBadge = (status: string) => {
+    switch (status) {
+      case 'assigned':
+        return <Badge variant="secondary">Zugewiesen</Badge>;
+      case 'in_progress':
+        return <Badge variant="outline" className="border-blue-500 text-blue-700">In Bearbeitung</Badge>;
+      case 'evaluated':
+        return <Badge variant="outline" className="border-orange-500 text-orange-700">Bewertet</Badge>;
+      case 'completed':
+        return <Badge variant="default">Abgeschlossen</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  const getEvaluationStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="outline" className="border-orange-500 text-orange-700">Ausstehend</Badge>;
+      case 'approved':
+        return <Badge variant="default">Genehmigt</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive">Abgelehnt</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* Modern Header */}
@@ -809,23 +1037,49 @@ export const VicsTab = () => {
                       <TableHead>E-Mail</TableHead>
                       <TableHead>Telefon</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Erstellt am</TableHead>
+                      <TableHead>Zugewiesen</TableHead>
+                      <TableHead>Abgeschlossen</TableHead>
+                      <TableHead>Letzte Aktivität</TableHead>
+                      <TableHead>Aktionen</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {createdEmployees.map((employee) => (
-                      <TableRow key={employee.id}>
-                        <TableCell className="font-medium">
-                          {employee.first_name} {employee.last_name}
-                        </TableCell>
-                        <TableCell>{employee.email}</TableCell>
-                        <TableCell>{employee.phone || '-'}</TableCell>
-                        <TableCell>{getStatusBadge(employee.status)}</TableCell>
-                        <TableCell>
-                          {new Date(employee.created_at).toLocaleDateString('de-DE')}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {createdEmployees.map((employee) => {
+                      const stats = createdStatsByEmployee[employee.id];
+                      const lastActivity = lastActivityByEmployee[employee.id];
+                      
+                      return (
+                        <TableRow key={employee.id}>
+                          <TableCell className="font-medium">
+                            {employee.first_name} {employee.last_name}
+                          </TableCell>
+                          <TableCell>{employee.email}</TableCell>
+                          <TableCell>{employee.phone || '-'}</TableCell>
+                          <TableCell>{getStatusBadge(employee.status)}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">
+                              {stats?.totalAssigned || 0}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="default">
+                              {stats?.completedAssigned || 0}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{formatLastActivity(lastActivity)}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEmployeeDetails(employee)}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              Details
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}
@@ -948,6 +1202,247 @@ export const VicsTab = () => {
                   </CardContent>
                 </Card>
               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Employee Details Dialog */}
+      <Dialog open={isEmployeeDetailsOpen} onOpenChange={setIsEmployeeDetailsOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Mitarbeiter-Details: {selectedEmployeeForDetails?.first_name} {selectedEmployeeForDetails?.last_name}</DialogTitle>
+          </DialogHeader>
+          {selectedEmployeeForDetails && (
+            <div className="space-y-6">
+              {detailsLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                  <p className="text-muted-foreground">Lädt Mitarbeiter-Details...</p>
+                </div>
+              ) : (
+                <>
+                  {/* Employee Overview */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-sm">Kontaktdaten</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm">
+                        <div><strong>Name:</strong> {selectedEmployeeForDetails.first_name} {selectedEmployeeForDetails.last_name}</div>
+                        <div><strong>E-Mail:</strong> {selectedEmployeeForDetails.email}</div>
+                        <div><strong>Telefon:</strong> {selectedEmployeeForDetails.phone || '-'}</div>
+                        <div><strong>Status:</strong> {getStatusBadge(selectedEmployeeForDetails.status)}</div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-sm">Auftrag-Statistiken</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {(() => {
+                          const stats = createdStatsByEmployee[selectedEmployeeForDetails.id];
+                          const completionRate = stats?.totalAssigned > 0 ? (stats.completedAssigned / stats.totalAssigned) * 100 : 0;
+                          
+                          return (
+                            <>
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-sm">
+                                  <span>Abgeschlossen:</span>
+                                  <span>{stats?.completedAssigned || 0} von {stats?.totalAssigned || 0}</span>
+                                </div>
+                                <div className="w-full bg-secondary rounded-full h-2">
+                                  <div 
+                                    className="bg-primary h-2 rounded-full transition-all duration-300" 
+                                    style={{ width: `${completionRate}%` }}
+                                  ></div>
+                                </div>
+                                <div className="text-xs text-muted-foreground">{completionRate.toFixed(1)}% abgeschlossen</div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground">In Bearbeitung:</span>
+                                  <div className="font-medium">{stats?.inProgress || 0}</div>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Bewertet:</span>
+                                  <div className="font-medium">{stats?.evaluated || 0}</div>
+                                </div>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-sm">Bewertungen</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {(() => {
+                          const approvedEvaluations = employeeEvaluations.filter(evaluation => evaluation.status === 'approved');
+                          const avgRating = approvedEvaluations.length > 0 
+                            ? approvedEvaluations.reduce((sum, evaluation) => sum + evaluation.rating, 0) / approvedEvaluations.length 
+                            : 0;
+                          const totalAwarded = approvedEvaluations.reduce((sum, evaluation) => sum + evaluation.premium_awarded, 0);
+                          
+                          return (
+                            <>
+                              <div className="text-sm">
+                                <span className="text-muted-foreground">Durchschnittsbewertung:</span>
+                                <div className="font-medium text-lg">
+                                  {avgRating > 0 ? `${avgRating.toFixed(1)}/5` : '-'}
+                                </div>
+                              </div>
+                              <div className="text-sm">
+                                <span className="text-muted-foreground">Gesamte Prämien:</span>
+                                <div className="font-medium text-lg">
+                                  {totalAwarded > 0 ? `€${totalAwarded.toFixed(2)}` : '-'}
+                                </div>
+                              </div>
+                              <div className="text-sm">
+                                <span className="text-muted-foreground">Bewertungen:</span>
+                                <div className="font-medium">{employeeEvaluations.length}</div>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Assigned Orders */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Zugewiesene Aufträge</CardTitle>
+                      <CardDescription>
+                        Alle Aufträge, die diesem Mitarbeiter zugewiesen wurden
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {employeeAssignments.length === 0 ? (
+                        <p className="text-center text-muted-foreground py-4">
+                          Noch keine Aufträge zugewiesen
+                        </p>
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Auftrag-Nr.</TableHead>
+                              <TableHead>Titel</TableHead>
+                              <TableHead>Anbieter</TableHead>
+                              <TableHead>Prämie</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Zugewiesen am</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {employeeAssignments.map((assignment) => (
+                              <TableRow key={assignment.id}>
+                                <TableCell className="font-medium">
+                                  {assignment.orders.order_number}
+                                </TableCell>
+                                <TableCell>{assignment.orders.title}</TableCell>
+                                <TableCell>{assignment.orders.provider}</TableCell>
+                                <TableCell>€{assignment.orders.premium}</TableCell>
+                                <TableCell>{getAssignmentStatusBadge(assignment.status)}</TableCell>
+                                <TableCell>
+                                  {new Date(assignment.assigned_at).toLocaleDateString('de-DE', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Evaluations */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Bewertungen</CardTitle>
+                      <CardDescription>
+                        Alle Bewertungen, die der Mitarbeiter eingereicht hat
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {employeeEvaluations.length === 0 ? (
+                        <p className="text-center text-muted-foreground py-4">
+                          Noch keine Bewertungen eingereicht
+                        </p>
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Auftrag-Nr.</TableHead>
+                              <TableHead>Titel</TableHead>
+                              <TableHead>Bewertung</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Prämie</TableHead>
+                              <TableHead>Eingereicht am</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {employeeEvaluations.map((evaluation) => (
+                              <TableRow key={evaluation.id}>
+                                <TableCell className="font-medium">
+                                  {evaluation.orders.order_number}
+                                </TableCell>
+                                <TableCell>{evaluation.orders.title}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1">
+                                    <span className="font-medium">{evaluation.rating}/5</span>
+                                    <div className="flex">
+                                      {[...Array(5)].map((_, i) => (
+                                        <div
+                                          key={i}
+                                          className={`w-3 h-3 rounded-full ${
+                                            i < evaluation.rating ? 'bg-primary' : 'bg-muted'
+                                          }`}
+                                        />
+                                      ))}
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell>{getEvaluationStatusBadge(evaluation.status)}</TableCell>
+                                <TableCell>
+                                  {evaluation.status === 'approved' ? (
+                                    <Badge variant="default">€{evaluation.premium_awarded}</Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {evaluation.approved_at ? 
+                                    new Date(evaluation.approved_at).toLocaleDateString('de-DE', {
+                                      day: '2-digit',
+                                      month: '2-digit',
+                                      year: 'numeric'
+                                    }) :
+                                    new Date(evaluation.created_at).toLocaleDateString('de-DE', {
+                                      day: '2-digit',
+                                      month: '2-digit',
+                                      year: 'numeric'
+                                    })
+                                  }
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </CardContent>
+                  </Card>
+                </>
+              )}
             </div>
           )}
         </DialogContent>
