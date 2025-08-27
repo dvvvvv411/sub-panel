@@ -31,6 +31,13 @@ export const TasksTab: React.FC<TasksTabProps> = ({ assignedOrders, onStartOrder
             In Bearbeitung
           </Badge>
         );
+      case 'evaluated':
+        return (
+          <Badge className="bg-yellow-500/10 text-yellow-700 border-yellow-200/60 hover:bg-yellow-500/20">
+            <Clock className="h-3 w-3 mr-1" />
+            In Überprüfung
+          </Badge>
+        );
       case 'completed':
         return (
           <Badge className="bg-green-500/10 text-green-700 border-green-200/60 hover:bg-green-500/20">

@@ -407,6 +407,17 @@ const AuftragWhatsapp = () => {
         return;
       }
 
+      // Update assignment status to 'evaluated'
+      const { error: assignmentError } = await supabase
+        .from('order_assignments')
+        .update({ status: 'evaluated' })
+        .eq('id', assignmentId);
+
+      if (assignmentError) {
+        console.error('Error updating assignment status:', assignmentError);
+        // Don't return, evaluation was successful
+      }
+
       toast.success('Bewertung erfolgreich eingereicht!');
       navigate('/mitarbeiter');
 
