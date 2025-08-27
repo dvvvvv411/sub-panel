@@ -25,6 +25,7 @@ interface OrderEvaluation {
   approved_at: string | null;
   created_at: string;
   updated_at: string;
+  questions?: { [key: string]: string }; // Map of question IDs to question text
   // Relations
   orders: {
     id: string;
@@ -84,7 +85,27 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({ user }) => {
         return;
       }
 
-      setEvaluations((data || []) as any);
+      // Fetch questions for each evaluation to display question text
+      const evaluationsWithQuestions = await Promise.all(
+        (data || []).map(async (evaluation: any) => {
+          const { data: questionsData, error: questionsError } = await supabase
+            .from('order_evaluation_questions')
+            .select('id, question')
+            .eq('order_id', evaluation.order_id);
+
+          if (!questionsError && questionsData) {
+            const questionsMap = questionsData.reduce((acc: any, q: any) => {
+              acc[q.id] = q.question;
+              return acc;
+            }, {});
+            evaluation.questions = questionsMap;
+          }
+          
+          return evaluation;
+        })
+      );
+
+      setEvaluations(evaluationsWithQuestions as any);
     } catch (error) {
       console.error('Error fetching evaluations:', error);
       toast.error('Fehler beim Laden der Bewertungen');
@@ -347,6 +368,9 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({ user }) => {
                   <div className="space-y-3">
                     {Object.entries(selectedEvaluation.details).map(([questionId, data]: [string, any]) => (
                       <div key={questionId} className="p-3 border rounded-lg">
+                        <h5 className="font-medium text-sm mb-2">
+                          {selectedEvaluation.questions?.[questionId] || `Frage ${questionId}`}
+                        </h5>
                         <div className="flex items-center gap-2 mb-2">
                           {renderStarRating(data.rating)}
                           <span className="text-sm">({data.rating}/5)</span>
