@@ -1,20 +1,138 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { User, LogOut, Briefcase, Calendar, Clock } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { User, LogOut, Briefcase, Calendar, Euro, Play, MessageSquare } from 'lucide-react';
+
+interface AssignedOrder {
+  id: string;
+  title: string;
+  order_number: string;
+  provider: string;
+  project_goal: string;
+  premium: number;
+  whatsapp_accounts: {
+    id: string;
+    name: string;
+    account_info: string | null;
+  } | null;
+  order_evaluation_questions: Array<{
+    id: string;
+    question: string;
+  }>;
+}
 
 const Mitarbeiter = () => {
   const { user, profile, signOut, loading } = useAuth();
   const navigate = useNavigate();
+  const [assignedOrders, setAssignedOrders] = useState<AssignedOrder[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
+    } else if (user) {
+      fetchAssignedOrders();
     }
   }, [user, loading, navigate]);
+
+  const fetchAssignedOrders = async () => {
+    if (!user) return;
+
+    try {
+      setLoadingOrders(true);
+      
+      // Find employee record for this user
+      const { data: employeeData, error: employeeError } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('email', user.email)
+        .single();
+
+      if (employeeError || !employeeData) {
+        console.log('No employee record found for user');
+        setAssignedOrders([]);
+        return;
+      }
+
+      // Get assigned orders for this employee
+      const { data, error } = await supabase
+        .from('order_assignments')
+        .select(`
+          orders (
+            id,
+            title,
+            order_number,
+            provider,
+            project_goal,
+            premium,
+            whatsapp_accounts (
+              id,
+              name,
+              account_info
+            ),
+            order_evaluation_questions (
+              id,
+              question
+            )
+          )
+        `)
+        .eq('employee_id', employeeData.id)
+        .eq('status', 'assigned');
+
+      if (error) {
+        console.error('Error fetching assigned orders:', error);
+        toast.error('Fehler beim Laden der zugewiesenen Aufträge');
+        return;
+      }
+
+      const orders = data?.map(assignment => assignment.orders).filter(Boolean) || [];
+      setAssignedOrders(orders as AssignedOrder[]);
+    } catch (error) {
+      console.error('Error fetching assigned orders:', error);
+      toast.error('Fehler beim Laden der zugewiesenen Aufträge');
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  const handleStartOrder = async (orderId: string) => {
+    if (!user) return;
+
+    try {
+      // Update assignment status to 'in_progress'
+      const { data: employeeData } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('email', user.email)
+        .single();
+
+      if (!employeeData) return;
+
+      const { error } = await supabase
+        .from('order_assignments')
+        .update({ status: 'in_progress' })
+        .eq('order_id', orderId)
+        .eq('employee_id', employeeData.id);
+
+      if (error) {
+        console.error('Error starting order:', error);
+        toast.error('Fehler beim Starten des Auftrags');
+        return;
+      }
+
+      toast.success('Auftrag wurde gestartet');
+      fetchAssignedOrders(); // Refresh the list
+    } catch (error) {
+      console.error('Error starting order:', error);
+      toast.error('Fehler beim Starten des Auftrags');
+    }
+  };
 
   const handleSignOut = async () => {
     const { error } = await signOut();
@@ -136,26 +254,28 @@ const Mitarbeiter = () => {
           <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Aktive Projekte</CardTitle>
+                <CardTitle className="text-sm font-medium">Zugewiesene Aufträge</CardTitle>
                 <Briefcase className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">0</div>
+                <div className="text-2xl font-bold">{assignedOrders.length}</div>
                 <p className="text-xs text-muted-foreground">
-                  Noch keine Projekte zugewiesen
+                  {assignedOrders.length === 0 ? 'Noch keine Aufträge zugewiesen' : 'Bereit zum Bearbeiten'}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Offene Aufgaben</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Gesamtprämie</CardTitle>
+                <Euro className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">0</div>
+                <div className="text-2xl font-bold">
+                  {assignedOrders.reduce((sum, order) => sum + order.premium, 0).toFixed(2)}€
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Keine offenen Aufgaben
+                  Aus {assignedOrders.length} Aufträgen
                 </p>
               </CardContent>
             </Card>
@@ -188,37 +308,115 @@ const Mitarbeiter = () => {
           </div>
         </div>
 
-        {/* Welcome Message */}
+        {/* Assigned Orders */}
         <Card>
           <CardHeader>
-            <CardTitle>Willkommen bei Innovatech</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Briefcase className="h-5 w-5" />
+              Meine zugewiesenen Aufträge
+            </CardTitle>
             <CardDescription>
-              Ihr zentraler Hub für Innovation und Projektmanagement
+              Aufträge, die Ihnen zugewiesen wurden und bereit zur Bearbeitung sind
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="prose max-w-none">
-              <p className="text-muted-foreground mb-4">
-                Herzlich willkommen in Ihrem persönlichen Arbeitsbereich! Hier können Sie:
-              </p>
-              <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-                <li>Projekte verwalten und den Fortschritt verfolgen</li>
-                <li>Mit Ihrem Team kommunizieren und zusammenarbeiten</li>
-                <li>Aufgaben organisieren und Deadlines einhalten</li>
-                <li>Berichte erstellen und Analysen durchführen</li>
-              </ul>
-              
-              {profile?.role === 'admin' && (
-                <div className="mt-6 p-4 bg-primary/5 rounded-lg border border-primary/20">
-                  <p className="text-sm text-primary font-medium">
-                    💡 Als Administrator haben Sie zusätzlichen Zugriff auf das Admin Panel, 
-                    wo Sie Benutzer verwalten und Systemeinstellungen konfigurieren können.
-                  </p>
+            {loadingOrders ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Lädt Aufträge...</p>
                 </div>
-              )}
-            </div>
+              </div>
+            ) : assignedOrders.length === 0 ? (
+              <div className="text-center py-8">
+                <Briefcase className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">Noch keine Aufträge zugewiesen</p>
+                <p className="text-sm text-muted-foreground">
+                  Aufträge werden hier erscheinen, sobald sie Ihnen zugewiesen werden
+                </p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Auftragsnummer</TableHead>
+                    <TableHead>Titel</TableHead>
+                    <TableHead>Anbieter</TableHead>
+                    <TableHead>Prämie</TableHead>
+                    <TableHead>WhatsApp</TableHead>
+                    <TableHead>Fragen</TableHead>
+                    <TableHead>Aktion</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {assignedOrders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">
+                        {order.order_number}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{order.title}</div>
+                          <div className="text-sm text-muted-foreground truncate max-w-xs">
+                            {order.project_goal}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{order.provider}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {order.premium.toFixed(2)}€
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {order.whatsapp_accounts ? (
+                          <Badge variant="outline" className="flex items-center gap-1">
+                            <MessageSquare className="h-3 w-3" />
+                            {order.whatsapp_accounts.name}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {order.order_evaluation_questions.length} Fragen
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          onClick={() => handleStartOrder(order.id)}
+                          className="flex items-center gap-2"
+                        >
+                          <Play className="h-4 w-4" />
+                          Beginnen
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
+
+        {/* Welcome Message */}
+        {profile?.role === 'admin' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Administrator-Hinweis</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+                <p className="text-sm text-primary font-medium">
+                  💡 Als Administrator haben Sie zusätzlichen Zugriff auf das Admin Panel, 
+                  wo Sie Benutzer verwalten und Systemeinstellungen konfigurieren können.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   );

@@ -27,16 +27,12 @@ export function CreateOrderDialog({ onOrderCreated }: CreateOrderDialogProps) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [whatsappAccounts, setWhatsappAccounts] = useState<WhatsAppAccount[]>([]);
-  const [loadingAccounts, setLoadingAccounts] = useState(false);
-  
   // Form data
   const [title, setTitle] = useState('');
   const [orderNumber, setOrderNumber] = useState('');
   const [provider, setProvider] = useState('');
   const [projectGoal, setProjectGoal] = useState('');
   const [premium, setPremium] = useState('');
-  const [whatsappAccountId, setWhatsappAccountId] = useState('');
   const [evaluationQuestions, setEvaluationQuestions] = useState<string[]>(['']);
 
   const resetForm = () => {
@@ -45,41 +41,16 @@ export function CreateOrderDialog({ onOrderCreated }: CreateOrderDialogProps) {
     setProvider('');
     setProjectGoal('');
     setPremium('');
-    setWhatsappAccountId('');
     setEvaluationQuestions(['']);
   };
 
-  const handleOpenChange = async (newOpen: boolean) => {
+  const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
-    if (newOpen) {
-      await fetchWhatsAppAccounts();
-    } else {
+    if (!newOpen) {
       resetForm();
     }
   };
 
-  const fetchWhatsAppAccounts = async () => {
-    try {
-      setLoadingAccounts(true);
-      const { data, error } = await supabase
-        .from('whatsapp_accounts')
-        .select('*')
-        .order('name');
-
-      if (error) {
-        console.error('Error fetching WhatsApp accounts:', error);
-        toast.error('Fehler beim Laden der WhatsApp-Konten');
-        return;
-      }
-
-      setWhatsappAccounts(data || []);
-    } catch (error) {
-      console.error('Error fetching WhatsApp accounts:', error);
-      toast.error('Fehler beim Laden der WhatsApp-Konten');
-    } finally {
-      setLoadingAccounts(false);
-    }
-  };
 
   const addEvaluationQuestion = () => {
     setEvaluationQuestions([...evaluationQuestions, '']);
@@ -117,7 +88,6 @@ export function CreateOrderDialog({ onOrderCreated }: CreateOrderDialogProps) {
           provider,
           project_goal: projectGoal,
           premium: parseFloat(premium),
-          whatsapp_account_id: whatsappAccountId || null,
           created_by: user.id
         })
         .select()
@@ -222,38 +192,18 @@ export function CreateOrderDialog({ onOrderCreated }: CreateOrderDialogProps) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="premium">Prämie (€) *</Label>
-              <Input
-                id="premium"
-                type="number"
-                step="0.01"
-                min="0"
-                value={premium}
-                onChange={(e) => setPremium(e.target.value)}
-                required
-                placeholder="0.00"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="whatsappAccount">WhatsApp-Account</Label>
-              <div className="flex gap-2">
-                <Select value={whatsappAccountId} onValueChange={setWhatsappAccountId}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder={loadingAccounts ? "Lädt..." : "WhatsApp-Account auswählen"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {!loadingAccounts && whatsappAccounts.map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        {account.name} {account.account_info && `(${account.account_info})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <ManageWhatsAppAccountsDialog onAccountsUpdated={fetchWhatsAppAccounts} />
-              </div>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="premium">Prämie (€) *</Label>
+            <Input
+              id="premium"
+              type="number"
+              step="0.01"
+              min="0"
+              value={premium}
+              onChange={(e) => setPremium(e.target.value)}
+              required
+              placeholder="0.00"
+            />
           </div>
 
           <Card>

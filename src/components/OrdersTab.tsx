@@ -5,9 +5,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CreateOrderDialog } from './CreateOrderDialog';
+import { AssignOrderDialog } from './AssignOrderDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Briefcase, Users, Euro, MessageSquare } from 'lucide-react';
+import { Briefcase, Users, Euro, MessageSquare, UserPlus } from 'lucide-react';
 
 interface WhatsAppAccount {
   id: string;
@@ -48,7 +49,8 @@ export function OrdersTab() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
-  const [assigningOrder, setAssigningOrder] = useState<string | null>(null);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -120,34 +122,13 @@ export function OrdersTab() {
     }
   };
 
-  const handleAssignEmployee = async (orderId: string, employeeId: string) => {
-    if (!employeeId) return;
+  const handleOpenAssignDialog = (order: Order) => {
+    setSelectedOrder(order);
+    setAssignDialogOpen(true);
+  };
 
-    try {
-      setAssigningOrder(orderId);
-      
-      const { error } = await supabase
-        .from('order_assignments')
-        .insert({
-          order_id: orderId,
-          employee_id: employeeId,
-          assigned_by: (await supabase.auth.getUser()).data.user?.id
-        });
-
-      if (error) {
-        console.error('Error assigning employee:', error);
-        toast.error('Fehler beim Zuweisen des Mitarbeiters');
-        return;
-      }
-
-      toast.success('Mitarbeiter erfolgreich zugewiesen');
-      fetchOrders(); // Refresh to show the assignment
-    } catch (error) {
-      console.error('Error assigning employee:', error);
-      toast.error('Fehler beim Zuweisen des Mitarbeiters');
-    } finally {
-      setAssigningOrder(null);
-    }
+  const handleAssignmentComplete = () => {
+    fetchOrders(); // Refresh to show the assignment
   };
 
   const getAssignedEmployees = (order: Order) => {
@@ -315,21 +296,15 @@ export function OrdersTab() {
                       </TableCell>
                       <TableCell>
                         {availableEmployees.length > 0 && (
-                          <Select
-                            onValueChange={(employeeId) => handleAssignEmployee(order.id, employeeId)}
-                            disabled={assigningOrder === order.id}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenAssignDialog(order)}
+                            className="flex items-center gap-2"
                           >
-                            <SelectTrigger className="w-40">
-                              <SelectValue placeholder="Mitarbeiter zuweisen" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableEmployees.map((employee) => (
-                                <SelectItem key={employee.id} value={employee.id}>
-                                  {employee.first_name} {employee.last_name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            <UserPlus className="h-4 w-4" />
+                            Zuweisen
+                          </Button>
                         )}
                       </TableCell>
                     </TableRow>
@@ -340,6 +315,15 @@ export function OrdersTab() {
           )}
         </CardContent>
       </Card>
+
+      {/* Assignment Dialog */}
+      <AssignOrderDialog
+        open={assignDialogOpen}
+        onOpenChange={setAssignDialogOpen}
+        order={selectedOrder}
+        availableEmployees={selectedOrder ? getAvailableEmployees(selectedOrder) : []}
+        onAssignmentComplete={handleAssignmentComplete}
+      />
     </div>
   );
 }
