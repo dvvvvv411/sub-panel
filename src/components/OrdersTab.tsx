@@ -106,7 +106,7 @@ export function OrdersTab() {
       const { data, error } = await supabase
         .from('employees')
         .select('id, first_name, last_name, email')
-        .eq('status', 'imported')
+        .in('status', ['created', 'imported', 'contract_received'])
         .order('first_name');
 
       if (error) {
