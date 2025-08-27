@@ -14,13 +14,6 @@ interface PersonalDataTabProps {
   user: any;
 }
 
-interface AccountStat {
-  label: string;
-  value: string;
-  icon: React.ComponentType<{ className?: string }>;
-  isStatus?: boolean;
-}
-
 export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState({
@@ -231,7 +224,7 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
     return formatIban(cleaned.substring(0, 4) + '••••••••••••' + cleaned.substring(cleaned.length - 4));
   };
 
-  const accountStats: AccountStat[] = [
+  const accountStats = [
     { label: 'Mitglied seit', value: 'Januar 2024', icon: Calendar },
     { label: 'Letzte Anmeldung', value: 'Heute', icon: User },
     { label: 'Status', value: 'Aktiv', icon: User, isStatus: true }
