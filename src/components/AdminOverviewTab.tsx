@@ -5,18 +5,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
-  AlertDialog, 
-  AlertDialogAction, 
-  AlertDialogCancel, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogFooter, 
-  AlertDialogHeader, 
-  AlertDialogTitle, 
-  AlertDialogTrigger 
-} from '@/components/ui/alert-dialog';
-import { toast } from 'sonner';
-import { 
   Users, 
   Briefcase, 
   MessageSquare, 
@@ -26,8 +14,7 @@ import {
   CheckCircle,
   AlertCircle,
   UserPlus,
-  Star,
-  Trash2
+  Star
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -86,34 +73,10 @@ export const AdminOverviewTab = () => {
   });
   
   const [loading, setLoading] = useState(true);
-  const [cleanupLoading, setCleanupLoading] = useState(false);
   const [, setSearchParams] = useSearchParams();
 
   const navigateToTab = (tab: string) => {
     setSearchParams({ tab });
-  };
-
-  const handleCleanupTestData = async () => {
-    try {
-      setCleanupLoading(true);
-      const { data, error } = await supabase.functions.invoke('cleanup-test-data');
-      
-      if (error) {
-        console.error('Cleanup error:', error);
-        toast.error('Fehler beim Bereinigen der Testdaten');
-        return;
-      }
-      
-      toast.success(`Testdaten erfolgreich bereinigt: ${data.deletedUsers} Benutzer und ${data.deletedEmployees} Mitarbeiter gelöscht`);
-      
-      // Refresh overview data
-      await fetchOverviewData();
-    } catch (error) {
-      console.error('Cleanup error:', error);
-      toast.error('Fehler beim Bereinigen der Testdaten');
-    } finally {
-      setCleanupLoading(false);
-    }
   };
 
   useEffect(() => {
@@ -346,90 +309,6 @@ export const AdminOverviewTab = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Cleanup Section - Only show if there are employees to clean */}
-      {stats.totalEmployees > 0 && (
-        <Card className="border-destructive/20 bg-destructive/5">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-destructive/10">
-                <AlertCircle className="h-5 w-5 text-destructive" />
-              </div>
-              <div>
-                <CardTitle className="text-lg text-destructive">Gefährlicher Bereich</CardTitle>
-                <CardDescription>
-                  Diese Aktion entfernt alle Testdaten unwiderruflich. Nur Admin-Accounts und Aufträge bleiben erhalten.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="p-4 bg-background/50 rounded-lg border border-border/50">
-                <h4 className="font-medium text-sm mb-2">Was wird gelöscht:</h4>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Alle Mitarbeiter-Benutzerkonten (außer Admins)</li>
-                  <li>• Alle Mitarbeiterdaten und Bankdaten</li>
-                  <li>• Alle Bewertungen und Terminbuchungen</li>
-                  <li>• Alle Arbeitsverträge und Anträge</li>
-                  <li>• Alle Prämienanpassungen</li>
-                </ul>
-              </div>
-              <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-                <h4 className="font-medium text-sm mb-2 text-primary">Was bleibt erhalten:</h4>
-                <ul className="text-sm text-primary/80 space-y-1">
-                  <li>• Admin-Benutzerkonten</li>
-                  <li>• Alle Aufträge</li>
-                  <li>• WhatsApp-Accounts</li>
-                </ul>
-              </div>
-              
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button 
-                    variant="destructive" 
-                    className="w-full"
-                    disabled={cleanupLoading}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    {cleanupLoading ? 'Bereinige Testdaten...' : 'Alle Testdaten löschen'}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-                      <AlertCircle className="h-5 w-5" />
-                      Testdaten unwiderruflich löschen?
-                    </AlertDialogTitle>
-                    <AlertDialogDescription className="space-y-3">
-                      <p className="font-medium">
-                        Diese Aktion kann NICHT rückgängig gemacht werden!
-                      </p>
-                      <p>
-                        Alle Mitarbeiter-Accounts (außer Admins) und deren Daten werden permanent gelöscht. 
-                        Dies umfasst Bewertungen, Termine, Arbeitsverträge und alle zugehörigen Informationen.
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Aufträge und Admin-Accounts bleiben unberührt.
-                      </p>
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleCleanupTestData}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      disabled={cleanupLoading}
-                    >
-                      {cleanupLoading ? 'Lösche...' : 'Ja, alle Testdaten löschen'}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Recent Activity Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
