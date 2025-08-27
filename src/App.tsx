@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import Mitarbeiter from "./pages/Mitarbeiter";
+import Auftrag from "./pages/Auftrag";
 import Arbeitsvertrag from "./pages/Arbeitsvertrag";
 import NotFound from "./pages/NotFound";
 
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/mitarbeiter" element={<Mitarbeiter />} />
+            <Route path="/auftrag/:orderId" element={<Auftrag />} />
             <Route path="/arbeitsvertrag" element={<Arbeitsvertrag />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

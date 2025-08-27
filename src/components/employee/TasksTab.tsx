@@ -1,8 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Play, Clock, Euro, MessageSquare } from 'lucide-react';
+import { Play, Clock, Euro } from 'lucide-react';
 
 interface TasksTabProps {
   assignedOrders: any[];
@@ -10,6 +11,7 @@ interface TasksTabProps {
 }
 
 export const TasksTab: React.FC<TasksTabProps> = ({ assignedOrders, onStartOrder }) => {
+  const navigate = useNavigate();
   const pendingOrders = assignedOrders.filter(order => order.status !== 'completed');
   const completedOrders = assignedOrders.filter(order => order.status === 'completed');
 
@@ -38,15 +40,9 @@ export const TasksTab: React.FC<TasksTabProps> = ({ assignedOrders, onStartOrder
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex items-center gap-2">
-            <Euro className="h-4 w-4 text-green-600" />
-            <span className="text-sm">€{order.premium?.toFixed(2) || '0.00'}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4 text-blue-600" />
-            <span className="text-sm">{order.whatsapp_accounts?.length || 0} WhatsApp Konten</span>
-          </div>
+        <div className="flex items-center gap-2">
+          <Euro className="h-4 w-4 text-green-600" />
+          <span className="text-sm font-medium">Prämie: €{order.premium?.toFixed(2) || '0.00'}</span>
         </div>
         
         {order.evaluation_questions && (
@@ -56,14 +52,14 @@ export const TasksTab: React.FC<TasksTabProps> = ({ assignedOrders, onStartOrder
           </div>
         )}
 
-        {showStartButton && order.status === 'assigned' && (
+        {showStartButton && (order.assignment_status === 'assigned' || order.status === 'assigned') && (
           <Button 
-            onClick={() => onStartOrder(order.id)} 
+            onClick={() => navigate(`/auftrag/${order.id}`)} 
             className="w-full"
             size="sm"
           >
             <Play className="h-4 w-4 mr-2" />
-            Auftrag beginnen
+            Auftrag starten
           </Button>
         )}
         
