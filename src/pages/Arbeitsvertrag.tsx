@@ -447,7 +447,7 @@ export default function Arbeitsvertrag() {
                         <SelectValue placeholder="Bitte wählen..." />
                       </SelectTrigger>
                       <SelectContent className="bg-white border-slate-200 rounded-xl shadow-xl z-50">
-                        <SelectItem value="minijob">Minijob (450€ Basis)</SelectItem>
+                        <SelectItem value="minijob">Minijob</SelectItem>
                         <SelectItem value="teilzeit">Teilzeit</SelectItem>
                         <SelectItem value="vollzeit">Vollzeit</SelectItem>
                       </SelectContent>
