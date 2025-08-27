@@ -183,6 +183,42 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({ user }) => {
 
   return (
     <div className="space-y-6">
+      {/* Performance Metrics - moved to top */}
+      {evaluations.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-yellow-500" />
+              Bewertungsübersicht
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {[5, 4, 3, 2, 1].map((stars) => {
+                const count = evaluations.filter(r => r.rating === stars).length;
+                const percentage = totalEvaluations > 0 ? (count / totalEvaluations) * 100 : 0;
+                
+                return (
+                  <div key={stars} className="flex items-center gap-3">
+                    <div className="flex items-center gap-1 w-16">
+                      <span className="text-sm">{stars}</span>
+                      <Star className="h-3 w-3 text-yellow-500 fill-current" />
+                    </div>
+                    <div className="flex-1 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-yellow-500 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                    <span className="text-sm text-muted-foreground w-12">{count}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stats Header */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
@@ -290,42 +326,6 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({ user }) => {
           </Card>
         )}
       </div>
-      
-      {/* Performance Metrics */}
-      {evaluations.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Star className="h-5 w-5 text-yellow-500" />
-              Bewertungsübersicht
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {[5, 4, 3, 2, 1].map((stars) => {
-                const count = evaluations.filter(r => r.rating === stars).length;
-                const percentage = totalEvaluations > 0 ? (count / totalEvaluations) * 100 : 0;
-                
-                return (
-                  <div key={stars} className="flex items-center gap-3">
-                    <div className="flex items-center gap-1 w-16">
-                      <span className="text-sm">{stars}</span>
-                      <Star className="h-3 w-3 text-yellow-500 fill-current" />
-                    </div>
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-yellow-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${percentage}%` }}
-                      />
-                    </div>
-                    <span className="text-sm text-muted-foreground w-12">{count}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Details Dialog */}
       <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
