@@ -4,8 +4,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, CreditCard } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { BankCardPreview } from './BankCardPreview';
+import { PasswordChangeDialog } from './PasswordChangeDialog';
 
 interface PersonalDataTabProps {
   employee: {
@@ -26,13 +28,66 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ employee, onUp
   const [phone, setPhone] = useState(employee.phone || '');
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState<boolean | null>(null);
+  
+  // Bank details state
+  const [bankName, setBankName] = useState('');
+  const [accountHolder, setAccountHolder] = useState('');
+  const [iban, setIban] = useState('');
+  const [bic, setBic] = useState('');
+  const [isBankUpdating, setIsBankUpdating] = useState(false);
+  const [bankUpdateSuccess, setBankUpdateSuccess] = useState<boolean | null>(null);
 
   useEffect(() => {
     setFirstName(employee.first_name);
     setLastName(employee.last_name);
     setEmail(employee.email);
     setPhone(employee.phone || '');
+    fetchBankDetails();
   }, [employee]);
+
+  const fetchBankDetails = async () => {
+    try {
+      // First try to get existing bank details
+      const { data: bankDetails, error: bankError } = await supabase
+        .from('employee_bank_details')
+        .select('*')
+        .eq('employee_id', employee.id)
+        .maybeSingle();
+
+      if (bankError && bankError.code !== 'PGRST116') {
+        console.error('Error fetching bank details:', bankError);
+        return;
+      }
+
+      if (bankDetails) {
+        setBankName(bankDetails.bank_name || '');
+        setAccountHolder(bankDetails.account_holder || '');
+        setIban(bankDetails.iban || '');
+        setBic(bankDetails.bic || '');
+      } else {
+        // If no bank details exist, try to get them from contract submission
+        const { data: contractData, error: contractError } = await supabase
+          .from('employment_contract_submissions')
+          .select('bank_name, iban, bic, first_name, last_name')
+          .eq('employee_id', employee.id)
+          .maybeSingle();
+
+        if (contractError && contractError.code !== 'PGRST116') {
+          console.error('Error fetching contract data:', contractError);
+          return;
+        }
+
+        if (contractData) {
+          setBankName(contractData.bank_name || '');
+          setAccountHolder(`${contractData.first_name} ${contractData.last_name}`);
+          setIban(contractData.iban || '');
+          setBic(contractData.bic || '');
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching bank details:', error);
+    }
+  };
 
   const handleUpdate = async () => {
     setIsUpdating(true);
@@ -64,6 +119,59 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ employee, onUp
       setUpdateSuccess(false);
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleBankUpdate = async () => {
+    setIsBankUpdating(true);
+    setBankUpdateSuccess(null);
+
+    try {
+      // Check if bank details already exist
+      const { data: existingDetails } = await supabase
+        .from('employee_bank_details')
+        .select('id')
+        .eq('employee_id', employee.id)
+        .maybeSingle();
+
+      const bankData = {
+        employee_id: employee.id,
+        bank_name: bankName === '' ? null : bankName,
+        account_holder: accountHolder === '' ? null : accountHolder,
+        iban: iban === '' ? null : iban,
+        bic: bic === '' ? null : bic,
+      };
+
+      let error;
+      if (existingDetails) {
+        // Update existing record
+        const result = await supabase
+          .from('employee_bank_details')
+          .update(bankData)
+          .eq('employee_id', employee.id);
+        error = result.error;
+      } else {
+        // Insert new record
+        const result = await supabase
+          .from('employee_bank_details')
+          .insert(bankData);
+        error = result.error;
+      }
+
+      if (error) {
+        console.error('Error updating bank details:', error);
+        toast.error('Fehler beim Aktualisieren der Bankdaten');
+        setBankUpdateSuccess(false);
+      } else {
+        toast.success('Bankdaten erfolgreich aktualisiert');
+        setBankUpdateSuccess(true);
+      }
+    } catch (error) {
+      console.error('Error updating bank details:', error);
+      toast.error('Ein unerwarteter Fehler ist aufgetreten');
+      setBankUpdateSuccess(false);
+    } finally {
+      setIsBankUpdating(false);
     }
   };
 
@@ -116,9 +224,12 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ employee, onUp
         </CardContent>
       </Card>
 
-      <Button onClick={handleUpdate} disabled={isUpdating}>
-        {isUpdating ? 'Aktualisiert...' : 'Daten aktualisieren'}
-      </Button>
+      <div className="flex gap-4">
+        <Button onClick={handleUpdate} disabled={isUpdating} className="flex-1">
+          {isUpdating ? 'Aktualisiert...' : 'Daten aktualisieren'}
+        </Button>
+        <PasswordChangeDialog userEmail={email} />
+      </div>
 
       {updateSuccess === true && (
         <div className="flex items-center gap-2 text-sm text-green-600">
@@ -140,6 +251,92 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ employee, onUp
           Aktualisiere Daten...
         </div>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Bankverbindung
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <BankCardPreview
+            bankName={bankName}
+            accountHolder={accountHolder}
+            iban={iban}
+          />
+          
+          <div className="grid gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="bankName">Bank</Label>
+                <Input
+                  type="text"
+                  id="bankName"
+                  value={bankName}
+                  onChange={(e) => setBankName(e.target.value)}
+                  placeholder="z.B. Deutsche Bank"
+                />
+              </div>
+              <div>
+                <Label htmlFor="accountHolder">Kontoinhaber</Label>
+                <Input
+                  type="text"
+                  id="accountHolder"
+                  value={accountHolder}
+                  onChange={(e) => setAccountHolder(e.target.value)}
+                  placeholder="Vollständiger Name"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="iban">IBAN</Label>
+              <Input
+                type="text"
+                id="iban"
+                value={iban}
+                onChange={(e) => setIban(e.target.value.toUpperCase())}
+                placeholder="DE89 3704 0044 0532 0130 00"
+              />
+            </div>
+            <div>
+              <Label htmlFor="bic">BIC</Label>
+              <Input
+                type="text"
+                id="bic"
+                value={bic}
+                onChange={(e) => setBic(e.target.value.toUpperCase())}
+                placeholder="COBADEFFXXX"
+              />
+            </div>
+          </div>
+
+          <Button onClick={handleBankUpdate} disabled={isBankUpdating} className="w-full">
+            {isBankUpdating ? 'Aktualisiert...' : 'Bankdaten aktualisieren'}
+          </Button>
+
+          {bankUpdateSuccess === true && (
+            <div className="flex items-center gap-2 text-sm text-green-600">
+              <CheckCircle className="h-4 w-4" />
+              Bankdaten erfolgreich aktualisiert!
+            </div>
+          )}
+
+          {bankUpdateSuccess === false && (
+            <div className="flex items-center gap-2 text-sm text-red-600">
+              <XCircle className="h-4 w-4" />
+              Fehler beim Aktualisieren der Bankdaten. Bitte versuchen Sie es erneut.
+            </div>
+          )}
+
+          {bankUpdateSuccess === null && isBankUpdating && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <AlertTriangle className="h-4 w-4 animate-pulse" />
+              Aktualisiere Bankdaten...
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
