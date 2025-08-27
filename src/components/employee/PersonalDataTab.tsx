@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { User, Mail, Phone, Calendar, Edit3, Save, X, Lock, CreditCard, Eye, EyeOff } from 'lucide-react';
+import { User, Mail, Phone, Calendar, Edit3, Save, X, Lock, CreditCard, Eye, EyeOff, Square } from 'lucide-react';
 
 interface PersonalDataTabProps {
   user: any;
@@ -40,11 +40,62 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
   // Bank information state
   const [bankEditing, setBankEditing] = useState(false);
   const [bankData, setBankData] = useState({
-    iban: user?.iban || '',
-    bic: user?.bic || '',
-    bankName: user?.bankName || '',
-    accountHolder: user?.accountHolder || user?.name || ''
+    iban: '',
+    bic: '',
+    bankName: '',
+    accountHolder: user?.name || ''
   });
+  const [bankLoading, setBankLoading] = useState(true);
+
+  // Load bank data from employment_contract_submissions
+  useEffect(() => {
+    fetchBankData();
+  }, [user?.email]);
+
+  const fetchBankData = async () => {
+    if (!user?.email) return;
+
+    try {
+      setBankLoading(true);
+      
+      // First get employee ID
+      const { data: employeeData, error: employeeError } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('email', user.email)
+        .maybeSingle();
+
+      if (employeeError || !employeeData) {
+        console.log('No employee data found');
+        return;
+      }
+
+      // Then get bank data from contract submissions
+      const { data: submissionData, error: submissionError } = await supabase
+        .from('employment_contract_submissions')
+        .select('iban, bic, bank_name, first_name, last_name')
+        .eq('employee_id', employeeData.id)
+        .maybeSingle();
+
+      if (submissionError) {
+        console.error('Error fetching bank data:', submissionError);
+        return;
+      }
+
+      if (submissionData) {
+        setBankData({
+          iban: submissionData.iban || '',
+          bic: submissionData.bic || '',
+          bankName: submissionData.bank_name || '',
+          accountHolder: `${submissionData.first_name} ${submissionData.last_name}` || user?.name || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching bank data:', error);
+    } finally {
+      setBankLoading(false);
+    }
+  };
 
   const handleSave = async () => {
     try {
@@ -58,12 +109,41 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
   };
 
   const handleBankSave = async () => {
+    if (!user?.email) return;
+
     try {
-      // Here you would save bank data to database
-      console.log('Saving bank data:', bankData);
+      // Get employee ID first
+      const { data: employeeData, error: employeeError } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('email', user.email)
+        .single();
+
+      if (employeeError || !employeeData) {
+        toast.error('Fehler beim Abrufen der Mitarbeiterdaten');
+        return;
+      }
+
+      // Update employment_contract_submissions
+      const { error: updateError } = await supabase
+        .from('employment_contract_submissions')
+        .update({
+          iban: bankData.iban,
+          bic: bankData.bic,
+          bank_name: bankData.bankName
+        })
+        .eq('employee_id', employeeData.id);
+
+      if (updateError) {
+        console.error('Error updating bank data:', updateError);
+        toast.error('Fehler beim Speichern der Bankdaten');
+        return;
+      }
+
       toast.success('Bankdaten erfolgreich aktualisiert');
       setBankEditing(false);
     } catch (error) {
+      console.error('Error saving bank data:', error);
       toast.error('Fehler beim Speichern der Bankdaten');
     }
   };
@@ -115,12 +195,7 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
   };
 
   const handleBankCancel = () => {
-    setBankData({
-      iban: user?.iban || '',
-      bic: user?.bic || '',
-      bankName: user?.bankName || '',
-      accountHolder: user?.accountHolder || user?.name || ''
-    });
+    fetchBankData(); // Reload original data
     setBankEditing(false);
   };
 
@@ -293,7 +368,9 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
             <div className="relative w-full max-w-sm mx-auto">
               <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 rounded-2xl p-6 text-white shadow-2xl transform hover:scale-105 transition-transform duration-300">
                 <div className="flex justify-between items-start mb-8">
-                  <div className="w-12 h-8 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded opacity-80"></div>
+                  <div className="w-10 h-6 bg-white/20 rounded flex items-center justify-center">
+                    <Square className="h-4 w-4 text-white fill-white" />
+                  </div>
                   <div className="text-xs opacity-75">DEBIT</div>
                 </div>
                 
@@ -322,95 +399,101 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
           </div>
 
           {/* Bank Information Form */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="iban">IBAN</Label>
-              {bankEditing ? (
-                <Input
-                  id="iban"
-                  value={bankData.iban}
-                  onChange={(e) => setBankData({ ...bankData, iban: e.target.value.toUpperCase() })}
-                  placeholder="DE89 3704 0044 0532 0130 00"
-                />
-              ) : (
-                <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                  <CreditCard className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-mono">{bankData.iban ? formatIban(bankData.iban) : 'Nicht angegeben'}</span>
-                </div>
-              )}
+          {bankLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
+          ) : (
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="bic">BIC</Label>
+                <Label htmlFor="iban">IBAN</Label>
                 {bankEditing ? (
                   <Input
-                    id="bic"
-                    value={bankData.bic}
-                    onChange={(e) => setBankData({ ...bankData, bic: e.target.value.toUpperCase() })}
-                    placeholder="COBADEFFXXX"
+                    id="iban"
+                    value={bankData.iban}
+                    onChange={(e) => setBankData({ ...bankData, iban: e.target.value.toUpperCase() })}
+                    placeholder="DE89 3704 0044 0532 0130 00"
                   />
                 ) : (
                   <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                    <span className="font-mono">{bankData.bic || 'Nicht angegeben'}</span>
+                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-mono">{bankData.iban ? formatIban(bankData.iban) : 'Nicht angegeben'}</span>
                   </div>
                 )}
               </div>
 
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="bic">BIC</Label>
+                  {bankEditing ? (
+                    <Input
+                      id="bic"
+                      value={bankData.bic}
+                      onChange={(e) => setBankData({ ...bankData, bic: e.target.value.toUpperCase() })}
+                      placeholder="COBADEFFXXX"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
+                      <span className="font-mono">{bankData.bic || 'Nicht angegeben'}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bankName">Bank Name</Label>
+                  {bankEditing ? (
+                    <Input
+                      id="bankName"
+                      value={bankData.bankName}
+                      onChange={(e) => setBankData({ ...bankData, bankName: e.target.value })}
+                      placeholder="Commerzbank AG"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
+                      <span>{bankData.bankName || 'Nicht angegeben'}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="bankName">Bank Name</Label>
+                <Label htmlFor="accountHolder">Kontoinhaber</Label>
                 {bankEditing ? (
                   <Input
-                    id="bankName"
-                    value={bankData.bankName}
-                    onChange={(e) => setBankData({ ...bankData, bankName: e.target.value })}
-                    placeholder="Commerzbank AG"
+                    id="accountHolder"
+                    value={bankData.accountHolder}
+                    onChange={(e) => setBankData({ ...bankData, accountHolder: e.target.value })}
+                    placeholder="Max Mustermann"
                   />
                 ) : (
                   <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                    <span>{bankData.bankName || 'Nicht angegeben'}</span>
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span>{bankData.accountHolder || 'Nicht angegeben'}</span>
                   </div>
                 )}
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="accountHolder">Kontoinhaber</Label>
-              {bankEditing ? (
-                <Input
-                  id="accountHolder"
-                  value={bankData.accountHolder}
-                  onChange={(e) => setBankData({ ...bankData, accountHolder: e.target.value })}
-                  placeholder="Max Mustermann"
-                />
-              ) : (
-                <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span>{bankData.accountHolder || 'Nicht angegeben'}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-2 pt-4">
-              {bankEditing ? (
-                <>
-                  <Button onClick={handleBankSave} className="flex-1">
-                    <Save className="h-4 w-4 mr-2" />
-                    Speichern
+              <div className="flex gap-2 pt-4">
+                {bankEditing ? (
+                  <>
+                    <Button onClick={handleBankSave} className="flex-1">
+                      <Save className="h-4 w-4 mr-2" />
+                      Speichern
+                    </Button>
+                    <Button variant="outline" onClick={handleBankCancel}>
+                      <X className="h-4 w-4 mr-2" />
+                      Abbrechen
+                    </Button>
+                  </>
+                ) : (
+                  <Button onClick={() => setBankEditing(true)} variant="outline" className="flex items-center gap-2">
+                    <Edit3 className="h-4 w-4" />
+                    Bankdaten bearbeiten
                   </Button>
-                  <Button variant="outline" onClick={handleBankCancel}>
-                    <X className="h-4 w-4 mr-2" />
-                    Abbrechen
-                  </Button>
-                </>
-              ) : (
-                <Button onClick={() => setBankEditing(true)} variant="outline" className="flex items-center gap-2">
-                  <Edit3 className="h-4 w-4" />
-                  Bankdaten bearbeiten
-                </Button>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
