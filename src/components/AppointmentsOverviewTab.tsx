@@ -14,7 +14,7 @@ import { de } from 'date-fns/locale';
 interface Appointment {
   id: string;
   scheduled_at: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: string;
   approved_at: string | null;
   feedback_requested: boolean;
   created_at: string;
