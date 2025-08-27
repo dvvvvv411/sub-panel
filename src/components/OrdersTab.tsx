@@ -10,7 +10,7 @@ import { AssignedEmployeesDialog } from './AssignedEmployeesDialog';
 import { EditOrderDialog } from './EditOrderDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { formatCurrencyEUR } from '@/lib/utils';
+import { cn, formatCurrencyEUR } from '@/lib/utils';
 import { Briefcase, Users, Euro, UserPlus, Edit, Eye } from 'lucide-react';
 
 interface WhatsAppAccount {
@@ -257,6 +257,7 @@ export function OrdersTab() {
                   <TableHead>Titel</TableHead>
                   <TableHead>Anbieter</TableHead>
                   <TableHead>Prämie</TableHead>
+                  <TableHead>Platzhalter</TableHead>
                   <TableHead>Bewertungsfragen</TableHead>
                   <TableHead>Zugewiesene Mitarbeiter</TableHead>
                   <TableHead>Aktionen</TableHead>
@@ -285,6 +286,20 @@ export function OrdersTab() {
                         <Badge variant="secondary" className="font-medium">
                           {formatCurrencyEUR(order.premium)}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-center">
+                          <span 
+                            className={cn(
+                              "inline-block h-2.5 w-2.5 rounded-full",
+                              order.is_placeholder ? "bg-blue-500" : "bg-green-500"
+                            )}
+                            title={order.is_placeholder ? "Platzhalterauftrag" : "Kein Platzhalterauftrag"}
+                          />
+                          <span className="sr-only">
+                            {order.is_placeholder ? "Platzhalterauftrag" : "Kein Platzhalterauftrag"}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">

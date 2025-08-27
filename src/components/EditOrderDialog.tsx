@@ -4,11 +4,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, X, Edit } from 'lucide-react';
+import { Plus, X, Edit, Download, FileText, Star, Users, Clock, Target, Settings } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { usePreventUnload } from '@/hooks/use-prevent-unload';
+
+interface Instruction {
+  title: string;
+  icon: string;
+  content: string;
+}
 
 interface Order {
   id: string;
@@ -51,6 +59,15 @@ export function EditOrderDialog({
   const [projectGoal, setProjectGoal] = useState('');
   const [premium, setPremium] = useState('');
   const [evaluationQuestions, setEvaluationQuestions] = useState<string[]>(['']);
+  
+  // Placeholder order specific fields
+  const [isPlaceholder, setIsPlaceholder] = useState(false);
+  const [showDownloadLinks, setShowDownloadLinks] = useState(false);
+  const [appStoreLink, setAppStoreLink] = useState('');
+  const [googlePlayLink, setGooglePlayLink] = useState('');
+  const [instructions, setInstructions] = useState<Instruction[]>([
+    { title: '', icon: 'FileText', content: '' }
+  ]);
 
   useEffect(() => {
     if (open && order) {
@@ -64,6 +81,17 @@ export function EditOrderDialog({
           ? order.order_evaluation_questions.map(q => q.question)
           : ['']
       );
+      
+      // Initialize placeholder fields
+      setIsPlaceholder(order.is_placeholder);
+      setShowDownloadLinks(Array.isArray(order.download_links) && order.download_links.length > 0);
+      setAppStoreLink(order.download_links?.[0] || '');
+      setGooglePlayLink(order.download_links?.[1] || '');
+      setInstructions(
+        Array.isArray(order.instructions) && order.instructions.length > 0
+          ? order.instructions
+          : [{ title: '', icon: 'FileText', content: '' }]
+      );
     }
   }, [open, order]);
 
@@ -74,6 +102,11 @@ export function EditOrderDialog({
     setProjectGoal('');
     setPremium('');
     setEvaluationQuestions(['']);
+    setIsPlaceholder(false);
+    setShowDownloadLinks(false);
+    setAppStoreLink('');
+    setGooglePlayLink('');
+    setInstructions([{ title: '', icon: 'FileText', content: '' }]);
   };
 
   const addEvaluationQuestion = () => {
@@ -92,6 +125,32 @@ export function EditOrderDialog({
     setEvaluationQuestions(updated);
   };
 
+  const addInstruction = () => {
+    setInstructions([...instructions, { title: '', icon: 'FileText', content: '' }]);
+  };
+
+  const removeInstruction = (index: number) => {
+    if (instructions.length > 1) {
+      setInstructions(instructions.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateInstruction = (index: number, field: keyof Instruction, value: string) => {
+    const updated = [...instructions];
+    updated[index] = { ...updated[index], [field]: value };
+    setInstructions(updated);
+  };
+
+  const iconOptions = [
+    { value: 'FileText', label: 'Dokument' },
+    { value: 'Download', label: 'Download' },
+    { value: 'Users', label: 'Benutzer' },
+    { value: 'Settings', label: 'Einstellungen' },
+    { value: 'Clock', label: 'Zeit' },
+    { value: 'Target', label: 'Ziel' },
+    { value: 'Star', label: 'Stern' },
+  ];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -108,7 +167,14 @@ export function EditOrderDialog({
           order_number: orderNumber,
           provider,
           project_goal: projectGoal,
-          premium: parseFloat(premium)
+          premium: parseFloat(premium),
+          is_placeholder: isPlaceholder,
+          download_links: isPlaceholder && showDownloadLinks 
+            ? [appStoreLink, googlePlayLink].filter(link => link.trim() !== '') 
+            : null,
+          instructions: isPlaceholder 
+            ? instructions.filter(inst => inst.title.trim() !== '') as any
+            : null
         })
         .eq('id', order.id);
 
@@ -239,6 +305,126 @@ export function EditOrderDialog({
               placeholder="0.00"
             />
           </div>
+
+          {/* Placeholder Toggle */}
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="placeholder"
+              checked={isPlaceholder}
+              onCheckedChange={setIsPlaceholder}
+            />
+            <Label htmlFor="placeholder">Platzhalterauftrag</Label>
+          </div>
+
+          {/* Download Links Section */}
+          {isPlaceholder && (
+            <>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="downloadLinks"
+                  checked={showDownloadLinks}
+                  onCheckedChange={setShowDownloadLinks}
+                />
+                <Label htmlFor="downloadLinks">Download Links anzeigen</Label>
+              </div>
+
+              {showDownloadLinks && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="appStoreLink">App Store Link</Label>
+                    <Input
+                      id="appStoreLink"
+                      value={appStoreLink}
+                      onChange={(e) => setAppStoreLink(e.target.value)}
+                      placeholder="https://apps.apple.com/..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="googlePlayLink">Google Play Link</Label>
+                    <Input
+                      id="googlePlayLink"
+                      value={googlePlayLink}
+                      onChange={(e) => setGooglePlayLink(e.target.value)}
+                      placeholder="https://play.google.com/..."
+                    />
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Instructions Section */}
+          {isPlaceholder && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Anweisungen</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {instructions.map((instruction, index) => (
+                  <div key={index} className="space-y-3 p-4 border rounded-lg">
+                    <div className="flex gap-2">
+                      <div className="flex-1 space-y-2">
+                        <Label>Titel</Label>
+                        <Input
+                          value={instruction.title}
+                          onChange={(e) => updateInstruction(index, 'title', e.target.value)}
+                          placeholder="Anweisungstitel"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Icon</Label>
+                        <Select
+                          value={instruction.icon}
+                          onValueChange={(value) => updateInstruction(index, 'icon', value)}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {iconOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {instructions.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => removeInstruction(index)}
+                          className="mt-6"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Inhalt</Label>
+                      <Textarea
+                        value={instruction.content}
+                        onChange={(e) => updateInstruction(index, 'content', e.target.value)}
+                        placeholder="Detaillierte Anweisungen hier eingeben..."
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addInstruction}
+                  className="w-full"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Weitere Anweisung hinzufügen
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
