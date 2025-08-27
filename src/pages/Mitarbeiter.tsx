@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -170,7 +169,7 @@ const Mitarbeiter = () => {
         .eq('status', 'approved');
 
       const averageRating = evaluationsData && evaluationsData.length > 0 
-        ? evaluationsData.reduce((sum, eval) => sum + eval.rating, 0) / evaluationsData.length
+        ? evaluationsData.reduce((sum, evaluation) => sum + evaluation.rating, 0) / evaluationsData.length
         : 0;
 
       setStats({

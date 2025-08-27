@@ -5,34 +5,49 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Gift, Trophy, Star, Target, Coins, Award, TrendingUp, Calendar, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-interface RewardsTabProps {
-  assignedOrders: any[];
-  user: any;
+interface Employee {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  status: string;
 }
 
-export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) => {
+interface RewardsTabProps {
+  employee: Employee;
+}
+
+export const RewardsTab: React.FC<RewardsTabProps> = ({ employee }) => {
   const [approvedEvaluations, setApprovedEvaluations] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [activeSince, setActiveSince] = React.useState<string>('');
+  const [assignedOrders, setAssignedOrders] = React.useState<any[]>([]);
 
   React.useEffect(() => {
-    fetchApprovedEvaluations();
-  }, [user]);
+    fetchData();
+  }, [employee]);
 
-  const fetchApprovedEvaluations = async () => {
-    if (!user?.email) return;
+  const fetchData = async () => {
+    if (!employee?.id) return;
 
     try {
-      const { data: employeeData } = await supabase
-        .from('employees')
-        .select('id, created_at')
-        .eq('email', user.email)
-        .maybeSingle();
+      // Get assigned orders
+      const { data: assignmentsData } = await supabase
+        .from('order_assignments')
+        .select('status')
+        .eq('employee_id', employee.id);
 
-      if (!employeeData) return;
+      setAssignedOrders(assignmentsData || []);
 
       // Set active since date
-      if (employeeData.created_at) {
+      const { data: employeeData } = await supabase
+        .from('employees')
+        .select('created_at')
+        .eq('id', employee.id)
+        .single();
+
+      if (employeeData?.created_at) {
         const createdDate = new Date(employeeData.created_at);
         const formattedDate = createdDate.toLocaleDateString('de-DE', { 
           month: 'long', 
@@ -53,7 +68,7 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
             provider
           )
         `)
-        .eq('employee_id', employeeData.id)
+        .eq('employee_id', employee.id)
         .eq('status', 'approved')
         .order('approved_at', { ascending: false });
 
@@ -65,7 +80,7 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
       setApprovedEvaluations(data || []);
       
       // Fallback: if no created_at, use earliest approved evaluation date
-      if (!employeeData.created_at && data && data.length > 0) {
+      if (!employeeData?.created_at && data && data.length > 0) {
         const earliestApproval = data.reduce((earliest, evaluation) => {
           const evalDate = new Date(evaluation.approved_at);
           const earliestDate = new Date(earliest.approved_at);
@@ -88,7 +103,7 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
     }
   };
 
-  const completedOrders = assignedOrders.filter((o: any) => o.assignment_status === 'completed');
+  const completedOrders = assignedOrders.filter((o: any) => o.status === 'completed');
   const completedCount = completedOrders.length;
   const totalPremium = approvedEvaluations.reduce((sum: number, evaluation: any) => sum + (evaluation.premium_awarded || 0), 0);
 

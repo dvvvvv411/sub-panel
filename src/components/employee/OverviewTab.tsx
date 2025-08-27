@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -6,19 +7,42 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Trophy, Target, Star, TrendingUp, Award, Zap, Users, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-interface OverviewTabProps {
-  assignedOrders: any[];
-  user: any;
-  employeeProfile: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-    phone: string | null;
-  } | null;
+interface Employee {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  status: string;
 }
 
-export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user, employeeProfile }) => {
+interface AssignedOrder {
+  id: string;
+  title: string;
+  order_number: string;
+  premium: number;
+  provider: string;
+  project_goal: string;
+  assignment_status: 'assigned' | 'in_progress' | 'evaluated' | 'completed';
+  assignment_id: string;
+  assigned_at: string;
+  evaluation_questions?: string;
+}
+
+interface Stats {
+  totalAssignments: number;
+  completedAssignments: number;
+  totalEarnings: number;
+  averageRating: number;
+}
+
+interface OverviewTabProps {
+  stats: Stats;
+  assignedOrders: AssignedOrder[];
+  employee: Employee;
+}
+
+export const OverviewTab: React.FC<OverviewTabProps> = ({ stats, assignedOrders, employee }) => {
   const [approvedEvaluations, setApprovedEvaluations] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [employmentType, setEmploymentType] = React.useState<string>('');
@@ -26,25 +50,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user, 
 
   React.useEffect(() => {
     fetchApprovedEvaluations();
-  }, [user]);
+  }, [employee]);
 
   const fetchApprovedEvaluations = async () => {
-    if (!user?.email) return;
+    if (!employee?.id) return;
 
     try {
-      const { data: employeeData } = await supabase
-        .from('employees')
-        .select('id')
-        .eq('email', user.email)
-        .maybeSingle();
-
-      if (!employeeData) return;
-
       // Fetch employment type from latest contract submission
       const { data: contractData } = await supabase
         .from('employment_contract_submissions')
         .select('employment_type')
-        .eq('employee_id', employeeData.id)
+        .eq('employee_id', employee.id)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -73,7 +89,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user, 
       const { data, error } = await supabase
         .from('order_evaluations')
         .select('premium_awarded')
-        .eq('employee_id', employeeData.id)
+        .eq('employee_id', employee.id)
         .eq('status', 'approved');
 
       if (error) {
@@ -96,7 +112,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user, 
       case 'in_progress':
         return 'In Bearbeitung';
       case 'evaluated':
-        return 'Zur Prüfung eingereicht';
+        return 'In Überprüfung';
       case 'completed':
         return 'Abgeschlossen';
       default:
@@ -117,14 +133,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user, 
     }
   };
 
-  const completedOrders = assignedOrders.filter(order => order.assignment_status === 'completed').length;
   const totalPremium = approvedEvaluations.reduce((sum, evaluation) => sum + (evaluation.premium_awarded || 0), 0);
-  const completionRate = assignedOrders.length > 0 ? (completedOrders / assignedOrders.length) * 100 : 0;
+  const completionRate = assignedOrders.length > 0 ? (stats.completedAssignments / assignedOrders.length) * 100 : 0;
 
-  const stats = [
+  const statsData = [
     {
       title: 'Zugewiesene Aufträge',
-      value: assignedOrders.length,
+      value: stats.totalAssignments,
       icon: Target,
       color: 'text-primary',
       bgColor: 'bg-primary/10',
@@ -132,7 +147,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user, 
     },
     {
       title: 'Abgeschlossene Aufträge',
-      value: completedOrders,
+      value: stats.completedAssignments,
       icon: Trophy,
       color: 'text-green-600',
       bgColor: 'bg-green-500/10',
@@ -140,7 +155,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user, 
     },
     {
       title: 'Gesamtprämie',
-      value: `€${totalPremium.toFixed(2)}`,
+      value: `€${stats.totalEarnings.toFixed(2)}`,
       icon: Award,
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-500/10',
@@ -157,9 +172,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user, 
   ];
 
   const achievements = [
-    { name: 'Erster Auftrag', description: 'Ersten Auftrag abgeschlossen', earned: completedOrders > 0, icon: Target },
-    { name: 'Fleißiger Arbeiter', description: '5 Aufträge abgeschlossen', earned: completedOrders >= 5, icon: Users },
-    { name: 'Top Performer', description: '10 Aufträge abgeschlossen', earned: completedOrders >= 10, icon: Trophy }
+    { name: 'Erster Auftrag', description: 'Ersten Auftrag abgeschlossen', earned: stats.completedAssignments > 0, icon: Target },
+    { name: 'Fleißiger Arbeiter', description: '5 Aufträge abgeschlossen', earned: stats.completedAssignments >= 5, icon: Users },
+    { name: 'Top Performer', description: '10 Aufträge abgeschlossen', earned: stats.completedAssignments >= 10, icon: Trophy }
   ];
 
   if (loading) {
@@ -195,7 +210,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user, 
             </div>
             <div className="space-y-2">
               <h2 className="text-2xl font-bold text-foreground">
-                Hallo {employeeProfile?.first_name || 'Mitarbeiter'}! 👋
+                Hallo {employee?.first_name || 'Mitarbeiter'}! 👋
               </h2>
               <p className="text-muted-foreground text-lg">
                 Hier ist Ihr persönliches Dashboard mit aktuellen Aufgaben und Fortschritten.
@@ -211,7 +226,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user, 
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, index) => (
+        {statsData.map((stat, index) => (
           <Card key={index} className="group hover:shadow-lg transition-all duration-300 border-muted/50 hover:border-primary/20">
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
@@ -246,7 +261,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user, 
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-muted-foreground">Aufträge abgeschlossen</span>
-                <span className="text-sm font-bold">{completedOrders}/{assignedOrders.length}</span>
+                <span className="text-sm font-bold">{stats.completedAssignments}/{stats.totalAssignments}</span>
               </div>
               <div className="space-y-2">
                 <Progress value={completionRate} className="h-3" />
@@ -259,10 +274,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user, 
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-muted-foreground">Prämien verdient</span>
-                <span className="text-sm font-bold text-green-600">€{totalPremium.toFixed(2)}</span>
+                <span className="text-sm font-bold text-green-600">€{stats.totalEarnings.toFixed(2)}</span>
               </div>
               <div className="space-y-2">
-                <Progress value={Math.min((totalPremium / monthlyGoal) * 100, 100)} className="h-3" />
+                <Progress value={Math.min((stats.totalEarnings / monthlyGoal) * 100, 100)} className="h-3" />
                 <p className="text-xs text-muted-foreground">
                   Ziel: €{monthlyGoal.toLocaleString('de-DE')} monatlich
                 </p>
