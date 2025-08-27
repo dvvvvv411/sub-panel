@@ -32,8 +32,17 @@ interface Appointment {
   };
 }
 
+interface OrderEvaluation {
+  id: string;
+  order_id: string;
+  employee_id: string;
+  status: string;
+  created_at: string;
+}
+
 export const AppointmentsOverviewTab = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [evaluations, setEvaluations] = useState<OrderEvaluation[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [requestingFeedback, setRequestingFeedback] = useState<string | null>(null);
@@ -41,12 +50,34 @@ export const AppointmentsOverviewTab = () => {
 
   useEffect(() => {
     fetchAppointments();
+    
+    // Real-time subscription for evaluations
+    const evaluationsChannel = supabase
+      .channel('order_evaluations_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'order_evaluations'
+        },
+        () => {
+          fetchAppointments(); // Refresh data when evaluations change
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(evaluationsChannel);
+    };
   }, []);
 
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // Fetch appointments
+      const { data: appointmentsData, error: appointmentsError } = await supabase
         .from('order_appointments')
         .select(`
           *,
@@ -65,13 +96,26 @@ export const AppointmentsOverviewTab = () => {
         `)
         .order('scheduled_at', { ascending: true });
 
-      if (error) {
-        console.error('Error fetching appointments:', error);
+      if (appointmentsError) {
+        console.error('Error fetching appointments:', appointmentsError);
         toast.error('Fehler beim Laden der Termine');
         return;
       }
 
-      setAppointments(data || []);
+      // Fetch evaluations
+      const { data: evaluationsData, error: evaluationsError } = await supabase
+        .from('order_evaluations')
+        .select('id, order_id, employee_id, status, created_at')
+        .order('created_at', { ascending: false });
+
+      if (evaluationsError) {
+        console.error('Error fetching evaluations:', evaluationsError);
+        toast.error('Fehler beim Laden der Bewertungen');
+        return;
+      }
+
+      setAppointments(appointmentsData || []);
+      setEvaluations(evaluationsData || []);
     } catch (error) {
       console.error('Error:', error);
       toast.error('Ein Fehler ist aufgetreten');
@@ -105,10 +149,26 @@ export const AppointmentsOverviewTab = () => {
     }
   };
 
+  // Get display status that prioritizes evaluation status over appointment status
+  const getDisplayStatus = (appointment: Appointment): string => {
+    // Find the latest evaluation for this order and employee
+    const evaluation = evaluations.find(evaluation => 
+      evaluation.order_id === appointment.orders.id && 
+      evaluation.employee_id === appointment.employees.id
+    );
+
+    if (evaluation) {
+      return evaluation.status; // 'pending', 'approved', or 'rejected' from evaluation
+    }
+
+    return appointment.status; // Original appointment status
+  };
+
   const filteredAppointments = appointments
     .filter(appointment => {
-      // Status filter
-      if (statusFilter !== 'all' && appointment.status !== statusFilter) {
+      // Status filter using display status instead of appointment status
+      const displayStatus = getDisplayStatus(appointment);
+      if (statusFilter !== 'all' && displayStatus !== statusFilter) {
         return false;
       }
       
@@ -149,13 +209,13 @@ export const AppointmentsOverviewTab = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
-        return <Badge variant="default">Bestätigt</Badge>;
+        return <Badge variant="default">Abgeschlossen</Badge>;
       case 'pending':
-        return <Badge variant="secondary">Ausstehend</Badge>;
+        return <Badge variant="secondary">In Überprüfung</Badge>;
       case 'rejected':
         return <Badge variant="destructive">Abgelehnt</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline">{status === 'approved' ? 'Bestätigt' : status}</Badge>;
     }
   };
 
@@ -189,8 +249,8 @@ export const AppointmentsOverviewTab = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Alle</SelectItem>
-                  <SelectItem value="approved">Bestätigt</SelectItem>
-                  <SelectItem value="pending">Ausstehend</SelectItem>
+                  <SelectItem value="approved">Abgeschlossen</SelectItem>
+                  <SelectItem value="pending">In Überprüfung</SelectItem>
                   <SelectItem value="rejected">Abgelehnt</SelectItem>
                 </SelectContent>
               </Select>
@@ -225,7 +285,7 @@ export const AppointmentsOverviewTab = () => {
                     <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                       {statusFilter === 'all' 
                         ? 'Keine Termine gefunden' 
-                        : `Keine ${statusFilter === 'approved' ? 'bestätigten' : statusFilter === 'pending' ? 'ausstehenden' : 'abgelehnten'} Termine gefunden`
+                        : `Keine ${statusFilter === 'approved' ? 'abgeschlossenen' : statusFilter === 'pending' ? 'in Überprüfung befindlichen' : 'abgelehnten'} Termine gefunden`
                       }
                     </TableCell>
                   </TableRow>
@@ -270,7 +330,7 @@ export const AppointmentsOverviewTab = () => {
                       </TableCell>
                       
                       <TableCell>
-                        {getStatusBadge(appointment.status)}
+                        {getStatusBadge(getDisplayStatus(appointment))}
                       </TableCell>
                       
                       <TableCell>
