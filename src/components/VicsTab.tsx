@@ -177,6 +177,11 @@ export const VicsTab = () => {
   // New states for assign order dialog
   const [selectedEmployeeForAssign, setSelectedEmployeeForAssign] = useState<Employee | null>(null);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  
+  // New states for deactivate user dialog
+  const [selectedEmployeeForDeactivation, setSelectedEmployeeForDeactivation] = useState<Employee | null>(null);
+  const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
+  const [isDeactivating, setIsDeactivating] = useState(false);
 
   useEffect(() => {
     fetchEmployees();
@@ -290,6 +295,34 @@ export const VicsTab = () => {
     } catch (error) {
       console.error('Error adding employee:', error);
       toast.error('Fehler beim Hinzufügen des Mitarbeiters');
+    }
+  };
+
+  const handleDeactivateUser = async () => {
+    if (!selectedEmployeeForDeactivation) return;
+    
+    setIsDeactivating(true);
+    try {
+      const { error } = await supabase.functions.invoke('deactivate-user', {
+        body: { employeeId: selectedEmployeeForDeactivation.id }
+      });
+
+      if (error) {
+        console.error('Error deactivating user:', error);
+        toast.error('Fehler beim Deaktivieren des Benutzers');
+        return;
+      }
+
+      toast.success(`Benutzer ${selectedEmployeeForDeactivation.first_name} ${selectedEmployeeForDeactivation.last_name} wurde erfolgreich deaktiviert`);
+      setIsDeactivateDialogOpen(false);
+      setSelectedEmployeeForDeactivation(null);
+      fetchEmployees(); // Refresh the list
+      fetchCreatedEmployeesStats(); // Refresh statistics
+    } catch (error) {
+      console.error('Error deactivating user:', error);
+      toast.error('Fehler beim Deaktivieren des Benutzers');
+    } finally {
+      setIsDeactivating(false);
     }
   };
 
@@ -545,6 +578,8 @@ export const VicsTab = () => {
         return <Badge variant="default"><UserCheck className="h-3 w-3 mr-1" />Erstellt</Badge>;
       case 'verified':
         return <Badge variant="outline" className="border-green-500 text-green-700"><UserCheck className="h-3 w-3 mr-1" />Verifiziert</Badge>;
+      case 'blocked':
+        return <Badge variant="destructive"><UserCheck className="h-3 w-3 mr-1" />Gesperrt</Badge>;
       default:
         return <Badge variant="secondary">Unbekannt</Badge>;
     }
@@ -552,7 +587,14 @@ export const VicsTab = () => {
 
   const importedEmployees = employees.filter(emp => emp.status === 'imported');
   const contractRequestedEmployees = employees.filter(emp => emp.status === 'contract_requested' || emp.status === 'contract_received');
-  const createdEmployees = employees.filter(emp => emp.status === 'created' || emp.status === 'verified');
+  const createdEmployees = employees.filter(emp => 
+    emp.status === 'created' || emp.status === 'verified' || emp.status === 'blocked'
+  ).sort((a, b) => {
+    // Sort blocked employees to the bottom
+    if (a.status === 'blocked' && b.status !== 'blocked') return 1;
+    if (a.status !== 'blocked' && b.status === 'blocked') return -1;
+    return 0;
+  });
 
   // Aggregate data for created employees
   useEffect(() => {
@@ -1118,16 +1160,31 @@ export const VicsTab = () => {
                                 <Eye className="h-4 w-4 mr-1" />
                                 Details
                               </Button>
-                              <Button
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedEmployeeForAssign(employee);
-                                  setIsAssignDialogOpen(true);
-                                }}
-                              >
-                                <UserPlus className="h-4 w-4 mr-1" />
-                                Auftrag zuweisen
-                              </Button>
+                              {employee.status !== 'blocked' && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedEmployeeForAssign(employee);
+                                      setIsAssignDialogOpen(true);
+                                    }}
+                                  >
+                                    <UserPlus className="h-4 w-4 mr-1" />
+                                    Auftrag zuweisen
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedEmployeeForDeactivation(employee);
+                                      setIsDeactivateDialogOpen(true);
+                                    }}
+                                  >
+                                    <UserCheck className="h-4 w-4 mr-1" />
+                                    Ausgeschieden
+                                  </Button>
+                                </>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -1533,6 +1590,61 @@ export const VicsTab = () => {
           setSelectedEmployeeForAssign(null);
         }}
       />
+
+      {/* Deactivate User Confirmation Dialog */}
+      <Dialog open={isDeactivateDialogOpen} onOpenChange={setIsDeactivateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Benutzer deaktivieren</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p>
+              Sind Sie sicher, dass Sie den Benutzer{' '}
+              <strong>
+                {selectedEmployeeForDeactivation?.first_name} {selectedEmployeeForDeactivation?.last_name}
+              </strong>{' '}
+              deaktivieren möchten?
+            </p>
+            <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3">
+              <p className="text-sm text-destructive">
+                <strong>Warnung:</strong> Diese Aktion wird:
+              </p>
+              <ul className="text-sm text-destructive mt-2 space-y-1">
+                <li>• Den Benutzer aus dem System ausloggen</li>
+                <li>• Zukünftige Anmeldungen verhindern</li>
+                <li>• Den Benutzer aus Auftragszuweisungen ausschließen</li>
+                <li>• Den Status auf "Gesperrt" setzen</li>
+              </ul>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeactivateDialogOpen(false);
+                setSelectedEmployeeForDeactivation(null);
+              }}
+              disabled={isDeactivating}
+            >
+              Abbrechen
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeactivateUser}
+              disabled={isDeactivating}
+            >
+              {isDeactivating ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Deaktiviere...
+                </>
+              ) : (
+                'Benutzer deaktivieren'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
