@@ -230,8 +230,19 @@ const Auftrag = () => {
   };
 
   const getIconComponent = (iconName: string) => {
-    const IconComponent = (LucideIcons as any)[iconName];
-    return IconComponent ? <IconComponent className="h-5 w-5" /> : <FileText className="h-5 w-5" />;
+    // Map common icon names to actual components
+    const iconMap: Record<string, any> = {
+      FileText,
+      Users,
+      Download,
+      Send,
+      Star,
+      ArrowLeft,
+      // Add more icons as needed
+    };
+    
+    const IconComponent = iconMap[iconName];
+    return IconComponent ? <IconComponent className="h-5 w-5 text-primary" /> : <FileText className="h-5 w-5 text-primary" />;
   };
 
   if (loading) {
@@ -259,32 +270,33 @@ const Auftrag = () => {
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8">
           <Button
             variant="outline"
             size="sm"
             onClick={() => navigate('/mitarbeiter')}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 self-start"
           >
             <ArrowLeft className="h-4 w-4" />
-            Zurück zum Dashboard
+            <span className="hidden xs:inline">Zurück zum Dashboard</span>
+            <span className="xs:hidden">Zurück</span>
           </Button>
           
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent break-words">
               {order.title}
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-sm sm:text-base break-words">
               Auftrag #{order.order_number} • {order.provider}
             </p>
           </div>
           
-          <Badge className="bg-green-100 text-green-800 px-4 py-2">
+          <Badge className="bg-green-100 text-green-800 px-3 py-1 sm:px-4 sm:py-2 text-sm whitespace-nowrap">
             €{order.premium.toFixed(2)} Prämie
           </Badge>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-2">
+        <div className="grid gap-6 lg:gap-8 lg:grid-cols-2">
           {/* Left Column - Order Details */}
           <div className="space-y-6">
             {/* Project Goal */}
@@ -301,33 +313,6 @@ const Auftrag = () => {
                 </p>
               </CardContent>
             </Card>
-
-            {/* Instructions */}
-            {order.instructions && order.instructions.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-primary" />
-                    Anweisungen
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {order.instructions.map((instruction, index) => (
-                    <div key={index} className="flex gap-4 p-4 rounded-lg bg-muted/50">
-                      <div className="flex-shrink-0 p-2 rounded-full bg-primary/10">
-                        {getIconComponent(instruction.icon)}
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium mb-2">{instruction.title}</h4>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                          {instruction.content}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
 
             {/* Download Links */}
             {order.download_links && order.download_links.length > 0 && (
@@ -348,10 +333,37 @@ const Auftrag = () => {
                       className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                     >
                       <Download className="h-4 w-4 text-primary" />
-                      <span className="text-sm text-primary hover:underline">
+                      <span className="text-sm text-primary hover:underline break-all">
                         {link}
                       </span>
                     </a>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Instructions */}
+            {order.instructions && order.instructions.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    Anweisungen
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {order.instructions.map((instruction, index) => (
+                    <div key={index} className="flex gap-4 p-4 rounded-lg bg-muted/50">
+                      <div className="flex-shrink-0 p-2 rounded-full bg-primary/10">
+                        {getIconComponent(instruction.icon)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium mb-2">{instruction.title}</h4>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {instruction.content}
+                        </p>
+                      </div>
+                    </div>
                   ))}
                 </CardContent>
               </Card>
@@ -389,21 +401,23 @@ const Auftrag = () => {
               </CardHeader>
               <CardContent className="space-y-6">
                 {order.order_evaluation_questions.map((question) => (
-                  <div key={question.id} className="space-y-3 p-4 rounded-lg border bg-card">
-                    <Label className="text-sm font-medium leading-relaxed">
+                  <div key={question.id} className="space-y-3 p-3 sm:p-4 rounded-lg border bg-card">
+                    <Label className="text-sm font-medium leading-relaxed block">
                       {question.question}
                     </Label>
                     
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-muted-foreground">Bewertung:</span>
-                      <StarRating
-                        rating={evaluations[question.id]?.rating || 0}
-                        onChange={(rating) => handleRatingChange(question.id, rating)}
-                        questionId={question.id}
-                      />
-                      <span className="text-sm text-muted-foreground">
-                        ({evaluations[question.id]?.rating || 0}/5)
-                      </span>
+                    <div className="flex flex-col xs:flex-row xs:items-center gap-2 xs:gap-3">
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">Bewertung:</span>
+                      <div className="flex items-center gap-2 xs:gap-3 flex-wrap">
+                        <StarRating
+                          rating={evaluations[question.id]?.rating || 0}
+                          onChange={(rating) => handleRatingChange(question.id, rating)}
+                          questionId={question.id}
+                        />
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">
+                          ({evaluations[question.id]?.rating || 0}/5)
+                        </span>
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -416,6 +430,7 @@ const Auftrag = () => {
                         value={evaluations[question.id]?.comment || ''}
                         onChange={(e) => handleCommentChange(question.id, e.target.value)}
                         rows={3}
+                        className="resize-none"
                       />
                     </div>
                   </div>
