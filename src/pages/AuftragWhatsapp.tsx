@@ -72,8 +72,6 @@ const AuftragWhatsapp = () => {
   // Evaluation states
   const [questions, setQuestions] = useState<EvaluationQuestion[]>([]);
   const [evaluation, setEvaluation] = useState<OrderEvaluation | null>(null);
-  const [rating, setRating] = useState<number>(0);
-  const [overallComment, setOverallComment] = useState<string>('');
   const [questionResponses, setQuestionResponses] = useState<Record<string, { rating: number; comment: string }>>({});
   const [submittingEvaluation, setSubmittingEvaluation] = useState(false);
 
@@ -287,8 +285,6 @@ const AuftragWhatsapp = () => {
 
       if (data) {
         setEvaluation(data as OrderEvaluation);
-        setRating(data.rating);
-        setOverallComment(data.overall_comment || '');
         
         // Prefill question responses from existing evaluation details
         if (data.details && questions.length > 0) {
@@ -349,7 +345,7 @@ const AuftragWhatsapp = () => {
   };
 
   const submitEvaluation = async () => {
-    if (!assignmentId || !employee || !order || rating === 0) return;
+    if (!assignmentId || !employee || !order) return;
 
     // Validate question ratings
     for (const question of questions) {
@@ -372,12 +368,17 @@ const AuftragWhatsapp = () => {
         return acc;
       }, {} as Record<string, any>);
 
+      // Calculate derived rating from question averages
+      const derivedRating = questions.length > 0 
+        ? Math.round(questions.reduce((sum, q) => sum + questionResponses[q.id].rating, 0) / questions.length)
+        : 5;
+
       const evaluationData = {
         order_id: order.id,
         employee_id: employee.id,
         assignment_id: assignmentId,
-        rating,
-        overall_comment: overallComment || null,
+        rating: derivedRating,
+        overall_comment: null,
         details: evaluationDetails,
         status: 'pending' as const
       };
@@ -757,32 +758,6 @@ const AuftragWhatsapp = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Bewertung mit Sternen */}
-              <div>
-                <label className="text-sm font-medium">Gesamtbewertung *</label>
-                <div className="mt-2">
-                  <StarRating
-                    rating={rating}
-                    onRatingChange={setRating}
-                    disabled={isFormDisabled}
-                  />
-                </div>
-              </div>
-
-              {/* Gesamtkommentar */}
-              <div>
-                <label className="text-sm font-medium">
-                  Gesamtkommentar (optional)
-                </label>
-                <Textarea
-                  value={overallComment}
-                  onChange={(e) => setOverallComment(e.target.value)}
-                  placeholder="Zusätzliche Anmerkungen zum Auftrag..."
-                  className={`mt-2 ${isFormDisabled ? 'bg-muted' : ''}`}
-                  rows={3}
-                  disabled={isFormDisabled}
-                />
-              </div>
 
               {/* Bewertungsfragen */}
               {questions.length > 0 && (
@@ -825,7 +800,7 @@ const AuftragWhatsapp = () => {
                 <div className="flex gap-3 pt-4">
                   <Button
                     onClick={submitEvaluation}
-                    disabled={rating === 0 || submittingEvaluation}
+                    disabled={submittingEvaluation || questions.some(q => questionResponses[q.id]?.rating === 0)}
                     className="flex-1"
                   >
                     {submittingEvaluation ? 'Wird eingereicht...' : 
