@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Star, ArrowLeft, Send } from 'lucide-react';
+import { Star, ArrowLeft, Send, FileText, Download, Users, Settings, Clock, Target } from 'lucide-react';
 
 interface Order {
   id: string;
@@ -18,6 +18,7 @@ interface Order {
   project_goal: string;
   instructions: any;
   whatsapp_account_id: string | null;
+  is_placeholder: boolean;
 }
 
 interface EvaluationQuestion {
@@ -40,6 +41,9 @@ const Auftrag = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  
+  // Icon mapping for instructions
+  const iconsMap = { FileText, Download, Users, Settings, Clock, Target, Star };
   
   const [order, setOrder] = useState<Order | null>(null);
   const [employee, setEmployee] = useState<Employee | null>(null);
@@ -315,6 +319,29 @@ const Auftrag = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Instructions Card - Only for placeholder orders */}
+          {order.is_placeholder && Array.isArray(order.instructions) && order.instructions.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Anweisungen</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {order.instructions.map((instruction: any, index: number) => {
+                  const IconComponent = iconsMap[instruction.icon as keyof typeof iconsMap] || FileText;
+                  return (
+                    <div key={index} className="flex items-start gap-3">
+                      <IconComponent className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium">{instruction.title}</p>
+                        <p className="text-sm text-muted-foreground whitespace-pre-line">{instruction.content}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Evaluation Questions */}
           {questions.length > 0 && (
