@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Trophy, Target, Star, TrendingUp, Award, Zap } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface OverviewTabProps {
   assignedOrders: any[];
@@ -10,8 +11,46 @@ interface OverviewTabProps {
 }
 
 export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user }) => {
-  const completedOrders = assignedOrders.filter(order => order.status === 'completed').length;
-  const totalPremium = assignedOrders.reduce((sum, order) => sum + (order.premium || 0), 0);
+  const [approvedEvaluations, setApprovedEvaluations] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    fetchApprovedEvaluations();
+  }, [user]);
+
+  const fetchApprovedEvaluations = async () => {
+    if (!user?.email) return;
+
+    try {
+      const { data: employeeData } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('email', user.email)
+        .maybeSingle();
+
+      if (!employeeData) return;
+
+      const { data, error } = await supabase
+        .from('order_evaluations')
+        .select('premium_awarded')
+        .eq('employee_id', employeeData.id)
+        .eq('status', 'approved');
+
+      if (error) {
+        console.error('Error fetching approved evaluations:', error);
+        return;
+      }
+
+      setApprovedEvaluations(data || []);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const completedOrders = assignedOrders.filter(order => order.assignment_status === 'completed').length;
+  const totalPremium = approvedEvaluations.reduce((sum, evaluation) => sum + (evaluation.premium_awarded || 0), 0);
   const completionRate = assignedOrders.length > 0 ? (completedOrders / assignedOrders.length) * 100 : 0;
 
   const stats = [

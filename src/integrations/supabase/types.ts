@@ -243,6 +243,54 @@ export type Database = {
           },
         ]
       }
+      order_evaluations: {
+        Row: {
+          approved_at: string | null
+          assignment_id: string
+          created_at: string
+          details: Json | null
+          employee_id: string
+          id: string
+          order_id: string
+          overall_comment: string | null
+          premium_awarded: number
+          rating: number
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          assignment_id: string
+          created_at?: string
+          details?: Json | null
+          employee_id: string
+          id?: string
+          order_id: string
+          overall_comment?: string | null
+          premium_awarded?: number
+          rating: number
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          assignment_id?: string
+          created_at?: string
+          details?: Json | null
+          employee_id?: string
+          id?: string
+          order_id?: string
+          overall_comment?: string | null
+          premium_awarded?: number
+          rating?: number
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           created_at: string

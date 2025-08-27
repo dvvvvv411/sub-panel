@@ -220,7 +220,44 @@ const Auftrag = () => {
         .eq('order_id', order.id)
         .eq('employee_id', employeeData.id);
 
-      toast.success('Bewertung erfolgreich abgesendet! Der Auftrag ist nun abgeschlossen.');
+      // Get assignment ID for evaluation
+      const { data: assignmentData, error: assignmentError } = await supabase
+        .from('order_assignments')
+        .select('id')
+        .eq('order_id', order.id)
+        .eq('employee_id', employeeData.id)
+        .single();
+
+      if (assignmentError) {
+        console.error('Error fetching assignment:', assignmentError);
+        toast.error('Fehler beim Abrufen der Zuweisung');
+        return;
+      }
+
+      // Calculate overall rating
+      const ratings = Object.values(evaluations).map(e => e.rating);
+      const overallRating = Math.round(ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length);
+
+      // Submit evaluation
+      const { error: evaluationError } = await supabase
+        .from('order_evaluations')
+        .insert({
+          assignment_id: assignmentData.id,
+          order_id: order.id,
+          employee_id: employeeData.id,
+          rating: overallRating,
+          details: evaluations,
+          overall_comment: Object.values(evaluations).map(e => e.comment).filter(c => c).join(' | ') || null,
+          status: 'pending'
+        });
+
+      if (evaluationError) {
+        console.error('Error submitting evaluation:', evaluationError);
+        toast.error('Fehler beim Absenden der Bewertung');
+        return;
+      }
+
+      toast.success('Bewertung erfolgreich abgesendet! Die Bewertung wird vom Admin geprüft.');
       navigate('/mitarbeiter');
 
     } catch (error) {

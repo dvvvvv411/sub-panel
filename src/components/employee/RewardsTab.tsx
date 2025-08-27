@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Gift, Trophy, Star, Target, Coins, Award } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface RewardsTabProps {
   assignedOrders: any[];
@@ -10,9 +11,47 @@ interface RewardsTabProps {
 }
 
 export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) => {
+  const [approvedEvaluations, setApprovedEvaluations] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    fetchApprovedEvaluations();
+  }, [user]);
+
+  const fetchApprovedEvaluations = async () => {
+    if (!user?.email) return;
+
+    try {
+      const { data: employeeData } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('email', user.email)
+        .maybeSingle();
+
+      if (!employeeData) return;
+
+      const { data, error } = await supabase
+        .from('order_evaluations')
+        .select('premium_awarded, created_at')
+        .eq('employee_id', employeeData.id)
+        .eq('status', 'approved');
+
+      if (error) {
+        console.error('Error fetching approved evaluations:', error);
+        return;
+      }
+
+      setApprovedEvaluations(data || []);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const completedOrders = assignedOrders.filter((o: any) => o.assignment_status === 'completed');
   const completedCount = completedOrders.length;
-  const totalPremium = completedOrders.reduce((sum: number, o: any) => sum + (o.premium || 0), 0);
+  const totalPremium = approvedEvaluations.reduce((sum: number, evaluation: any) => sum + (evaluation.premium_awarded || 0), 0);
   
   const points = completedCount * 100 + Math.floor(totalPremium);
   const nextLevelPoints = Math.ceil(points / 500) * 500;
@@ -79,10 +118,10 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
   const availableRewards = rewards.filter(reward => !reward.earned);
 
   const monthlyEarningsMap = new Map<string, number>();
-  completedOrders.forEach((o: any) => {
-    const date = o.created_at ? new Date(o.created_at) : null;
+  approvedEvaluations.forEach((evaluation: any) => {
+    const date = evaluation.created_at ? new Date(evaluation.created_at) : null;
     const month = date ? date.toLocaleString('de-DE', { month: 'long' }) : 'Aktuell';
-    monthlyEarningsMap.set(month, (monthlyEarningsMap.get(month) || 0) + (o.premium || 0));
+    monthlyEarningsMap.set(month, (monthlyEarningsMap.get(month) || 0) + (evaluation.premium_awarded || 0));
   });
   const monthlyEarnings = Array.from(monthlyEarningsMap, ([month, amount]) => ({ month, amount }));
 
