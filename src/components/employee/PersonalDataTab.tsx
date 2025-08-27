@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { User, Mail, Phone, Calendar, Edit3, Save, X, Lock, CreditCard, Eye, EyeOff, Square } from 'lucide-react';
+import { User, Mail, Phone, Calendar, Edit3, Save, X, Lock, CreditCard, Eye, EyeOff, Chip } from 'lucide-react';
 
 interface PersonalDataTabProps {
   user: any;
@@ -57,6 +58,7 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
 
     try {
       setBankLoading(true);
+      console.log('Fetching bank data for user:', user.email);
       
       // First get employee ID
       const { data: employeeData, error: employeeError } = await supabase
@@ -65,22 +67,35 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
         .eq('email', user.email)
         .maybeSingle();
 
-      if (employeeError || !employeeData) {
-        console.log('No employee data found');
+      if (employeeError) {
+        console.error('Error fetching employee data:', employeeError);
+        toast.error('Fehler beim Abrufen der Mitarbeiterdaten');
         return;
       }
 
-      // Then get bank data from contract submissions
+      if (!employeeData) {
+        console.log('No employee data found for email:', user.email);
+        return;
+      }
+
+      console.log('Found employee ID:', employeeData.id);
+
+      // Then get the LATEST bank data from contract submissions
       const { data: submissionData, error: submissionError } = await supabase
         .from('employment_contract_submissions')
         .select('iban, bic, bank_name, first_name, last_name')
         .eq('employee_id', employeeData.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (submissionError) {
         console.error('Error fetching bank data:', submissionError);
+        toast.error('Fehler beim Abrufen der Bankdaten');
         return;
       }
+
+      console.log('Fetched bank data:', submissionData);
 
       if (submissionData) {
         setBankData({
@@ -89,9 +104,18 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
           bankName: submissionData.bank_name || '',
           accountHolder: `${submissionData.first_name} ${submissionData.last_name}` || user?.name || ''
         });
+        console.log('Updated bank data state:', {
+          iban: submissionData.iban || '',
+          bic: submissionData.bic || '',
+          bankName: submissionData.bank_name || '',
+          accountHolder: `${submissionData.first_name} ${submissionData.last_name}` || user?.name || ''
+        });
+      } else {
+        console.log('No bank submission data found');
       }
     } catch (error) {
       console.error('Error fetching bank data:', error);
+      toast.error('Fehler beim Laden der Bankdaten');
     } finally {
       setBankLoading(false);
     }
@@ -112,6 +136,8 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
     if (!user?.email) return;
 
     try {
+      console.log('Saving bank data:', bankData);
+      
       // Get employee ID first
       const { data: employeeData, error: employeeError } = await supabase
         .from('employees')
@@ -120,6 +146,7 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
         .single();
 
       if (employeeError || !employeeData) {
+        console.error('Error fetching employee data:', employeeError);
         toast.error('Fehler beim Abrufen der Mitarbeiterdaten');
         return;
       }
@@ -136,12 +163,14 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
 
       if (updateError) {
         console.error('Error updating bank data:', updateError);
-        toast.error('Fehler beim Speichern der Bankdaten');
+        toast.error('Fehler beim Speichern der Bankdaten: ' + updateError.message);
         return;
       }
 
       toast.success('Bankdaten erfolgreich aktualisiert');
       setBankEditing(false);
+      // Refresh the data to show the changes
+      fetchBankData();
     } catch (error) {
       console.error('Error saving bank data:', error);
       toast.error('Fehler beim Speichern der Bankdaten');
@@ -369,7 +398,7 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
               <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 rounded-2xl p-6 text-white shadow-2xl transform hover:scale-105 transition-transform duration-300">
                 <div className="flex justify-between items-start mb-8">
                   <div className="w-10 h-6 bg-white/20 rounded flex items-center justify-center">
-                    <Square className="h-4 w-4 text-white fill-white" />
+                    <Chip className="h-4 w-4 text-white" />
                   </div>
                   <div className="text-xs opacity-75">DEBIT</div>
                 </div>
