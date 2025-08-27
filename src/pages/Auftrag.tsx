@@ -232,19 +232,22 @@ const Auftrag = () => {
   };
 
   const getIconComponent = (iconName: string) => {
-    // Map common icon names to actual components
-    const iconMap: Record<string, any> = {
-      FileText,
-      Users,
-      Download,
-      Send,
-      Star,
-      ArrowLeft,
-      // Add more icons as needed
+    // Normalize icon name - handle kebab-case, snake_case, camelCase, PascalCase
+    const normalizeIconName = (name: string): string => {
+      return name
+        .replace(/[-_]/g, '') // Remove hyphens and underscores
+        .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
+        .replace(/[a-z][A-Z]/g, match => match[0] + match[1].toUpperCase()); // Handle camelCase
     };
+
+    const normalizedName = normalizeIconName(iconName);
     
-    const IconComponent = iconMap[iconName];
-    return IconComponent ? <IconComponent className="h-4 w-4 text-primary" /> : <FileText className="h-4 w-4 text-primary" />;
+    // Try to get icon from lucide-react dynamically
+    const IconComponent = (LucideIcons as any)[normalizedName] || 
+                         (LucideIcons as any)[iconName] || 
+                         FileText;
+    
+    return <IconComponent className="h-4 w-4 sm:h-5 sm:w-5 text-primary" absoluteStrokeWidth />;
   };
 
   if (loading) {
@@ -280,8 +283,8 @@ const Auftrag = () => {
             className="flex items-center gap-2 self-start"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span className="hidden xs:inline">Zurück zum Dashboard</span>
-            <span className="xs:hidden">Zurück</span>
+            <span className="hidden sm:inline">Zurück zum Dashboard</span>
+            <span className="sm:hidden">Zurück</span>
           </Button>
           
           <div className="flex-1 min-w-0">
@@ -359,15 +362,15 @@ const Auftrag = () => {
                     Anweisungen
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 p-3 sm:p-4">
                   {order.instructions.map((instruction, index) => (
-                    <div key={index} className="flex gap-4 p-4 rounded-lg bg-muted/50">
-                      <div className="flex-shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                    <div key={index} className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg bg-muted/50">
+                      <div className="flex-none h-7 w-7 sm:h-8 sm:w-8 aspect-square grid place-items-center rounded-full bg-primary/10">
                         {getIconComponent(instruction.icon)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium mb-2">{instruction.title}</h4>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
+                        <h4 className="font-medium mb-2 text-sm sm:text-base">{instruction.title}</h4>
+                        <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                           {instruction.content}
                         </p>
                       </div>
@@ -414,9 +417,9 @@ const Auftrag = () => {
                       {question.question}
                     </Label>
                     
-                    <div className="flex flex-col xs:flex-row xs:items-center gap-2 xs:gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                       <span className="text-sm text-muted-foreground whitespace-nowrap">Bewertung:</span>
-                      <div className="flex items-center gap-2 xs:gap-3 flex-wrap">
+                      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                         <StarRating
                           rating={evaluations[question.id]?.rating || 0}
                           onChange={(rating) => handleRatingChange(question.id, rating)}
