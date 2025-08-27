@@ -224,12 +224,6 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
     return formatIban(cleaned.substring(0, 4) + '••••••••••••' + cleaned.substring(cleaned.length - 4));
   };
 
-  const accountStats = [
-    { label: 'Mitglied seit', value: 'Januar 2024', icon: Calendar },
-    { label: 'Letzte Anmeldung', value: 'Heute', icon: User },
-    { label: 'Status', value: 'Aktiv', icon: User, isStatus: true }
-  ];
-
   return (
     <div className="space-y-6">
       {/* Profile Header */}
@@ -347,26 +341,35 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {accountStats.map((stat, index) => {
-              const IconComponent = stat.icon;
-              return (
-                <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="p-2 rounded-full bg-primary/10">
-                    <IconComponent className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
-                    <p className="font-medium">
-                      {stat.isStatus ? (
-                        <Badge className="bg-green-100 text-green-800">{stat.value}</Badge>
-                      ) : (
-                        stat.value
-                      )}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+              <div className="p-2 rounded-full bg-primary/10">
+                <Calendar className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">Mitglied seit</p>
+                <p className="font-medium">Januar 2024</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+              <div className="p-2 rounded-full bg-primary/10">
+                <User className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">Letzte Anmeldung</p>
+                <p className="font-medium">Heute</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+              <div className="p-2 rounded-full bg-primary/10">
+                <User className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">Status</p>
+                <p className="font-medium">
+                  <Badge className="bg-green-100 text-green-800">Aktiv</Badge>
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
