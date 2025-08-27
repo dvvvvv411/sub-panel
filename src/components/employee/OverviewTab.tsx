@@ -49,6 +49,34 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user }
     }
   };
 
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'assigned':
+        return 'Zugewiesen';
+      case 'in_progress':
+        return 'In Bearbeitung';
+      case 'evaluated':
+        return 'Zur Prüfung eingereicht';
+      case 'completed':
+        return 'Abgeschlossen';
+      default:
+        return 'Unbekannt';
+    }
+  };
+
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'default';
+      case 'evaluated':
+        return 'outline';
+      case 'in_progress':
+        return 'secondary';
+      default:
+        return 'secondary';
+    }
+  };
+
   const completedOrders = assignedOrders.filter(order => order.assignment_status === 'completed').length;
   const totalPremium = approvedEvaluations.reduce((sum, evaluation) => sum + (evaluation.premium_awarded || 0), 0);
   const completionRate = assignedOrders.length > 0 ? (completedOrders / assignedOrders.length) * 100 : 0;
@@ -205,8 +233,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user }
                   <p className="font-medium">{order.title}</p>
                   <p className="text-sm text-muted-foreground">Auftrag #{order.order_number}</p>
                 </div>
-                <Badge variant={order.status === 'completed' ? 'default' : 'secondary'}>
-                  {order.status === 'completed' ? 'Abgeschlossen' : 'Zugewiesen'}
+                <Badge variant={getStatusVariant(order.assignment_status)}>
+                  {getStatusText(order.assignment_status)}
                 </Badge>
               </div>
             ))}
