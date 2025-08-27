@@ -18,9 +18,8 @@ interface PremiumAdjustment {
   reason: string;
   created_at: string;
   created_by: string;
-  user_profiles?: {
-    full_name: string;
-  };
+  employee_id: string;
+  // We skip nested profile lookups to avoid join issues
 }
 
 interface PremiumAdjustmentsHistoryProps {
@@ -39,12 +38,7 @@ export const PremiumAdjustmentsHistory: React.FC<PremiumAdjustmentsHistoryProps>
     try {
       const { data, error } = await supabase
         .from('premium_adjustments')
-        .select(`
-          *,
-          user_profiles:created_by (
-            full_name
-          )
-        `)
+        .select('*')
         .eq('employee_id', employee.id)
         .order('created_at', { ascending: false });
 
@@ -128,7 +122,7 @@ export const PremiumAdjustmentsHistory: React.FC<PremiumAdjustmentsHistoryProps>
                     </div>
                     <div className="flex items-center gap-1">
                       <User className="h-3 w-3" />
-                      {adjustment.user_profiles?.full_name || 'Administrator'}
+                      Administrator
                     </div>
                   </div>
                 </div>

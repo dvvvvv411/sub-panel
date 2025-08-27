@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Shield, Users, LogOut, Crown, UserPlus, Briefcase, MessageSquare, Calendar, TrendingUp, Home } from 'lucide-react';
-import { VicsTab } from '@/components/VicsTab';
+import VicsTab from '@/components/VicsTab';
 import { OrdersTab } from '@/components/OrdersTab';
 import { ReviewsManagementTab } from '@/components/ReviewsManagementTab';
 import { AppointmentsOverviewTab } from '@/components/AppointmentsOverviewTab';

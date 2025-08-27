@@ -80,18 +80,9 @@ const VicsTab = () => {
         setEmployees(employeesData || []);
       }
 
-      // Fetch contract requests
-      const { data: requestsData, error: requestsError } = await supabase
-        .from('contract_requests')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (requestsError) {
-        console.error('Error fetching contract requests:', requestsError);
-        toast.error('Fehler beim Laden der Vertragsanfragen');
-      } else {
-        setContractRequests(requestsData || []);
-      }
+      // Disable legacy "contract_requests" fetch (table does not exist in current schema)
+      // We keep the UI structure intact by setting an empty list.
+      setContractRequests([]);
 
     } catch (error) {
       console.error('Error:', error);
@@ -131,86 +122,15 @@ const VicsTab = () => {
     }
   };
 
-  const handleApproveRequest = async (requestId: string) => {
-    setProcessingRequestId(requestId);
-    
-    try {
-      const request = contractRequests.find(r => r.id === requestId);
-      if (!request) return;
-
-      // Create employee
-      const { data: employeeData, error: employeeError } = await supabase
-        .from('employees')
-        .insert([{
-          first_name: request.first_name,
-          last_name: request.last_name,
-          email: request.email,
-          phone: request.phone,
-          status: 'active'
-        }])
-        .select()
-        .single();
-
-      if (employeeError) {
-        console.error('Error creating employee:', employeeError);
-        toast.error('Fehler beim Erstellen des Mitarbeiters');
-        return;
-      }
-
-      // Update request status
-      const { error: updateError } = await supabase
-        .from('contract_requests')
-        .update({ status: 'approved' })
-        .eq('id', requestId);
-
-      if (updateError) {
-        console.error('Error updating request:', updateError);
-        toast.error('Fehler beim Aktualisieren der Anfrage');
-        return;
-      }
-
-      toast.success('Vertragsanfrage genehmigt und Mitarbeiter erstellt');
-      
-      // Refresh data
-      fetchData();
-      setSelectedRequest(null);
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error('Ein Fehler ist aufgetreten');
-    } finally {
-      setProcessingRequestId(null);
-    }
+  // Legacy handlers disabled because the "contract_requests" table is not part of the current schema.
+  const handleApproveRequest = async (_requestId: string) => {
+    console.warn('Approve request is disabled - no contract_requests table in schema');
+    toast.info('Diese Funktion ist derzeit nicht verfügbar.');
   };
 
-  const handleRejectRequest = async (requestId: string, reason: string) => {
-    setProcessingRequestId(requestId);
-    
-    try {
-      const { error } = await supabase
-        .from('contract_requests')
-        .update({ 
-          status: 'rejected',
-          rejection_reason: reason
-        })
-        .eq('id', requestId);
-
-      if (error) {
-        console.error('Error rejecting request:', error);
-        toast.error('Fehler beim Ablehnen der Anfrage');
-        return;
-      }
-
-      toast.success('Vertragsanfrage abgelehnt');
-      
-      // Refresh data
-      fetchData();
-      setSelectedRequest(null);
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error('Ein Fehler ist aufgetreten');
-    } finally {
-      setProcessingRequestId(null);
-    }
+  const handleRejectRequest = async (_requestId: string, _reason: string) => {
+    console.warn('Reject request is disabled - no contract_requests table in schema');
+    toast.info('Diese Funktion ist derzeit nicht verfügbar.');
   };
 
   const filteredEmployees = employees.filter(employee =>
