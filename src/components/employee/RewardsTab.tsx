@@ -1,7 +1,8 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Gift, Trophy, Star, Target, Coins, Award, TrendingUp } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Gift, Trophy, Star, Target, Coins, Award, TrendingUp, Calendar, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface RewardsTabProps {
@@ -69,7 +70,7 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
       earned: completedCount > 0,
       icon: Target,
       color: 'text-blue-600',
-      bgColor: 'bg-blue-100'
+      bgColor: 'bg-blue-500/10'
     },
     { 
       name: 'Fleißiger Arbeiter', 
@@ -77,7 +78,7 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
       earned: completedCount >= 5,
       icon: Trophy,
       color: 'text-yellow-600',
-      bgColor: 'bg-yellow-100'
+      bgColor: 'bg-yellow-500/10'
     },
     { 
       name: 'Top Performer', 
@@ -85,7 +86,7 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
       earned: completedCount >= 10,
       icon: Award,
       color: 'text-purple-600',
-      bgColor: 'bg-purple-100'
+      bgColor: 'bg-purple-500/10'
     },
     { 
       name: 'Prämien-Sammler', 
@@ -93,7 +94,7 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
       earned: totalPremium >= 500,
       icon: Coins,
       color: 'text-green-600',
-      bgColor: 'bg-green-100'
+      bgColor: 'bg-green-500/10'
     },
     { 
       name: 'Meister', 
@@ -101,7 +102,7 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
       earned: completedCount >= 20,
       icon: Star,
       color: 'text-indigo-600',
-      bgColor: 'bg-indigo-100'
+      bgColor: 'bg-indigo-500/10'
     }
   ];
 
@@ -115,66 +116,118 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
   });
   const monthlyEarnings = Array.from(monthlyEarningsMap, ([month, amount]) => ({ month, amount }));
 
-  return (
-    <div className="space-y-6">
-      {/* Premium Overview Header */}
-      <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Card className="animate-pulse">
+          <CardContent className="p-8">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-green-100">
-                <Coins className="h-8 w-8 text-green-600" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-green-800">€{totalPremium.toFixed(2)}</h2>
-                <p className="text-green-600">Gesamtprämien erhalten</p>
+              <Skeleton className="h-16 w-16 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-32" />
+                <Skeleton className="h-4 w-48" />
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-green-600">Aus {approvedEvaluations.length} genehmigten Bewertungen</p>
-              <p className="text-xs text-green-500">{completedCount} abgeschlossene Aufträge</p>
+          </CardContent>
+        </Card>
+        
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-center">
+                  <div className="space-y-2">
+                    <Skeleton className="h-5 w-48" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                  <Skeleton className="h-8 w-20" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Premium Overview Header */}
+      <Card className="bg-gradient-to-br from-green-50 via-green-50/80 to-emerald-50/60 border-green-200/60">
+        <CardContent className="p-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <div className="p-4 rounded-2xl bg-green-500/10 border border-green-200/60">
+                <Coins className="h-10 w-10 text-green-600" />
+              </div>
+              <div className="space-y-1">
+                <h2 className="text-3xl font-bold text-green-800">€{totalPremium.toFixed(2)}</h2>
+                <p className="text-green-600 font-medium">Gesamtprämien erhalten</p>
+                <div className="flex items-center gap-4 text-sm text-green-600">
+                  <span>Aus {approvedEvaluations.length} genehmigten Bewertungen</span>
+                  <span>•</span>
+                  <span>{completedCount} abgeschlossene Aufträge</span>
+                </div>
+              </div>
+            </div>
+            <div className="text-right space-y-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <span className="text-sm font-medium text-green-700">Aktiv seit Januar 2024</span>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Premium History */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Coins className="h-5 w-5 text-green-600" />
+      <Card className="border-muted/50">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-3 text-lg">
+            <div className="p-2 rounded-lg bg-green-500/10">
+              <Coins className="h-5 w-5 text-green-600" />
+            </div>
             Prämien-Verlauf
           </CardTitle>
         </CardHeader>
         <CardContent>
           {approvedEvaluations.length === 0 ? (
-            <div className="text-center py-8">
-              <Coins className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">Noch keine Prämien erhalten</p>
-              <p className="text-sm text-muted-foreground">
-                Vervollständigen Sie Aufträge und lassen Sie diese vom Admin genehmigen
+            <div className="text-center py-12">
+              <div className="mx-auto mb-6 p-4 rounded-full bg-muted/50 w-fit">
+                <Coins className="h-12 w-12 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold text-foreground mb-2">Noch keine Prämien erhalten</h3>
+              <p className="text-muted-foreground max-w-md mx-auto leading-relaxed">
+                Vervollständigen Sie Aufträge und lassen Sie diese vom Administrator genehmigen, um Ihre ersten Prämien zu erhalten.
               </p>
             </div>
           ) : (
             <div className="space-y-3">
               {approvedEvaluations.map((evaluation, index) => (
-                <div key={index} className="flex items-center justify-between p-4 rounded-lg border bg-green-50/50">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-green-100">
-                      <Trophy className="h-4 w-4 text-green-600" />
+                <div key={index} className="group flex items-center justify-between p-4 rounded-lg border border-muted/50 bg-green-50/30 hover:bg-green-50/50 hover:border-green-200/60 transition-all duration-300">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2.5 rounded-lg bg-green-500/10">
+                      <Trophy className="h-5 w-5 text-green-600" />
                     </div>
-                    <div>
-                      <p className="font-medium">{evaluation.orders?.title || 'Auftrag'}</p>
-                      <p className="text-sm text-muted-foreground">
-                        #{evaluation.orders?.order_number} • {evaluation.orders?.provider}
+                    <div className="space-y-1">
+                      <p className="font-semibold text-foreground group-hover:text-green-800 transition-colors">
+                        {evaluation.orders?.title || 'Auftrag'}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        Genehmigt am {evaluation.approved_at ? new Date(evaluation.approved_at).toLocaleDateString('de-DE') : 'Unbekannt'}
-                      </p>
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                        <span>#{evaluation.orders?.order_number}</span>
+                        <span>•</span>
+                        <span>{evaluation.orders?.provider}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        <span>
+                          Genehmigt am {evaluation.approved_at ? new Date(evaluation.approved_at).toLocaleDateString('de-DE') : 'Unbekannt'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <Badge className="bg-green-100 text-green-800 text-base font-semibold">
+                    <Badge className="bg-green-500/10 text-green-800 text-base font-bold px-3 py-1.5 hover:bg-green-500/20 transition-colors">
                       €{evaluation.premium_awarded.toFixed(2)}
                     </Badge>
                   </div>
@@ -186,32 +239,35 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
       </Card>
 
       {/* Achievements */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-yellow-600" />
+      <Card className="border-muted/50">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-3 text-lg">
+            <div className="p-2 rounded-lg bg-yellow-500/10">
+              <Trophy className="h-5 w-5 text-yellow-600" />
+            </div>
             Meilensteine & Errungenschaften
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-4">
           {achievements.map((achievement, index) => (
-            <div key={index} className="flex items-center gap-4 p-4 rounded-lg border">
-              <div className={`p-3 rounded-full ${achievement.earned ? achievement.bgColor : 'bg-gray-100'}`}>
-                <achievement.icon className={`h-5 w-5 ${achievement.earned ? achievement.color : 'text-gray-400'}`} />
+            <div key={index} className="group flex items-center gap-4 p-4 rounded-lg border border-muted/50 hover:border-muted transition-colors">
+              <div className={`p-3 rounded-xl ${achievement.earned ? achievement.bgColor : 'bg-muted/50'} group-hover:scale-105 transition-transform duration-300`}>
+                <achievement.icon className={`h-6 w-6 ${achievement.earned ? achievement.color : 'text-muted-foreground'}`} />
               </div>
-              <div className="flex-1">
-                <h3 className={`font-medium ${achievement.earned ? 'text-foreground' : 'text-muted-foreground'}`}>
+              <div className="flex-1 space-y-1">
+                <h3 className={`font-semibold ${achievement.earned ? 'text-foreground' : 'text-muted-foreground'}`}>
                   {achievement.name}
                 </h3>
                 <p className="text-sm text-muted-foreground">{achievement.description}</p>
               </div>
               <div>
                 {achievement.earned ? (
-                  <Badge className="bg-green-100 text-green-800">
+                  <Badge className="bg-green-500/10 text-green-700 hover:bg-green-500/20 border-green-200/60">
+                    <CheckCircle className="h-3 w-3 mr-1" />
                     Erreicht
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="text-muted-foreground">
+                  <Badge variant="outline" className="text-muted-foreground border-muted/60">
                     Nicht erreicht
                   </Badge>
                 )}
@@ -223,10 +279,12 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
 
       {/* Monthly Earnings Chart */}
       {monthlyEarnings.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-blue-600" />
+        <Card className="border-muted/50">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-3 text-lg">
+              <div className="p-2 rounded-lg bg-blue-500/10">
+                <TrendingUp className="h-5 w-5 text-blue-600" />
+              </div>
               Monatliche Prämien-Entwicklung
             </CardTitle>
           </CardHeader>
@@ -234,13 +292,13 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ assignedOrders, user }) 
             <div className="space-y-4">
               {monthlyEarnings.map((entry, index) => (
                 <div key={index} className="flex items-center gap-4">
-                  <div className="w-24 text-sm font-medium">{entry.month}</div>
-                  <div className="flex-1 bg-gray-200 rounded-full h-6">
+                  <div className="w-28 text-sm font-medium text-muted-foreground">{entry.month}</div>
+                  <div className="flex-1 bg-muted/60 rounded-full h-8 overflow-hidden">
                     <div 
-                      className="bg-green-500 h-6 rounded-full transition-all duration-300 flex items-center justify-end pr-2"
+                      className="bg-gradient-to-r from-green-400 to-green-500 h-full transition-all duration-500 flex items-center justify-end pr-3 relative"
                       style={{ width: `${Math.min((entry.amount / Math.max(...monthlyEarnings.map(e => e.amount))) * 100, 100)}%` }}
                     >
-                      <span className="text-white text-xs font-medium">
+                      <span className="text-white text-sm font-semibold drop-shadow-sm">
                         €{entry.amount.toFixed(2)}
                       </span>
                     </div>

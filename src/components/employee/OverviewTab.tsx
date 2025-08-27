@@ -2,7 +2,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Target, Star, TrendingUp, Award, Zap } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Trophy, Target, Star, TrendingUp, Award, Zap, Users, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface OverviewTabProps {
@@ -94,68 +95,103 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user, 
       value: assignedOrders.length,
       icon: Target,
       color: 'text-primary',
-      bgColor: 'bg-primary/10'
+      bgColor: 'bg-primary/10',
+      description: 'Insgesamt erhalten'
     },
     {
       title: 'Abgeschlossene Aufträge',
       value: completedOrders,
       icon: Trophy,
       color: 'text-green-600',
-      bgColor: 'bg-green-100'
+      bgColor: 'bg-green-500/10',
+      description: 'Erfolgreich beendet'
     },
     {
       title: 'Gesamtprämie',
       value: `€${totalPremium.toFixed(2)}`,
       icon: Award,
       color: 'text-yellow-600',
-      bgColor: 'bg-yellow-100'
+      bgColor: 'bg-yellow-500/10',
+      description: 'Verdient bis heute'
     },
     {
       title: 'Erfolgsrate',
       value: `${completionRate.toFixed(0)}%`,
       icon: TrendingUp,
       color: 'text-blue-600',
-      bgColor: 'bg-blue-100'
+      bgColor: 'bg-blue-500/10',
+      description: 'Completion Rate'
     }
   ];
 
   const achievements = [
-    { name: 'Erster Auftrag', description: 'Ersten Auftrag abgeschlossen', earned: completedOrders > 0 },
-    { name: 'Fleißiger Arbeiter', description: '5 Aufträge abgeschlossen', earned: completedOrders >= 5 },
-    { name: 'Top Performer', description: '10 Aufträge abgeschlossen', earned: completedOrders >= 10 }
+    { name: 'Erster Auftrag', description: 'Ersten Auftrag abgeschlossen', earned: completedOrders > 0, icon: Target },
+    { name: 'Fleißiger Arbeiter', description: '5 Aufträge abgeschlossen', earned: completedOrders >= 5, icon: Users },
+    { name: 'Top Performer', description: '10 Aufträge abgeschlossen', earned: completedOrders >= 10, icon: Trophy }
   ];
 
-  return (
-    <div className="space-y-6">
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg p-6">
-        <div className="flex items-center gap-4">
-          <div className="p-3 rounded-full bg-primary/20">
-            <Zap className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              Willkommen zurück, {employeeProfile?.first_name || 'Mitarbeiter'}!
-            </h1>
-            <p className="text-muted-foreground">
-              Hier ist dein persönliches Dashboard mit deinen aktuellen Aufgaben und Fortschritten.
-            </p>
-          </div>
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-8 w-16" />
+                  </div>
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Welcome Section */}
+      <Card className="bg-gradient-to-r from-primary/5 via-primary/3 to-accent/5 border-primary/20">
+        <CardContent className="p-8">
+          <div className="flex items-center gap-6">
+            <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20">
+              <Zap className="h-8 w-8 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-foreground">
+                Hallo {employeeProfile?.first_name || 'Mitarbeiter'}! 👋
+              </h2>
+              <p className="text-muted-foreground text-lg">
+                Hier ist Ihr persönliches Dashboard mit aktuellen Aufgaben und Fortschritten.
+              </p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock className="h-4 w-4" />
+                Letzter Login: Heute
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, index) => (
-          <Card key={index} className="hover:shadow-md transition-shadow">
+          <Card key={index} className="group hover:shadow-lg transition-all duration-300 border-muted/50 hover:border-primary/20">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
                   <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                  <p className="text-2xl font-bold">{stat.value}</p>
+                  <p className="text-3xl font-bold text-foreground group-hover:scale-105 transition-transform duration-300">
+                    {stat.value}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{stat.description}</p>
                 </div>
-                <div className={`p-3 rounded-full ${stat.bgColor}`}>
-                  <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                <div className={`p-3 rounded-xl ${stat.bgColor} group-hover:scale-110 transition-all duration-300`}>
+                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
                 </div>
               </div>
             </CardContent>
@@ -165,54 +201,70 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user, 
 
       {/* Progress Section */}
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary" />
+        <Card className="border-muted/50">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-3 text-lg">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Target className="h-5 w-5 text-primary" />
+              </div>
               Fortschritt diesen Monat
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span>Aufträge abgeschlossen</span>
-                <span>{completedOrders}/{assignedOrders.length}</span>
+          <CardContent className="space-y-6">
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-muted-foreground">Aufträge abgeschlossen</span>
+                <span className="text-sm font-bold">{completedOrders}/{assignedOrders.length}</span>
               </div>
-              <Progress value={completionRate} className="h-2" />
+              <div className="space-y-2">
+                <Progress value={completionRate} className="h-3" />
+                <p className="text-xs text-muted-foreground">
+                  {completionRate.toFixed(0)}% aller zugewiesenen Aufträge
+                </p>
+              </div>
             </div>
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span>Prämien verdient</span>
-                <span>€{totalPremium.toFixed(2)}</span>
+            
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-muted-foreground">Prämien verdient</span>
+                <span className="text-sm font-bold text-green-600">€{totalPremium.toFixed(2)}</span>
               </div>
-              <Progress value={Math.min((totalPremium / 1000) * 100, 100)} className="h-2" />
+              <div className="space-y-2">
+                <Progress value={Math.min((totalPremium / 1000) * 100, 100)} className="h-3" />
+                <p className="text-xs text-muted-foreground">
+                  Ziel: €1.000 monatlich
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Achievements */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-yellow-600" />
+        <Card className="border-muted/50">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-3 text-lg">
+              <div className="p-2 rounded-lg bg-yellow-500/10">
+                <Trophy className="h-5 w-5 text-yellow-600" />
+              </div>
               Errungenschaften
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             {achievements.map((achievement, index) => (
-              <div key={index} className="flex items-center gap-3">
-                <div className={`p-2 rounded-full ${achievement.earned ? 'bg-yellow-100' : 'bg-gray-100'}`}>
-                  <Award className={`h-4 w-4 ${achievement.earned ? 'text-yellow-600' : 'text-gray-400'}`} />
+              <div key={index} className="flex items-center gap-4 p-3 rounded-lg border border-muted/50 hover:border-muted transition-colors">
+                <div className={`p-2.5 rounded-lg ${achievement.earned ? 'bg-yellow-500/10' : 'bg-muted'}`}>
+                  <achievement.icon className={`h-5 w-5 ${achievement.earned ? 'text-yellow-600' : 'text-muted-foreground'}`} />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 space-y-1">
                   <p className={`font-medium ${achievement.earned ? 'text-foreground' : 'text-muted-foreground'}`}>
                     {achievement.name}
                   </p>
                   <p className="text-sm text-muted-foreground">{achievement.description}</p>
                 </div>
                 {achievement.earned && (
-                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                    Erhalten
+                  <Badge className="bg-green-500/10 text-green-700 hover:bg-green-500/20">
+                    <Trophy className="h-3 w-3 mr-1" />
+                    Erreicht
                   </Badge>
                 )}
               </div>
@@ -222,30 +274,45 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user, 
       </div>
 
       {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Star className="h-5 w-5 text-primary" />
+      <Card className="border-muted/50">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-3 text-lg">
+            <div className="p-2 rounded-lg bg-blue-500/10">
+              <Star className="h-5 w-5 text-blue-600" />
+            </div>
             Letzte Aktivitäten
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {assignedOrders.slice(0, 3).map((order, index) => (
-              <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                <div className="p-2 rounded-full bg-primary/10">
-                  <Target className="h-4 w-4 text-primary" />
+          {assignedOrders.length === 0 ? (
+            <div className="text-center py-8">
+              <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+              <h3 className="font-medium text-muted-foreground mb-1">Noch keine Aufträge</h3>
+              <p className="text-sm text-muted-foreground">
+                Ihre zugewiesenen Aufträge werden hier angezeigt.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {assignedOrders.slice(0, 3).map((order, index) => (
+                <div key={index} className="flex items-center gap-4 p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors border border-muted/20">
+                  <div className="p-2.5 rounded-lg bg-primary/10">
+                    <Target className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="font-medium text-foreground">{order.title}</p>
+                    <p className="text-sm text-muted-foreground">Auftrag #{order.order_number}</p>
+                  </div>
+                  <div className="text-right space-y-1">
+                    <Badge variant={getStatusVariant(order.assignment_status)} className="text-xs">
+                      {getStatusText(order.assignment_status)}
+                    </Badge>
+                    <p className="text-xs text-muted-foreground">€{order.premium}</p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium">{order.title}</p>
-                  <p className="text-sm text-muted-foreground">Auftrag #{order.order_number}</p>
-                </div>
-                <Badge variant={getStatusVariant(order.assignment_status)}>
-                  {getStatusText(order.assignment_status)}
-                </Badge>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

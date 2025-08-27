@@ -5,10 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { User, Mail, Phone, Calendar, Edit3, Save, X, Lock, CreditCard, Eye, EyeOff, Square } from 'lucide-react';
+import { User, Mail, Phone, Calendar, Edit3, Save, X, Lock, CreditCard, Eye, EyeOff, Square, Crown, Shield, CheckCircle } from 'lucide-react';
 
 interface PersonalDataTabProps {
   user: any;
@@ -260,24 +261,30 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Profile Header */}
-      <Card>
-        <CardContent className="p-6">
+      <Card className="bg-gradient-to-r from-primary/5 via-primary/3 to-accent/5 border-primary/20">
+        <CardContent className="p-8">
           <div className="flex items-center gap-6">
-            <Avatar className="h-20 w-20">
+            <Avatar className="h-20 w-20 ring-4 ring-primary/10">
               <AvatarImage src={user?.avatar_url} alt={user?.name} />
-              <AvatarFallback className="text-lg">
+              <AvatarFallback className="text-xl font-semibold bg-primary/10 text-primary">
                 {user?.name?.split(' ').map((n: string) => n[0]).join('') || 'M'}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold">{user?.name || 'Mitarbeiter'}</h1>
-              <p className="text-muted-foreground">{editedData.position}</p>
-              <div className="flex items-center gap-2 mt-2">
-                <Badge className="bg-green-100 text-green-800">Aktiv</Badge>
+            <div className="flex-1 space-y-2">
+              <h1 className="text-3xl font-bold text-foreground">{user?.name || 'Mitarbeiter'}</h1>
+              <p className="text-lg text-muted-foreground">{editedData.position}</p>
+              <div className="flex items-center gap-3">
+                <Badge className="bg-green-500/10 text-green-700 hover:bg-green-500/20 border-green-200/60">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Aktiv
+                </Badge>
                 {user?.role === 'admin' && (
-                  <Badge className="bg-blue-100 text-blue-800">Administrator</Badge>
+                  <Badge className="bg-blue-500/10 text-blue-700 hover:bg-blue-500/20 border-blue-200/60">
+                    <Crown className="h-3 w-3 mr-1" />
+                    Administrator
+                  </Badge>
                 )}
               </div>
             </div>
@@ -285,80 +292,86 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
               variant={isEditing ? "outline" : "default"}
               onClick={() => setIsEditing(!isEditing)}
               className="flex items-center gap-2"
+              size="lg"
             >
-              <Edit3 className="h-4 w-4" />
+              {isEditing ? <X className="h-4 w-4" /> : <Edit3 className="h-4 w-4" />}
               {isEditing ? 'Abbrechen' : 'Bearbeiten'}
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-8 md:grid-cols-2">
         {/* Personal Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5 text-primary" />
+        <Card className="border-muted/50">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-3 text-lg">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <User className="h-5 w-5 text-primary" />
+              </div>
               Persönliche Informationen
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+          <CardContent className="space-y-6">
+            <div className="space-y-3">
+              <Label htmlFor="name" className="text-sm font-medium">Vollständiger Name</Label>
               {isEditing ? (
                 <Input
                   id="name"
                   value={editedData.name}
                   onChange={(e) => setEditedData({ ...editedData, name: e.target.value })}
+                  className="h-12"
                 />
               ) : (
-                <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span>{editedData.name || 'Nicht angegeben'}</span>
+                <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                  <User className="h-5 w-5 text-muted-foreground" />
+                  <span className="font-medium">{editedData.name || 'Nicht angegeben'}</span>
                 </div>
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">E-Mail</Label>
+            <div className="space-y-3">
+              <Label htmlFor="email" className="text-sm font-medium">E-Mail-Adresse</Label>
               {isEditing ? (
                 <Input
                   id="email"
                   type="email"
                   value={editedData.email}
                   onChange={(e) => setEditedData({ ...editedData, email: e.target.value })}
+                  className="h-12"
                 />
               ) : (
-                <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span>{editedData.email || 'Nicht angegeben'}</span>
+                <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                  <Mail className="h-5 w-5 text-muted-foreground" />
+                  <span className="font-medium">{editedData.email || 'Nicht angegeben'}</span>
                 </div>
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="phone">Telefon</Label>
+            <div className="space-y-3">
+              <Label htmlFor="phone" className="text-sm font-medium">Telefonnummer</Label>
               {isEditing ? (
                 <Input
                   id="phone"
                   value={editedData.phone}
                   onChange={(e) => setEditedData({ ...editedData, phone: e.target.value })}
+                  className="h-12"
                 />
               ) : (
-                <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span>{editedData.phone || 'Nicht angegeben'}</span>
+                <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                  <Phone className="h-5 w-5 text-muted-foreground" />
+                  <span className="font-medium">{editedData.phone || 'Nicht angegeben'}</span>
                 </div>
               )}
             </div>
 
             {isEditing && (
-              <div className="flex gap-2 pt-4">
-                <Button onClick={handleSave} className="flex-1">
+              <div className="flex gap-3 pt-4">
+                <Button onClick={handleSave} className="flex-1" size="lg">
                   <Save className="h-4 w-4 mr-2" />
                   Speichern
                 </Button>
-                <Button variant="outline" onClick={handleCancel}>
+                <Button variant="outline" onClick={handleCancel} size="lg">
                   <X className="h-4 w-4 mr-2" />
                   Abbrechen
                 </Button>
@@ -368,218 +381,64 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
         </Card>
 
         {/* Account Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5 text-primary" />
+        <Card className="border-muted/50">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-3 text-lg">
+              <div className="p-2 rounded-lg bg-blue-500/10">
+                <Shield className="h-5 w-5 text-blue-600" />
+              </div>
               Account-Informationen
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-              <div className="p-2 rounded-full bg-primary/10">
-                <Calendar className="h-4 w-4 text-primary" />
+          <CardContent className="space-y-6">
+            <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/30">
+              <div className="p-3 rounded-lg bg-primary/10">
+                <Calendar className="h-5 w-5 text-primary" />
               </div>
-              <div className="flex-1">
+              <div>
                 <p className="text-sm text-muted-foreground">Mitglied seit</p>
-                <p className="font-medium">Januar 2024</p>
+                <p className="font-semibold">Januar 2024</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-              <div className="p-2 rounded-full bg-primary/10">
-                <User className="h-4 w-4 text-primary" />
+            
+            <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/30">
+              <div className="p-3 rounded-lg bg-green-500/10">
+                <CheckCircle className="h-5 w-5 text-green-600" />
               </div>
-              <div className="flex-1">
+              <div>
                 <p className="text-sm text-muted-foreground">Letzte Anmeldung</p>
-                <p className="font-medium">Heute</p>
+                <p className="font-semibold">Heute</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-              <div className="p-2 rounded-full bg-primary/10">
-                <User className="h-4 w-4 text-primary" />
+            
+            <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/30">
+              <div className="p-3 rounded-lg bg-blue-500/10">
+                <Shield className="h-5 w-5 text-blue-600" />
               </div>
               <div className="flex-1">
-                <p className="text-sm text-muted-foreground">Status</p>
-                <p className="font-medium">
-                  <Badge className="bg-green-100 text-green-800">Aktiv</Badge>
-                </p>
+                <p className="text-sm text-muted-foreground">Account-Status</p>
+                <Badge className="bg-green-500/10 text-green-700 hover:bg-green-500/20 border-green-200/60 mt-1">
+                  Aktiv & Verifiziert
+                </Badge>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
 
-      {/* Bank Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-primary" />
-            Bankverbindung
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {/* Bank Card Visualization */}
-          <div className="mb-6">
-            <div className="relative w-full max-w-sm mx-auto">
-              <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 rounded-2xl p-6 text-white shadow-2xl transform hover:scale-105 transition-transform duration-300">
-                <div className="flex justify-between items-start mb-8">
-                  <div className="w-10 h-6 bg-white/20 rounded flex items-center justify-center">
-                    <Square className="h-4 w-4 text-white fill-white" />
-                  </div>
-                  <div className="text-xs opacity-75">DEBIT</div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="text-lg font-mono tracking-wider">
-                    {bankData.iban ? maskIban(bankData.iban) : '•••• •••• •••• ••••'}
-                  </div>
-                  
-                  <div className="flex justify-between items-end">
-                    <div>
-                      <div className="text-xs opacity-75">KONTOINHABER</div>
-                      <div className="font-medium text-sm">
-                        {bankData.accountHolder || 'NAME'}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xs opacity-75">BANK</div>
-                      <div className="font-medium text-sm">
-                        {bankData.bankName || 'BANK NAME'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Bank Information Form */}
-          {bankLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="iban">IBAN</Label>
-                {bankEditing ? (
-                  <Input
-                    id="iban"
-                    value={bankData.iban}
-                    onChange={(e) => setBankData({ ...bankData, iban: e.target.value.toUpperCase() })}
-                    placeholder="DE89 3704 0044 0532 0130 00"
-                  />
-                ) : (
-                  <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                    <CreditCard className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-mono">{bankData.iban ? formatIban(bankData.iban) : 'Nicht angegeben'}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="bic">BIC</Label>
-                  {bankEditing ? (
-                    <Input
-                      id="bic"
-                      value={bankData.bic}
-                      onChange={(e) => setBankData({ ...bankData, bic: e.target.value.toUpperCase() })}
-                      placeholder="COBADEFFXXX"
-                    />
-                  ) : (
-                    <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                      <span className="font-mono">{bankData.bic || 'Nicht angegeben'}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="bankName">Bank Name</Label>
-                  {bankEditing ? (
-                    <Input
-                      id="bankName"
-                      value={bankData.bankName}
-                      onChange={(e) => setBankData({ ...bankData, bankName: e.target.value })}
-                      placeholder="Commerzbank AG"
-                    />
-                  ) : (
-                    <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                      <span>{bankData.bankName || 'Nicht angegeben'}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="accountHolder">Kontoinhaber</Label>
-                {bankEditing ? (
-                  <Input
-                    id="accountHolder"
-                    value={bankData.accountHolder}
-                    onChange={(e) => setBankData({ ...bankData, accountHolder: e.target.value })}
-                    placeholder="Max Mustermann"
-                  />
-                ) : (
-                  <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span>{bankData.accountHolder || 'Nicht angegeben'}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                {bankEditing ? (
-                  <>
-                    <Button onClick={handleBankSave} className="flex-1">
-                      <Save className="h-4 w-4 mr-2" />
-                      Speichern
-                    </Button>
-                    <Button variant="outline" onClick={handleBankCancel}>
-                      <X className="h-4 w-4 mr-2" />
-                      Abbrechen
-                    </Button>
-                  </>
-                ) : (
-                  <Button onClick={() => setBankEditing(true)} variant="outline" className="flex items-center gap-2">
-                    <Edit3 className="h-4 w-4" />
-                    Bankdaten bearbeiten
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Security Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lock className="h-5 w-5 text-primary" />
-            Sicherheitseinstellungen
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div>
-              <h3 className="font-medium">Passwort ändern</h3>
-              <p className="text-sm text-muted-foreground">
-                Aktualisiere dein Passwort für bessere Sicherheit
-              </p>
-            </div>
+            {/* Password Change */}
             <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" className="w-full" size="lg">
                   <Lock className="h-4 w-4 mr-2" />
                   Passwort ändern
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Passwort ändern</DialogTitle>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Lock className="h-5 w-5" />
+                    Passwort ändern
+                  </DialogTitle>
                   <DialogDescription>
-                    Gib dein neues Passwort ein. Es sollte mindestens 6 Zeichen lang sein.
+                    Geben Sie Ihr aktuelles Passwort ein und wählen Sie ein neues Passwort.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
@@ -591,8 +450,7 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
                         type={showPasswords.current ? "text" : "password"}
                         value={passwordData.currentPassword}
                         onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                        disabled={passwordLoading}
-                        placeholder="Geben Sie Ihr aktuelles Passwort ein"
+                        className="pr-10"
                       />
                       <Button
                         type="button"
@@ -601,15 +459,11 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
                         className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                         onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
                       >
-                        {showPasswords.current ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
+                        {showPasswords.current ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
                     </div>
                   </div>
-
+                  
                   <div className="space-y-2">
                     <Label htmlFor="newPassword">Neues Passwort</Label>
                     <div className="relative">
@@ -618,8 +472,7 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
                         type={showPasswords.new ? "text" : "password"}
                         value={passwordData.newPassword}
                         onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                        disabled={passwordLoading}
-                        placeholder="Neues Passwort eingeben"
+                        className="pr-10"
                       />
                       <Button
                         type="button"
@@ -628,15 +481,11 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
                         className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                         onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
                       >
-                        {showPasswords.new ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
+                        {showPasswords.new ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
                     </div>
                   </div>
-
+                  
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Neues Passwort bestätigen</Label>
                     <div className="relative">
@@ -645,8 +494,7 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
                         type={showPasswords.confirm ? "text" : "password"}
                         value={passwordData.confirmPassword}
                         onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                        disabled={passwordLoading}
-                        placeholder="Neues Passwort bestätigen"
+                        className="pr-10"
                       />
                       <Button
                         type="button"
@@ -655,35 +503,165 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
                         className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                         onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
                       >
-                        {showPasswords.confirm ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
+                        {showPasswords.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
                     </div>
                   </div>
-
+                  
                   <div className="flex gap-2 pt-4">
-                    <Button 
-                      onClick={handlePasswordChange} 
-                      disabled={passwordLoading || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
-                      className="flex-1"
-                    >
-                      {passwordLoading ? 'Speichere...' : 'Passwort ändern'}
+                    <Button onClick={handlePasswordChange} disabled={passwordLoading} className="flex-1">
+                      {passwordLoading ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                      ) : (
+                        'Ändern'
+                      )}
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setPasswordDialogOpen(false)}
-                      disabled={passwordLoading}
-                    >
+                    <Button variant="outline" onClick={() => setPasswordDialogOpen(false)}>
                       Abbrechen
                     </Button>
                   </div>
                 </div>
               </DialogContent>
             </Dialog>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bank Information */}
+      <Card className="border-muted/50">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-3 text-lg">
+            <div className="p-2 rounded-lg bg-green-500/10">
+              <CreditCard className="h-5 w-5 text-green-600" />
+            </div>
+            Bankverbindung
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* Bank Card Visualization */}
+          <div className="mb-8">
+            <div className="relative w-full max-w-md mx-auto">
+              <div className="bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 rounded-2xl p-6 text-white shadow-xl hover:shadow-2xl transition-shadow duration-300">
+                <div className="flex justify-between items-start mb-8">
+                  <div className="w-12 h-8 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                    <Square className="h-5 w-5 text-white fill-white" />
+                  </div>
+                  <div className="text-xs font-medium opacity-90 bg-white/10 px-2 py-1 rounded">DEBIT</div>
+                </div>
+                
+                <div className="space-y-6">
+                  <div className="text-xl font-mono tracking-widest">
+                    {bankData.iban ? maskIban(bankData.iban) : '•••• •••• •••• ••••'}
+                  </div>
+                  
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <div className="text-xs opacity-75 mb-1">KONTOINHABER</div>
+                      <div className="font-semibold text-sm">
+                        {bankData.accountHolder || 'NAME'}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs opacity-75 mb-1">BANK</div>
+                      <div className="font-semibold text-sm">
+                        {bankData.bankName || 'BANK NAME'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
+
+          {/* Bank Information Form */}
+          {bankLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <Label htmlFor="iban" className="text-sm font-medium">IBAN</Label>
+                {bankEditing ? (
+                  <Input
+                    id="iban"
+                    value={bankData.iban}
+                    onChange={(e) => setBankData({ ...bankData, iban: e.target.value.toUpperCase() })}
+                    placeholder="DE89 3704 0044 0532 0130 00"
+                    className="h-12 font-mono"
+                  />
+                ) : (
+                  <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <CreditCard className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-mono font-medium">{bankData.iban ? formatIban(bankData.iban) : 'Nicht angegeben'}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div className="space-y-3">
+                  <Label htmlFor="bic" className="text-sm font-medium">BIC</Label>
+                  {bankEditing ? (
+                    <Input
+                      id="bic"
+                      value={bankData.bic}
+                      onChange={(e) => setBankData({ ...bankData, bic: e.target.value.toUpperCase() })}
+                      placeholder="COBADEFFXXX"
+                      className="h-12 font-mono"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <CreditCard className="h-5 w-5 text-muted-foreground" />
+                      <span className="font-mono font-medium">{bankData.bic || 'Nicht angegeben'}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="bankName" className="text-sm font-medium">Bankname</Label>
+                  {bankEditing ? (
+                    <Input
+                      id="bankName"
+                      value={bankData.bankName}
+                      onChange={(e) => setBankData({ ...bankData, bankName: e.target.value })}
+                      placeholder="Deutsche Bank AG"
+                      className="h-12"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <CreditCard className="h-5 w-5 text-muted-foreground" />
+                      <span className="font-medium">{bankData.bankName || 'Nicht angegeben'}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                {bankEditing ? (
+                  <>
+                    <Button onClick={handleBankSave} className="flex-1" size="lg">
+                      <Save className="h-4 w-4 mr-2" />
+                      Bankdaten speichern
+                    </Button>
+                    <Button variant="outline" onClick={handleBankCancel} size="lg">
+                      <X className="h-4 w-4 mr-2" />
+                      Abbrechen
+                    </Button>
+                  </>
+                ) : (
+                  <Button onClick={() => setBankEditing(true)} variant="outline" className="flex-1" size="lg">
+                    <Edit3 className="h-4 w-4 mr-2" />
+                    Bankdaten bearbeiten
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
