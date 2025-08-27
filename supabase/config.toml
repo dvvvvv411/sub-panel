@@ -12,3 +12,6 @@ verify_jwt = false
 
 [functions.submit-contract]
 verify_jwt = false
+
+[functions.cleanup-test-data]
+verify_jwt = true
