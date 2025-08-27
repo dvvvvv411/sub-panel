@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CreateOrderDialog } from './CreateOrderDialog';
 import { AssignOrderDialog } from './AssignOrderDialog';
+import { AssignedEmployeesDialog } from './AssignedEmployeesDialog';
+import { EditOrderDialog } from './EditOrderDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Briefcase, Users, Euro, MessageSquare, UserPlus } from 'lucide-react';
+import { Briefcase, Users, Euro, UserPlus, Edit, Eye } from 'lucide-react';
 
 interface WhatsAppAccount {
   id: string;
@@ -51,6 +53,8 @@ export function OrdersTab() {
   const [loading, setLoading] = useState(true);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [assignedEmployeesDialogOpen, setAssignedEmployeesDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -127,6 +131,16 @@ export function OrdersTab() {
     setAssignDialogOpen(true);
   };
 
+  const handleOpenAssignedEmployeesDialog = (order: Order) => {
+    setSelectedOrder(order);
+    setAssignedEmployeesDialogOpen(true);
+  };
+
+  const handleOpenEditDialog = (order: Order) => {
+    setSelectedOrder(order);
+    setEditDialogOpen(true);
+  };
+
   const handleAssignmentComplete = () => {
     fetchOrders(); // Refresh to show the assignment
   };
@@ -165,7 +179,7 @@ export function OrdersTab() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Gesamt Aufträge</CardTitle>
@@ -199,18 +213,6 @@ export function OrdersTab() {
             </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Mit WhatsApp</CardTitle>
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {orders.filter(order => order.whatsapp_account_id).length}
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Orders Table */}
@@ -238,7 +240,6 @@ export function OrdersTab() {
                   <TableHead>Titel</TableHead>
                   <TableHead>Anbieter</TableHead>
                   <TableHead>Prämie</TableHead>
-                  <TableHead>WhatsApp</TableHead>
                   <TableHead>Bewertungsfragen</TableHead>
                   <TableHead>Zugewiesene Mitarbeiter</TableHead>
                   <TableHead>Aktionen</TableHead>
@@ -269,41 +270,46 @@ export function OrdersTab() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {order.whatsapp_accounts ? (
-                          <Badge variant="outline">
-                            {order.whatsapp_accounts.name}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
                         <Badge variant="outline">
                           {order.order_evaluation_questions.length} Fragen
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="space-y-1">
-                          {assignedEmployees.map((employee) => (
-                            <Badge key={employee.id} variant="default" className="text-xs">
-                              {employee.first_name} {employee.last_name}
-                            </Badge>
-                          ))}
-                          {assignedEmployees.length === 0 && (
-                            <span className="text-muted-foreground text-sm">Nicht zugewiesen</span>
-                          )}
-                        </div>
+                        {assignedEmployees.length > 0 ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenAssignedEmployeesDialog(order)}
+                            className="flex items-center gap-2"
+                          >
+                            <Users className="h-4 w-4" />
+                            {assignedEmployees.length} Mitarbeiter
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Nicht zugewiesen</span>
+                        )}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleOpenAssignDialog(order)}
-                          className="flex items-center gap-2"
-                        >
-                          <UserPlus className="h-4 w-4" />
-                          {availableEmployees.length > 0 ? 'Zuweisen' : 'Mitarbeiter'}
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenEditDialog(order)}
+                            className="flex items-center gap-2"
+                          >
+                            <Edit className="h-4 w-4" />
+                            Bearbeiten
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenAssignDialog(order)}
+                            className="flex items-center gap-2"
+                          >
+                            <UserPlus className="h-4 w-4" />
+                            {availableEmployees.length > 0 ? 'Zuweisen' : 'Mitarbeiter'}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -321,6 +327,22 @@ export function OrdersTab() {
         order={selectedOrder}
         availableEmployees={selectedOrder ? getAvailableEmployees(selectedOrder) : []}
         onAssignmentComplete={handleAssignmentComplete}
+      />
+
+      {/* Assigned Employees Dialog */}
+      <AssignedEmployeesDialog
+        open={assignedEmployeesDialogOpen}
+        onOpenChange={setAssignedEmployeesDialogOpen}
+        order={selectedOrder}
+        assignedEmployees={selectedOrder ? getAssignedEmployees(selectedOrder) : []}
+      />
+
+      {/* Edit Order Dialog */}
+      <EditOrderDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        order={selectedOrder}
+        onOrderUpdated={fetchOrders}
       />
     </div>
   );
