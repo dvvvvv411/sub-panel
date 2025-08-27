@@ -14,11 +14,17 @@ interface WhatsAppAccount {
 }
 
 interface ManageWhatsAppAccountsDialogProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   onAccountsUpdated: () => void;
 }
 
-export function ManageWhatsAppAccountsDialog({ onAccountsUpdated }: ManageWhatsAppAccountsDialogProps) {
-  const [open, setOpen] = useState(false);
+export function ManageWhatsAppAccountsDialog({ 
+  open, 
+  onOpenChange, 
+  onAccountsUpdated 
+}: ManageWhatsAppAccountsDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
   const [whatsappAccounts, setWhatsappAccounts] = useState<WhatsAppAccount[]>([]);
   const [loading, setLoading] = useState(false);
   
@@ -30,11 +36,14 @@ export function ManageWhatsAppAccountsDialog({ onAccountsUpdated }: ManageWhatsA
   const [newAccountInfo, setNewAccountInfo] = useState('');
   const [showAddAccount, setShowAddAccount] = useState(false);
 
+  const isOpen = open !== undefined ? open : internalOpen;
+  const setIsOpen = onOpenChange || setInternalOpen;
+
   useEffect(() => {
-    if (open) {
+    if (isOpen) {
       fetchWhatsAppAccounts();
     }
-  }, [open]);
+  }, [isOpen]);
 
   const fetchWhatsAppAccounts = async () => {
     try {
@@ -165,7 +174,7 @@ export function ManageWhatsAppAccountsDialog({ onAccountsUpdated }: ManageWhatsA
   };
 
   const handleOpenChange = (newOpen: boolean) => {
-    setOpen(newOpen);
+    setIsOpen(newOpen);
     if (!newOpen) {
       // Reset state when closing
       setShowAddAccount(false);
@@ -176,13 +185,15 @@ export function ManageWhatsAppAccountsDialog({ onAccountsUpdated }: ManageWhatsA
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" type="button">
-          <MessageSquare className="h-4 w-4 mr-2" />
-          WhatsApp-Konten verwalten
-        </Button>
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      {!open && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" type="button">
+            <MessageSquare className="h-4 w-4 mr-2" />
+            WhatsApp-Konten verwalten
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

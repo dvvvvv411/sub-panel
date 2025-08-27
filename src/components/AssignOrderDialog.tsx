@@ -2,12 +2,17 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, MessageSquare } from 'lucide-react';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { UserPlus, MessageSquare, Settings, Check, ChevronsUpDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { ManageWhatsAppAccountsDialog } from './ManageWhatsAppAccountsDialog';
+import { cn } from '@/lib/utils';
 
 interface Employee {
   id: string;
@@ -50,12 +55,15 @@ export function AssignOrderDialog({
   const [whatsappAccounts, setWhatsappAccounts] = useState<WhatsAppAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
+  const [employeeSearchOpen, setEmployeeSearchOpen] = useState(false);
+  const [manageWhatsAppOpen, setManageWhatsAppOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
       fetchWhatsAppAccounts();
       setSelectedEmployeeId('');
       setSelectedWhatsAppId('');
+      setEmployeeSearchOpen(false);
     }
   }, [open]);
 
@@ -81,6 +89,12 @@ export function AssignOrderDialog({
       setLoadingAccounts(false);
     }
   };
+
+  const handleWhatsAppAccountsUpdated = () => {
+    fetchWhatsAppAccounts();
+  };
+
+  const selectedEmployee = availableEmployees.find(emp => emp.id === selectedEmployeeId);
 
   const handleAssign = async () => {
     if (!order || !selectedEmployeeId || !selectedWhatsAppId) {
@@ -167,21 +181,55 @@ export function AssignOrderDialog({
             </CardContent>
           </Card>
 
-          {/* Employee Selection */}
+          {/* Employee Selection with Search */}
           <div className="space-y-2">
             <Label htmlFor="employee">Mitarbeiter auswählen *</Label>
-            <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Mitarbeiter auswählen" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableEmployees.map((employee) => (
-                  <SelectItem key={employee.id} value={employee.id}>
-                    {employee.first_name} {employee.last_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={employeeSearchOpen} onOpenChange={setEmployeeSearchOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={employeeSearchOpen}
+                  className="w-full justify-between"
+                >
+                  {selectedEmployee
+                    ? `${selectedEmployee.first_name} ${selectedEmployee.last_name}`
+                    : "Mitarbeiter auswählen..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0 bg-popover border">
+                <Command className="w-full">
+                  <CommandInput placeholder="Mitarbeiter suchen..." />
+                  <CommandList>
+                    <CommandEmpty>Kein Mitarbeiter gefunden.</CommandEmpty>
+                    <CommandGroup>
+                      {availableEmployees.map((employee) => (
+                        <CommandItem
+                          key={employee.id}
+                          value={`${employee.first_name} ${employee.last_name} ${employee.email}`}
+                          onSelect={() => {
+                            setSelectedEmployeeId(employee.id);
+                            setEmployeeSearchOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedEmployeeId === employee.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <div className="flex flex-col">
+                            <span>{employee.first_name} {employee.last_name}</span>
+                            <span className="text-sm text-muted-foreground">{employee.email}</span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* WhatsApp Account Selection */}
@@ -195,10 +243,10 @@ export function AssignOrderDialog({
               onValueChange={setSelectedWhatsAppId}
               disabled={loadingAccounts}
             >
-              <SelectTrigger>
+              <SelectTrigger className="bg-background">
                 <SelectValue placeholder={loadingAccounts ? "Lädt..." : "WhatsApp-Konto auswählen"} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-popover border">
                 {whatsappAccounts.map((account) => (
                   <SelectItem key={account.id} value={account.id}>
                     {account.name} {account.account_info && `(${account.account_info})`}
@@ -206,6 +254,18 @@ export function AssignOrderDialog({
                 ))}
               </SelectContent>
             </Select>
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setManageWhatsAppOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                WhatsApp-Konten verwalten
+              </Button>
+            </div>
           </div>
 
           {/* Actions */}
@@ -226,6 +286,13 @@ export function AssignOrderDialog({
             </Button>
           </div>
         </div>
+
+        {/* WhatsApp Management Dialog */}
+        <ManageWhatsAppAccountsDialog 
+          open={manageWhatsAppOpen}
+          onOpenChange={setManageWhatsAppOpen}
+          onAccountsUpdated={handleWhatsAppAccountsUpdated}
+        />
       </DialogContent>
     </Dialog>
   );
