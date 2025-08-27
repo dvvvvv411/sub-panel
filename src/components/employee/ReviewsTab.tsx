@@ -9,7 +9,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface ReviewsTabProps {
-  user: any;
+  employee: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string | null;
+    status: string;
+  };
 }
 
 interface OrderEvaluation {
@@ -36,36 +43,23 @@ interface OrderEvaluation {
   };
 }
 
-export const ReviewsTab: React.FC<ReviewsTabProps> = ({ user }) => {
+export const ReviewsTab: React.FC<ReviewsTabProps> = ({ employee }) => {
   const [evaluations, setEvaluations] = useState<OrderEvaluation[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvaluation, setSelectedEvaluation] = useState<OrderEvaluation | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (user?.email) {
+    if (employee?.email) {
       fetchEvaluations();
     }
-  }, [user?.email]);
+  }, [employee?.email]);
 
   const fetchEvaluations = async () => {
     try {
       setLoading(true);
       
-      // First get the employee ID
-      const { data: employeeData, error: employeeError } = await supabase
-        .from('employees')
-        .select('id')
-        .eq('email', user.email)
-        .maybeSingle();
-
-      if (employeeError || !employeeData) {
-        console.error('Error fetching employee data:', employeeError);
-        setEvaluations([]);
-        return;
-      }
-
-      // Then get their evaluations
+      // Get evaluations using the employee ID directly
       const { data, error } = await supabase
         .from('order_evaluations')
         .select(`
@@ -77,7 +71,7 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({ user }) => {
             premium
           )
         `)
-        .eq('employee_id', employeeData.id)
+        .eq('employee_id', employee.id)
         .order('created_at', { ascending: false });
 
       if (error) {
