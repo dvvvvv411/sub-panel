@@ -12,6 +12,7 @@ interface WhatsAppAccount {
   id: string;
   name: string;
   account_info: string | null;
+  chat_link: string | null;
 }
 
 interface ManageWhatsAppAccountsDialogProps {
@@ -33,8 +34,10 @@ export function ManageWhatsAppAccountsDialog({
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
   const [editingAccountName, setEditingAccountName] = useState('');
   const [editingAccountInfo, setEditingAccountInfo] = useState('');
+  const [editingAccountLink, setEditingAccountLink] = useState('');
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountInfo, setNewAccountInfo] = useState('');
+  const [newAccountLink, setNewAccountLink] = useState('');
   const [showAddAccount, setShowAddAccount] = useState(false);
 
   const isOpen = open !== undefined ? open : internalOpen;
@@ -82,7 +85,8 @@ export function ManageWhatsAppAccountsDialog({
         .from('whatsapp_accounts')
         .insert({
           name: newAccountName.trim(),
-          account_info: newAccountInfo.trim() || null
+          account_info: newAccountInfo.trim() || null,
+          chat_link: newAccountLink.trim() || null
         })
         .select()
         .single();
@@ -96,6 +100,7 @@ export function ManageWhatsAppAccountsDialog({
       setWhatsappAccounts([...whatsappAccounts, data]);
       setNewAccountName('');
       setNewAccountInfo('');
+      setNewAccountLink('');
       setShowAddAccount(false);
       toast.success('WhatsApp-Konto erfolgreich hinzugefügt');
       onAccountsUpdated();
@@ -116,7 +121,8 @@ export function ManageWhatsAppAccountsDialog({
         .from('whatsapp_accounts')
         .update({
           name: editingAccountName.trim(),
-          account_info: editingAccountInfo.trim() || null
+          account_info: editingAccountInfo.trim() || null,
+          chat_link: editingAccountLink.trim() || null
         })
         .eq('id', accountId);
 
@@ -128,12 +134,18 @@ export function ManageWhatsAppAccountsDialog({
 
       setWhatsappAccounts(whatsappAccounts.map(account =>
         account.id === accountId
-          ? { ...account, name: editingAccountName.trim(), account_info: editingAccountInfo.trim() || null }
+          ? { 
+              ...account, 
+              name: editingAccountName.trim(), 
+              account_info: editingAccountInfo.trim() || null,
+              chat_link: editingAccountLink.trim() || null
+            }
           : account
       ));
       setEditingAccountId(null);
       setEditingAccountName('');
       setEditingAccountInfo('');
+      setEditingAccountLink('');
       toast.success('WhatsApp-Konto erfolgreich bearbeitet');
       onAccountsUpdated();
     } catch (error) {
@@ -168,12 +180,14 @@ export function ManageWhatsAppAccountsDialog({
     setEditingAccountId(account.id);
     setEditingAccountName(account.name);
     setEditingAccountInfo(account.account_info || '');
+    setEditingAccountLink(account.chat_link || '');
   };
 
   const cancelEditingAccount = () => {
     setEditingAccountId(null);
     setEditingAccountName('');
     setEditingAccountInfo('');
+    setEditingAccountLink('');
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -183,6 +197,7 @@ export function ManageWhatsAppAccountsDialog({
       setShowAddAccount(false);
       setNewAccountName('');
       setNewAccountInfo('');
+      setNewAccountLink('');
       cancelEditingAccount();
     }
   };
@@ -245,6 +260,11 @@ export function ManageWhatsAppAccountsDialog({
                             onChange={(e) => setNewAccountInfo(e.target.value)}
                           />
                         </div>
+                        <Input
+                          placeholder="WhatsApp Chat-Link (z.B. https://wa.me/491784171510)"
+                          value={newAccountLink}
+                          onChange={(e) => setNewAccountLink(e.target.value)}
+                        />
                         <div className="flex gap-2">
                           <Button
                             type="button"
@@ -262,6 +282,7 @@ export function ManageWhatsAppAccountsDialog({
                               setShowAddAccount(false);
                               setNewAccountName('');
                               setNewAccountInfo('');
+                              setNewAccountLink('');
                             }}
                           >
                             Abbrechen
@@ -277,16 +298,23 @@ export function ManageWhatsAppAccountsDialog({
                       <div key={account.id} className="flex items-center gap-2 p-2 border rounded">
                         {editingAccountId === account.id ? (
                           <>
-                            <div className="grid grid-cols-2 gap-2 flex-1">
+                            <div className="flex-1 space-y-2">
+                              <div className="grid grid-cols-2 gap-2">
+                                <Input
+                                  value={editingAccountName}
+                                  onChange={(e) => setEditingAccountName(e.target.value)}
+                                  placeholder="Name des Kontos"
+                                />
+                                <Input
+                                  value={editingAccountInfo}
+                                  onChange={(e) => setEditingAccountInfo(e.target.value)}
+                                  placeholder="Telefonnummer/Info (optional)"
+                                />
+                              </div>
                               <Input
-                                value={editingAccountName}
-                                onChange={(e) => setEditingAccountName(e.target.value)}
-                                placeholder="Name des Kontos"
-                              />
-                              <Input
-                                value={editingAccountInfo}
-                                onChange={(e) => setEditingAccountInfo(e.target.value)}
-                                placeholder="Telefonnummer/Info (optional)"
+                                value={editingAccountLink}
+                                onChange={(e) => setEditingAccountLink(e.target.value)}
+                                placeholder="WhatsApp Chat-Link (z.B. https://wa.me/491784171510)"
                               />
                             </div>
                             <Button
@@ -308,11 +336,18 @@ export function ManageWhatsAppAccountsDialog({
                         ) : (
                           <>
                             <div className="flex-1">
-                              <span className="font-medium">{account.name}</span>
-                              {account.account_info && (
-                                <span className="text-sm text-muted-foreground ml-2">
-                                  ({account.account_info})
-                                </span>
+                              <div>
+                                <span className="font-medium">{account.name}</span>
+                                {account.account_info && (
+                                  <span className="text-sm text-muted-foreground ml-2">
+                                    ({account.account_info})
+                                  </span>
+                                )}
+                              </div>
+                              {account.chat_link && (
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  Link: {account.chat_link}
+                                </div>
                               )}
                             </div>
                             <Button

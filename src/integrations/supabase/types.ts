@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      employee_bank_details: {
+        Row: {
+          account_holder: string | null
+          bank_name: string | null
+          bic: string | null
+          created_at: string
+          employee_id: string
+          iban: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          account_holder?: string | null
+          bank_name?: string | null
+          bic?: string | null
+          created_at?: string
+          employee_id: string
+          iban?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          account_holder?: string | null
+          bank_name?: string | null
+          bic?: string | null
+          created_at?: string
+          employee_id?: string
+          iban?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_bank_details_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: true
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           created_at: string | null
@@ -402,6 +443,7 @@ export type Database = {
       whatsapp_accounts: {
         Row: {
           account_info: string | null
+          chat_link: string | null
           created_at: string
           id: string
           name: string
@@ -409,6 +451,7 @@ export type Database = {
         }
         Insert: {
           account_info?: string | null
+          chat_link?: string | null
           created_at?: string
           id?: string
           name: string
@@ -416,6 +459,7 @@ export type Database = {
         }
         Update: {
           account_info?: string | null
+          chat_link?: string | null
           created_at?: string
           id?: string
           name?: string
