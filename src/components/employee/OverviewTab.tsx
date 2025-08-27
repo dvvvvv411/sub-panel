@@ -21,6 +21,8 @@ interface OverviewTabProps {
 export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user, employeeProfile }) => {
   const [approvedEvaluations, setApprovedEvaluations] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [employmentType, setEmploymentType] = React.useState<string>('');
+  const [monthlyGoal, setMonthlyGoal] = React.useState<number>(556); // Default: Minijob
 
   React.useEffect(() => {
     fetchApprovedEvaluations();
@@ -37,6 +39,36 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user, 
         .maybeSingle();
 
       if (!employeeData) return;
+
+      // Fetch employment type from latest contract submission
+      const { data: contractData } = await supabase
+        .from('employment_contract_submissions')
+        .select('employment_type')
+        .eq('employee_id', employeeData.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // Set employment type and monthly goal
+      let employmentTypeNormalized = 'minijob'; // default
+      let goal = 556; // default: Minijob
+      
+      if (contractData?.employment_type) {
+        const empType = contractData.employment_type.toLowerCase();
+        if (empType.includes('mini')) {
+          employmentTypeNormalized = 'minijob';
+          goal = 556;
+        } else if (empType.includes('teil')) {
+          employmentTypeNormalized = 'teilzeit';
+          goal = 1600;
+        } else if (empType.includes('voll')) {
+          employmentTypeNormalized = 'vollzeit';
+          goal = 3300;
+        }
+      }
+      
+      setEmploymentType(employmentTypeNormalized);
+      setMonthlyGoal(goal);
 
       const { data, error } = await supabase
         .from('order_evaluations')
@@ -230,9 +262,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ assignedOrders, user, 
                 <span className="text-sm font-bold text-green-600">€{totalPremium.toFixed(2)}</span>
               </div>
               <div className="space-y-2">
-                <Progress value={Math.min((totalPremium / 1000) * 100, 100)} className="h-3" />
+                <Progress value={Math.min((totalPremium / monthlyGoal) * 100, 100)} className="h-3" />
                 <p className="text-xs text-muted-foreground">
-                  Ziel: €1.000 monatlich
+                  Ziel: €{monthlyGoal.toLocaleString('de-DE')} monatlich
                 </p>
               </div>
             </div>
