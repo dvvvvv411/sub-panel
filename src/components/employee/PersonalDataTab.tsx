@@ -47,7 +47,7 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
   });
   const [bankLoading, setBankLoading] = useState(true);
 
-  // Load bank data from employment_contract_submissions
+  // Load bank data from employee_bank_details
   useEffect(() => {
     fetchBankData();
   }, [user?.email]);
@@ -85,33 +85,31 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
 
       console.log('Employee ID:', employeeData.id);
 
-      // Get the LATEST bank data from contract submissions for this employee
-      const { data: submissionData, error: submissionError } = await supabase
-        .from('employment_contract_submissions')
-        .select('iban, bic, bank_name, first_name, last_name')
+      // Get bank data from employee_bank_details table
+      const { data: bankDetails, error: bankError } = await supabase
+        .from('employee_bank_details')
+        .select('iban, bic, bank_name, account_holder')
         .eq('employee_id', employeeData.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
         .maybeSingle();
 
-      if (submissionError) {
-        console.error('Error fetching bank data:', submissionError);
-        toast.error('Fehler beim Abrufen der Bankdaten: ' + submissionError.message);
+      if (bankError) {
+        console.error('Error fetching bank data:', bankError);
+        toast.error('Fehler beim Abrufen der Bankdaten: ' + bankError.message);
         return;
       }
 
-      console.log('Fetched bank data:', submissionData);
+      console.log('Fetched bank data:', bankDetails);
 
-      if (submissionData) {
+      if (bankDetails) {
         setBankData({
-          iban: submissionData.iban || '',
-          bic: submissionData.bic || '',
-          bankName: submissionData.bank_name || '',
-          accountHolder: `${submissionData.first_name} ${submissionData.last_name}` || user?.name || ''
+          iban: bankDetails.iban || '',
+          bic: bankDetails.bic || '',
+          bankName: bankDetails.bank_name || '',
+          accountHolder: bankDetails.account_holder || user?.name || ''
         });
         console.log('Updated bank data state');
       } else {
-        console.log('No bank submission data found for user');
+        console.log('No bank details found for user');
         setBankData({
           iban: '',
           bic: '',
@@ -155,19 +153,20 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ user }) => {
         return;
       }
 
-      // Update employment_contract_submissions
-      const { error: updateError } = await supabase
-        .from('employment_contract_submissions')
-        .update({
+      // Use upsert to insert or update bank details
+      const { error: upsertError } = await supabase
+        .from('employee_bank_details')
+        .upsert({
+          employee_id: employeeData.id,
           iban: bankData.iban,
           bic: bankData.bic,
-          bank_name: bankData.bankName
-        })
-        .eq('employee_id', employeeData.id);
+          bank_name: bankData.bankName,
+          account_holder: bankData.accountHolder
+        });
 
-      if (updateError) {
-        console.error('Error updating bank data:', updateError);
-        toast.error('Fehler beim Speichern der Bankdaten: ' + updateError.message);
+      if (upsertError) {
+        console.error('Error saving bank data:', upsertError);
+        toast.error('Fehler beim Speichern der Bankdaten: ' + upsertError.message);
         return;
       }
 

@@ -1,4 +1,5 @@
 
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -135,6 +136,22 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Update or insert bank details in employee_bank_details table
+    const { error: bankUpsertError } = await supabase
+      .from('employee_bank_details')
+      .upsert({
+        employee_id: request.employee_id,
+        iban: contractData.iban,
+        bic: contractData.bic,
+        bank_name: contractData.bankName,
+        account_holder: `${contractData.firstName} ${contractData.lastName}`
+      });
+
+    if (bankUpsertError) {
+      console.error('Error upserting bank details:', bankUpsertError);
+      // Don't fail the entire request for this, just log it
+    }
+
     // Update request status
     const { error: updateError } = await supabase
       .from('employment_contract_requests')
@@ -170,3 +187,4 @@ Deno.serve(async (req) => {
     );
   }
 });
+
