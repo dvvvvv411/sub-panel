@@ -1,507 +1,410 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ArrowLeft, Star, Send, Download, FileText, Users } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
+import { Star, ArrowLeft, Send } from 'lucide-react';
 
-interface OrderDetails {
+interface Order {
   id: string;
   title: string;
   order_number: string;
+  premium: number;
   provider: string;
   project_goal: string;
-  premium: number;
-  download_links: string[] | null;
-  instructions: Array<{
-    icon: string;
-    title: string;
-    content: string;
-  }> | null;
-  whatsapp_accounts: {
-    id: string;
-    name: string;
-    account_info: string;
-  } | null;
-  order_evaluation_questions: Array<{
-    id: string;
-    question: string;
-  }>;
+  instructions: any;
+  whatsapp_account_id: string | null;
 }
 
-interface StarRatingProps {
-  rating: number;
-  onChange: (rating: number) => void;
-  questionId: string;
+interface EvaluationQuestion {
+  id: string;
+  question: string;
 }
 
-const StarRating: React.FC<StarRatingProps> = ({ rating, onChange, questionId }) => {
-  return (
-    <div className="flex gap-1">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <button
-          key={star}
-          type="button"
-          onClick={() => onChange(star)}
-          className="hover:scale-110 transition-transform"
-        >
-          <Star
-            className={`h-6 w-6 ${
-              star <= rating 
-                ? 'fill-yellow-400 text-yellow-400' 
-                : 'text-gray-300 hover:text-yellow-200'
-            }`}
-          />
-        </button>
-      ))}
-    </div>
-  );
-};
+interface Employee {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
+interface Assignment {
+  id: string;
+  status: string;
+}
 
 const Auftrag = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [order, setOrder] = useState<OrderDetails | null>(null);
+  
+  const [order, setOrder] = useState<Order | null>(null);
+  const [employee, setEmployee] = useState<Employee | null>(null);
+  const [assignment, setAssignment] = useState<Assignment | null>(null);
+  const [questions, setQuestions] = useState<EvaluationQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [assignmentStatus, setAssignmentStatus] = useState<string>('');
-  const [evaluations, setEvaluations] = useState<Record<string, { rating: number; comment: string }>>({});
+  
+  // Rating state
+  const [overallRating, setOverallRating] = useState(0);
+  const [overallComment, setOverallComment] = useState('');
+  const [questionResponses, setQuestionResponses] = useState<Record<string, { rating: number; comment: string }>>({});
 
   useEffect(() => {
-    if (!orderId || !user?.email) {
-      navigate('/mitarbeiter');
-      return;
-    }
-    fetchOrderDetails();
-  }, [orderId, user?.email]);
+    if (!orderId || !user) return;
+    
+    fetchOrderData();
+  }, [orderId, user]);
 
-  const fetchOrderDetails = async () => {
-    if (!orderId || !user?.email) return;
-
+  const fetchOrderData = async () => {
     try {
       setLoading(true);
 
-      // Get employee ID first
+      // Get employee by email
       const { data: employeeData, error: employeeError } = await supabase
         .from('employees')
-        .select('id')
-        .eq('email', user.email)
-        .maybeSingle();
+        .select('*')
+        .eq('email', user?.email)
+        .single();
 
-      if (employeeError || !employeeData) {
-        toast.error('Mitarbeiterdaten nicht gefunden');
-        navigate('/mitarbeiter');
+      if (employeeError) {
+        console.error('Error fetching employee:', employeeError);
+        toast.error('Fehler beim Laden der Mitarbeiterdaten');
         return;
       }
 
-      // Check if order is assigned to this employee
-      const { data: assignmentData, error: assignmentError } = await supabase
-        .from('order_assignments')
-        .select('status')
-        .eq('order_id', orderId)
-        .eq('employee_id', employeeData.id)
-        .maybeSingle();
+      setEmployee(employeeData);
 
-      if (assignmentError || !assignmentData) {
-        toast.error('Auftrag nicht gefunden oder nicht zugewiesen');
-        navigate('/mitarbeiter');
-        return;
-      }
-
-      // Update assignment status to 'in_progress' if it's 'assigned'
-      if (assignmentData.status === 'assigned') {
-        await supabase
-          .from('order_assignments')
-          .update({ status: 'in_progress' })
-          .eq('order_id', orderId)
-          .eq('employee_id', employeeData.id);
-      }
-
-      // Fetch order details
+      // Get order details
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .select(`
-          id,
-          title,
-          order_number,
-          provider,
-          project_goal,
-          premium,
-          download_links,
-          instructions,
-          whatsapp_accounts (
-            id,
-            name,
-            account_info
-          ),
-          order_evaluation_questions (
-            id,
-            question
-          )
-        `)
+        .select('*')
         .eq('id', orderId)
         .single();
 
-      if (orderError || !orderData) {
-        toast.error('Auftrag konnte nicht geladen werden');
+      if (orderError) {
+        console.error('Error fetching order:', orderError);
+        toast.error('Fehler beim Laden des Auftrags');
+        return;
+      }
+
+      // If this is a WhatsApp order, redirect to WhatsApp flow
+      if (orderData.whatsapp_account_id) {
+        navigate(`/auftrag-whatsapp/${orderId}`);
+        return;
+      }
+
+      setOrder(orderData);
+
+      // Check assignment
+      const { data: assignmentData, error: assignmentError } = await supabase
+        .from('order_assignments')
+        .select('*')
+        .eq('order_id', orderId)
+        .eq('employee_id', employeeData.id)
+        .single();
+
+      if (assignmentError) {
+        console.error('Error checking assignment:', assignmentError);
+        toast.error('Sie sind diesem Auftrag nicht zugewiesen');
         navigate('/mitarbeiter');
         return;
       }
 
-      setOrder(orderData as OrderDetails);
-      setAssignmentStatus(assignmentData.status);
-      
-      // Initialize evaluations object
-      const initialEvaluations: Record<string, { rating: number; comment: string }> = {};
-      orderData.order_evaluation_questions?.forEach((q: any) => {
-        initialEvaluations[q.id] = { rating: 0, comment: '' };
+      setAssignment(assignmentData);
+
+      // Get evaluation questions
+      const { data: questionsData, error: questionsError } = await supabase
+        .from('order_evaluation_questions')
+        .select('*')
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: true });
+
+      if (questionsError) {
+        console.error('Error fetching questions:', questionsError);
+        toast.error('Fehler beim Laden der Bewertungsfragen');
+        return;
+      }
+
+      setQuestions(questionsData || []);
+
+      // Initialize question responses
+      const initialResponses: Record<string, { rating: number; comment: string }> = {};
+      questionsData?.forEach(q => {
+        initialResponses[q.id] = { rating: 0, comment: '' };
       });
-      setEvaluations(initialEvaluations);
+      setQuestionResponses(initialResponses);
 
     } catch (error) {
-      console.error('Error fetching order details:', error);
-      toast.error('Fehler beim Laden des Auftrags');
-      navigate('/mitarbeiter');
+      console.error('Error:', error);
+      toast.error('Ein Fehler ist aufgetreten');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRatingChange = (questionId: string, rating: number) => {
-    setEvaluations(prev => ({
+  const StarRating = ({ rating, onRatingChange, disabled = false }: { 
+    rating: number; 
+    onRatingChange: (rating: number) => void;
+    disabled?: boolean;
+  }) => {
+    return (
+      <div className="flex items-center gap-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            onClick={() => !disabled && onRatingChange(star)}
+            disabled={disabled}
+            className={`p-1 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:scale-110'} transition-transform`}
+          >
+            <Star
+              className={`h-6 w-6 ${
+                star <= rating
+                  ? 'fill-yellow-400 text-yellow-400'
+                  : 'text-gray-300'
+              }`}
+            />
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const updateQuestionResponse = (questionId: string, field: 'rating' | 'comment', value: number | string) => {
+    setQuestionResponses(prev => ({
       ...prev,
-      [questionId]: { ...prev[questionId], rating }
+      [questionId]: {
+        ...prev[questionId],
+        [field]: value
+      }
     }));
   };
 
-  const handleCommentChange = (questionId: string, comment: string) => {
-    setEvaluations(prev => ({
-      ...prev,
-      [questionId]: { ...prev[questionId], comment }
-    }));
-  };
+  const submitEvaluation = async () => {
+    if (!order || !employee || !assignment) return;
 
-  const handleSubmitEvaluation = async () => {
-    if (!order || !user?.email) return;
-
-    // Check if all questions have ratings
-    const incompleteQuestions = Object.entries(evaluations).filter(([_, evaluation]) => evaluation.rating === 0);
-    if (incompleteQuestions.length > 0) {
-      toast.error('Bitte bewerten Sie alle Fragen mit mindestens einem Stern');
+    // Validate overall rating
+    if (overallRating === 0) {
+      toast.error('Bitte geben Sie eine Gesamtbewertung ab');
       return;
+    }
+
+    // Validate question ratings
+    for (const question of questions) {
+      if (questionResponses[question.id]?.rating === 0) {
+        toast.error(`Bitte bewerten Sie: ${question.question}`);
+        return;
+      }
     }
 
     try {
       setSubmitting(true);
 
-      // Get employee ID
-      const { data: employeeData } = await supabase
-        .from('employees')
-        .select('id')
-        .eq('email', user.email)
-        .single();
+      // Prepare evaluation details
+      const evaluationDetails = questions.reduce((acc, question) => {
+        acc[question.id] = {
+          question: question.question,
+          rating: questionResponses[question.id].rating,
+          comment: questionResponses[question.id].comment
+        };
+        return acc;
+      }, {} as Record<string, any>);
 
-      if (!employeeData) {
-        toast.error('Mitarbeiterdaten nicht gefunden');
-        return;
-      }
-
-      // Update assignment status to 'evaluated' (waiting for admin approval)
-      await supabase
-        .from('order_assignments')
-        .update({ status: 'evaluated' })
-        .eq('order_id', order.id)
-        .eq('employee_id', employeeData.id);
-
-      // Get assignment ID for evaluation
-      const { data: assignmentData, error: assignmentError } = await supabase
-        .from('order_assignments')
-        .select('id')
-        .eq('order_id', order.id)
-        .eq('employee_id', employeeData.id)
-        .single();
-
-      if (assignmentError) {
-        console.error('Error fetching assignment:', assignmentError);
-        toast.error('Fehler beim Abrufen der Zuweisung');
-        return;
-      }
-
-      // Calculate overall rating
-      const ratings = Object.values(evaluations).map(e => e.rating);
-      const overallRating = Math.round(ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length);
-
-      // Submit evaluation (pending)
-      const { error: evaluationError } = await supabase
+      const { error } = await supabase
         .from('order_evaluations')
         .insert({
-          assignment_id: assignmentData.id,
+          assignment_id: assignment.id,
           order_id: order.id,
-          employee_id: employeeData.id,
+          employee_id: employee.id,
           rating: overallRating,
-          details: evaluations,
-          overall_comment: Object.values(evaluations).map(e => e.comment).filter(c => c).join(' | ') || null,
+          overall_comment: overallComment,
+          details: evaluationDetails,
           status: 'pending'
         });
 
-      if (evaluationError) {
-        console.error('Error submitting evaluation:', evaluationError);
-        toast.error('Fehler beim Absenden der Bewertung');
+      if (error) {
+        console.error('Error submitting evaluation:', error);
+        toast.error('Fehler beim Einreichen der Bewertung');
         return;
       }
 
-      toast.success('Bewertung abgesendet! Der Auftrag wird nach Admin-Genehmigung abgeschlossen.');
+      toast.success('Bewertung erfolgreich eingereicht!');
       navigate('/mitarbeiter');
 
     } catch (error) {
-      console.error('Error submitting evaluation:', error);
-      toast.error('Fehler beim Absenden der Bewertung');
+      console.error('Error:', error);
+      toast.error('Ein Fehler ist aufgetreten');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const getIconComponent = (iconName: string) => {
-    // Normalize icon name - handle kebab-case, snake_case, camelCase, PascalCase
-    const normalizeIconName = (name: string): string => {
-      return name
-        .replace(/[-_]/g, '') // Remove hyphens and underscores
-        .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
-        .replace(/[a-z][A-Z]/g, match => match[0] + match[1].toUpperCase()); // Handle camelCase
-    };
-
-    const normalizedName = normalizeIconName(iconName);
-    
-    // Try to get icon from lucide-react dynamically
-    const IconComponent = (LucideIcons as any)[normalizedName] || 
-                         (LucideIcons as any)[iconName] || 
-                         FileText;
-    
-    return <IconComponent className="h-4 w-4 sm:h-5 sm:w-5 text-primary" absoluteStrokeWidth />;
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Auftrag wird geladen...</p>
+          <p className="text-muted-foreground">Lädt...</p>
         </div>
       </div>
     );
   }
 
-  if (!order) {
+  if (!order || !employee) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground">Auftrag nicht gefunden</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6 text-center">
+            <p className="text-muted-foreground">Auftrag nicht gefunden oder keine Berechtigung.</p>
+            <Button onClick={() => navigate('/mitarbeiter')} className="mt-4">
+              Zurück zur Übersicht
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex items-center gap-4 mb-6">
           <Button
             variant="outline"
-            size="sm"
+            size="icon"
             onClick={() => navigate('/mitarbeiter')}
-            className="flex items-center gap-2 self-start"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Zurück zum Dashboard</span>
-            <span className="sm:hidden">Zurück</span>
           </Button>
-          
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent break-words">
-              {order.title}
-            </h1>
-            <p className="text-muted-foreground text-sm sm:text-base break-words">
-              Auftrag #{order.order_number} • {order.provider}
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Auftrag bewerten</h1>
+            <p className="text-muted-foreground">
+              {order.title} - {order.order_number}
             </p>
           </div>
-          
-          <Badge className="bg-green-100 text-green-800 px-3 py-1 sm:px-4 sm:py-2 text-sm whitespace-nowrap">
-            €{order.premium.toFixed(2)} Prämie
-          </Badge>
-          
-          {assignmentStatus === 'in_progress' && (
-            <Badge className="bg-blue-100 text-blue-800 px-3 py-1 sm:px-4 sm:py-2 text-sm whitespace-nowrap">
-              In Bearbeitung
-            </Badge>
-          )}
         </div>
 
-        <div className="grid gap-6 lg:gap-8 lg:grid-cols-2">
-          {/* Left Column - Order Details */}
-          <div className="space-y-6">
-            {/* Project Goal */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-primary" />
-                  Projektziel
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground leading-relaxed">
-                  {order.project_goal}
-                </p>
-              </CardContent>
-            </Card>
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Order Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Auftragsinformationen</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Titel</p>
+                <p className="font-medium">{order.title}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Auftragsnummer</p>
+                <p className="font-medium">{order.order_number}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Anbieter</p>
+                <p className="font-medium">{order.provider}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Prämie</p>
+                <p className="font-medium">{order.premium}€</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Projektziel</p>
+                <p className="font-medium">{order.project_goal}</p>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Download Links */}
-            {order.download_links && order.download_links.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Download className="h-5 w-5 text-primary" />
-                    Download Links
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {order.download_links.map((link, index) => (
-                    <a
-                      key={index}
-                      href={link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-                    >
-                      <Download className="h-4 w-4 text-primary" />
-                      <span className="text-sm text-primary hover:underline break-all">
-                        {link}
-                      </span>
-                    </a>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
+          {/* Overall Rating */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Gesamtbewertung</CardTitle>
+              <CardDescription>
+                Wie bewerten Sie den Auftrag insgesamt?
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm font-medium mb-2">Bewertung (1-5 Sterne)</p>
+                <StarRating
+                  rating={overallRating}
+                  onRatingChange={setOverallRating}
+                />
+              </div>
+              <div>
+                <p className="text-sm font-medium mb-2">Kommentar (optional)</p>
+                <Textarea
+                  value={overallComment}
+                  onChange={(e) => setOverallComment(e.target.value)}
+                  placeholder="Zusätzliche Anmerkungen zum Auftrag..."
+                  rows={3}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-            {/* Instructions */}
-            {order.instructions && order.instructions.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-primary" />
-                    Anweisungen
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 p-3 sm:p-4">
-                  {order.instructions.map((instruction, index) => (
-                    <div key={index} className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg bg-muted/50">
-                      <div className="flex-none h-7 w-7 sm:h-8 sm:w-8 aspect-square grid place-items-center rounded-full bg-primary/10">
-                        {getIconComponent(instruction.icon)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium mb-2 text-sm sm:text-base">{instruction.title}</h4>
-                        <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                          {instruction.content}
-                        </p>
-                      </div>
+        {/* Evaluation Questions */}
+        {questions.length > 0 && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Bewertungsfragen</CardTitle>
+              <CardDescription>
+                Bitte bewerten Sie jeden Aspekt des Auftrags
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {questions.map((question) => (
+                <div key={question.id} className="border-b border-border pb-6 last:border-b-0">
+                  <p className="font-medium mb-3">{question.question}</p>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-medium mb-2">Bewertung</p>
+                      <StarRating
+                        rating={questionResponses[question.id]?.rating || 0}
+                        onRatingChange={(rating) => updateQuestionResponse(question.id, 'rating', rating)}
+                      />
                     </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* WhatsApp Account Info */}
-            {order.whatsapp_accounts && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-primary" />
-                    WhatsApp Account
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="p-4 rounded-lg bg-muted/50">
-                    <h4 className="font-medium mb-2">{order.whatsapp_accounts.name}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {order.whatsapp_accounts.account_info}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Right Column - Evaluation Form */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Star className="h-5 w-5 text-yellow-500" />
-                  Bewertungsbogen
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {order.order_evaluation_questions.map((question) => (
-                  <div key={question.id} className="space-y-3 p-3 sm:p-4 rounded-lg border bg-card">
-                    <Label className="text-sm font-medium leading-relaxed block">
-                      {question.question}
-                    </Label>
                     
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                      <span className="text-sm text-muted-foreground whitespace-nowrap">Bewertung:</span>
-                      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                        <StarRating
-                          rating={evaluations[question.id]?.rating || 0}
-                          onChange={(rating) => handleRatingChange(question.id, rating)}
-                          questionId={question.id}
-                        />
-                        <span className="text-sm text-muted-foreground whitespace-nowrap">
-                          ({evaluations[question.id]?.rating || 0}/5)
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor={`comment-${question.id}`} className="text-sm">
-                        Kommentar (optional)
-                      </Label>
+                    <div>
+                      <p className="text-sm font-medium mb-2">Kommentar (optional)</p>
                       <Textarea
-                        id={`comment-${question.id}`}
-                        placeholder="Zusätzliche Bemerkungen zu dieser Frage..."
-                        value={evaluations[question.id]?.comment || ''}
-                        onChange={(e) => handleCommentChange(question.id, e.target.value)}
-                        rows={3}
-                        className="resize-none"
+                        value={questionResponses[question.id]?.comment || ''}
+                        onChange={(e) => updateQuestionResponse(question.id, 'comment', e.target.value)}
+                        placeholder="Erläutern Sie Ihre Bewertung..."
+                        rows={2}
                       />
                     </div>
                   </div>
-                ))}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
-                <Button
-                  onClick={handleSubmitEvaluation}
-                  disabled={submitting || Object.values(evaluations).some(evaluation => evaluation.rating === 0)}
-                  className="w-full"
-                  size="lg"
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  {submitting ? 'Wird abgesendet...' : 'Bewertung absenden'}
-                </Button>
-
-                {Object.values(evaluations).some(evaluation => evaluation.rating === 0) && (
-                  <p className="text-sm text-amber-600 text-center">
-                    Bitte bewerten Sie alle Fragen mit mindestens einem Stern
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+        {/* Submit Button */}
+        <div className="mt-6 flex justify-end">
+          <Button
+            onClick={submitEvaluation}
+            disabled={submitting || overallRating === 0}
+            size="lg"
+          >
+            {submitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                Wird eingereicht...
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Bewertung einreichen
+              </>
+            )}
+          </Button>
         </div>
       </div>
     </div>

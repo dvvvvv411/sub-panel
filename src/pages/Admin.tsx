@@ -9,10 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Shield, Users, LogOut, Crown, UserPlus, Briefcase, MessageSquare } from 'lucide-react';
+import { Shield, Users, LogOut, Crown, UserPlus, Briefcase, MessageSquare, Calendar } from 'lucide-react';
 import { VicsTab } from '@/components/VicsTab';
 import { OrdersTab } from '@/components/OrdersTab';
 import { ReviewsManagementTab } from '@/components/ReviewsManagementTab';
+import { AppointmentsOverviewTab } from '@/components/AppointmentsOverviewTab';
 
 interface UserProfile {
   id: string;
@@ -197,7 +198,7 @@ const Admin = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Benutzerverwaltung
@@ -213,6 +214,10 @@ const Admin = () => {
             <TabsTrigger value="reviews" className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
               Bewertungen
+            </TabsTrigger>
+            <TabsTrigger value="appointments" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Terminübersicht
             </TabsTrigger>
           </TabsList>
 
@@ -286,6 +291,10 @@ const Admin = () => {
 
           <TabsContent value="reviews">
             <ReviewsManagementTab />
+          </TabsContent>
+
+          <TabsContent value="appointments">
+            <AppointmentsOverviewTab />
           </TabsContent>
         </Tabs>
       </main>
