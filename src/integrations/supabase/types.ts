@@ -216,6 +216,7 @@ export type Database = {
           approved_by: string | null
           created_at: string
           employee_id: string
+          feedback_requested: boolean
           id: string
           order_id: string
           scheduled_at: string
@@ -227,6 +228,7 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           employee_id: string
+          feedback_requested?: boolean
           id?: string
           order_id: string
           scheduled_at: string
@@ -238,6 +240,7 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           employee_id?: string
+          feedback_requested?: boolean
           id?: string
           order_id?: string
           scheduled_at?: string

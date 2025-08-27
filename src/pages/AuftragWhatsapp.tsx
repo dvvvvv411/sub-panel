@@ -8,9 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Calendar as CalendarIcon, Clock, MessageCircle, CheckCircle2, ArrowLeft, ChevronLeft } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MessageCircle, CheckCircle2, ArrowLeft, ChevronLeft, Star } from 'lucide-react';
 import { format, isToday, isBefore, startOfDay } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { Textarea } from '@/components/ui/textarea';
 
 interface OrderWithWhatsApp {
   id: string;
@@ -36,6 +37,20 @@ interface Appointment {
   scheduled_at: string;
   status: 'pending' | 'approved' | 'rejected';
   approved_at: string | null;
+  feedback_requested: boolean;
+}
+
+interface EvaluationQuestion {
+  id: string;
+  question: string;
+}
+
+interface OrderEvaluation {
+  id: string;
+  rating: number;
+  overall_comment: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  premium_awarded: number;
 }
 
 const AuftragWhatsapp = () => {
@@ -51,6 +66,13 @@ const AuftragWhatsapp = () => {
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
   const [bookingStep, setBookingStep] = useState<'date' | 'time'>('date');
+  
+  // Evaluation states
+  const [questions, setQuestions] = useState<EvaluationQuestion[]>([]);
+  const [evaluation, setEvaluation] = useState<OrderEvaluation | null>(null);
+  const [rating, setRating] = useState<number>(0);
+  const [overallComment, setOverallComment] = useState<string>('');
+  const [submittingEvaluation, setSubmittingEvaluation] = useState(false);
 
   // Generate time slots from 08:00 to 18:00 in 30-minute intervals
   const generateTimeSlots = () => {
@@ -99,7 +121,7 @@ const AuftragWhatsapp = () => {
   useEffect(() => {
     if (!appointment) return;
 
-    // Listen for appointment status changes
+    // Listen for feedback requests
     const channel = supabase
       .channel('appointment-updates')
       .on(
@@ -115,11 +137,9 @@ const AuftragWhatsapp = () => {
           const newAppointment = payload.new as Appointment;
           setAppointment(newAppointment);
           
-          if (newAppointment.status === 'approved') {
-            toast.success('Ihr Termin wurde genehmigt! Sie werden zur Bewertungsseite weitergeleitet.');
-            setTimeout(() => {
-              navigate(`/auftrag/${orderId}`);
-            }, 2000);
+          if (newAppointment.feedback_requested && !appointment.feedback_requested) {
+            toast.success('Feedback wurde angefordert! Bitte füllen Sie den Bewertungsbogen aus.');
+            fetchEvaluationQuestions();
           }
         }
       )
@@ -128,7 +148,7 @@ const AuftragWhatsapp = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [appointment, orderId, navigate]);
+  }, [appointment]);
 
   const fetchOrderAndEmployee = async () => {
     try {
@@ -192,13 +212,12 @@ const AuftragWhatsapp = () => {
 
       setOrder(orderData);
 
-      // Check if employee already has a pending/approved appointment for this order
+      // Check if employee already has an appointment for this order
       const { data: existingAppointment } = await supabase
         .from('order_appointments')
         .select('*')
         .eq('order_id', orderId)
         .eq('employee_id', employeeData.id)
-        .in('status', ['pending', 'approved'])
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
@@ -208,6 +227,12 @@ const AuftragWhatsapp = () => {
         const appointmentDate = new Date(existingAppointment.scheduled_at);
         setSelectedDate(appointmentDate);
         setSelectedTime(format(appointmentDate, 'HH:mm'));
+
+        // If feedback is requested, load evaluation questions
+        if (existingAppointment.feedback_requested) {
+          fetchEvaluationQuestions();
+          fetchExistingEvaluation(existingAppointment.id, employeeData.id, orderId);
+        }
       }
 
     } catch (error) {
@@ -215,6 +240,46 @@ const AuftragWhatsapp = () => {
       toast.error('Ein Fehler ist aufgetreten');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchEvaluationQuestions = async () => {
+    if (!orderId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('order_evaluation_questions')
+        .select('*')
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching questions:', error);
+        return;
+      }
+
+      setQuestions(data || []);
+    } catch (error) {
+      console.error('Error fetching questions:', error);
+    }
+  };
+
+  const fetchExistingEvaluation = async (appointmentId: string, employeeId: string, orderId: string) => {
+    try {
+      const { data } = await supabase
+        .from('order_evaluations')
+        .select('*')
+        .eq('order_id', orderId)
+        .eq('employee_id', employeeId)
+        .single();
+
+      if (data) {
+        setEvaluation(data as OrderEvaluation);
+        setRating(data.rating);
+        setOverallComment(data.overall_comment || '');
+      }
+    } catch (error) {
+      console.error('Error fetching existing evaluation:', error);
     }
   };
 
@@ -234,7 +299,9 @@ const AuftragWhatsapp = () => {
           order_id: order.id,
           employee_id: employee.id,
           scheduled_at: scheduledAt.toISOString(),
-          status: 'pending'
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+          feedback_requested: false
         })
         .select()
         .single();
@@ -246,13 +313,65 @@ const AuftragWhatsapp = () => {
       }
 
       setAppointment(data as Appointment);
-      toast.success('Termin erfolgreich gebucht! Warten Sie auf die Genehmigung.');
+      toast.success('Termin erfolgreich gebucht und bestätigt!');
 
     } catch (error) {
       console.error('Error:', error);
       toast.error('Ein Fehler ist aufgetreten');
     } finally {
       setBooking(false);
+    }
+  };
+
+  const submitEvaluation = async () => {
+    if (!appointment || !employee || !order || rating === 0) return;
+
+    try {
+      setSubmittingEvaluation(true);
+
+      const evaluationData = {
+        order_id: order.id,
+        employee_id: employee.id,
+        assignment_id: appointment.id,
+        rating,
+        overall_comment: overallComment || null,
+        status: 'pending' as const
+      };
+
+      let result;
+      if (evaluation) {
+        // Update existing evaluation
+        result = await supabase
+          .from('order_evaluations')
+          .update(evaluationData)
+          .eq('id', evaluation.id)
+          .select()
+          .single();
+      } else {
+        // Create new evaluation
+        result = await supabase
+          .from('order_evaluations')
+          .insert(evaluationData)
+          .select()
+          .single();
+      }
+
+      if (result.error) {
+        console.error('Error submitting evaluation:', result.error);
+        toast.error('Fehler beim Einreichen der Bewertung');
+        return;
+      }
+
+      toast.success('Bewertung erfolgreich eingereicht!');
+      setTimeout(() => {
+        navigate('/mitarbeiter');
+      }, 1500);
+
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Ein Fehler ist aufgetreten');
+    } finally {
+      setSubmittingEvaluation(false);
     }
   };
 
@@ -296,8 +415,8 @@ const AuftragWhatsapp = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center gap-4 mb-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center gap-4">
           <Button
             variant="outline"
             size="icon"
@@ -316,13 +435,13 @@ const AuftragWhatsapp = () => {
         <div className="grid gap-6 md:grid-cols-2">
           {/* Auftragsinformationen */}
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2">
                 <MessageCircle className="h-5 w-5 text-green-600" />
                 Auftragsinformationen
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2">
               <div>
                 <p className="text-sm text-muted-foreground">Titel</p>
                 <p className="font-medium">{order.title}</p>
@@ -425,7 +544,7 @@ const AuftragWhatsapp = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
                   Ihr Termin
                 </CardTitle>
               </CardHeader>
@@ -440,62 +559,115 @@ const AuftragWhatsapp = () => {
                 </div>
 
                 <div className="flex justify-center">
-                  <Badge
-                    variant={
-                      appointment.status === 'approved' 
-                        ? 'default' 
-                        : appointment.status === 'pending' 
-                        ? 'secondary' 
-                        : 'destructive'
-                    }
-                  >
-                    {appointment.status === 'approved' && 'Genehmigt'}
-                    {appointment.status === 'pending' && 'Warten auf Genehmigung'}
-                    {appointment.status === 'rejected' && 'Abgelehnt'}
+                  <Badge variant="default">
+                    Bestätigt
                   </Badge>
                 </div>
 
-                {appointment.status === 'approved' && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-green-900">Termin bestätigt!</p>
-                        <p className="text-sm text-green-700 mt-1">
-                          Sie werden den Auftrag am {format(new Date(appointment.scheduled_at), 'dd.MM.yyyy um HH:mm', { locale: de })} Uhr über WhatsApp durchführen.
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <Button
-                      onClick={openWhatsAppChat}
-                      className="w-full mt-4 bg-green-600 hover:bg-green-700"
-                      disabled={!order.whatsapp_accounts?.chat_link}
-                    >
-                      <MessageCircle className="h-4 w-4 mr-2" />
-                      Zum WhatsApp Chat
-                    </Button>
-                  </div>
-                )}
-
-                {appointment.status === 'pending' && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <Clock className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-yellow-900">Warten auf Genehmigung</p>
-                        <p className="text-sm text-yellow-700 mt-1">
-                          Ihr Termin wartet auf die Genehmigung durch einen Administrator. 
-                          Sie werden automatisch weitergeleitet, sobald der Termin genehmigt wurde.
-                        </p>
-                      </div>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-green-900">Termin bestätigt!</p>
+                      <p className="text-sm text-green-700 mt-1">
+                        Sie werden den Auftrag am {format(new Date(appointment.scheduled_at), 'dd.MM.yyyy um HH:mm', { locale: de })} Uhr über WhatsApp durchführen.
+                      </p>
                     </div>
                   </div>
-                )}
+                  
+                  <Button
+                    onClick={openWhatsAppChat}
+                    className="w-full mt-4 bg-green-600 hover:bg-green-700"
+                    disabled={!order.whatsapp_accounts?.chat_link}
+                  >
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Zum WhatsApp Chat
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}
         </div>
+
+        {/* Bewertungsformular - nur anzeigen wenn feedback_requested */}
+        {appointment?.feedback_requested && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Bewertung erforderlich</CardTitle>
+              <CardDescription>
+                Bitte bewerten Sie Ihre Erfahrung mit diesem Auftrag.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Bewertung mit Sternen */}
+              <div>
+                <label className="text-sm font-medium">Gesamtbewertung *</label>
+                <div className="flex items-center gap-2 mt-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setRating(star)}
+                      className="focus:outline-none"
+                    >
+                      <Star
+                        className={`h-6 w-6 ${
+                          star <= rating
+                            ? 'text-yellow-400 fill-yellow-400'
+                            : 'text-gray-300'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                  <span className="text-sm text-muted-foreground ml-2">
+                    {rating > 0 ? `${rating} von 5 Sternen` : 'Keine Bewertung'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Gesamtkommentar */}
+              <div>
+                <label className="text-sm font-medium">
+                  Gesamtkommentar
+                </label>
+                <Textarea
+                  value={overallComment}
+                  onChange={(e) => setOverallComment(e.target.value)}
+                  placeholder="Teilen Sie Ihre Erfahrungen mit diesem Auftrag..."
+                  className="mt-2"
+                  rows={4}
+                />
+              </div>
+
+              {/* Fragen */}
+              {questions.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium">Zusätzliche Fragen</label>
+                  <div className="space-y-3 mt-2">
+                    {questions.map((question) => (
+                      <div key={question.id} className="p-3 bg-muted rounded-lg">
+                        <p className="text-sm">{question.question}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          (Diese Fragen werden in einem zukünftigen Update bearbeitbar sein)
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  onClick={submitEvaluation}
+                  disabled={rating === 0 || submittingEvaluation}
+                  className="flex-1"
+                >
+                  {submittingEvaluation ? 'Wird eingereicht...' : 'Bewertung einreichen'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
