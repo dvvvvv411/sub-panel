@@ -190,7 +190,7 @@ const AuftragWhatsapp = () => {
         .single();
 
       if (existingAppointment) {
-        setAppointment(existingAppointment);
+        setAppointment(existingAppointment as Appointment);
         const appointmentDate = new Date(existingAppointment.scheduled_at);
         setSelectedDate(appointmentDate);
         setSelectedTime(format(appointmentDate, 'HH:mm'));
@@ -231,7 +231,7 @@ const AuftragWhatsapp = () => {
         return;
       }
 
-      setAppointment(data);
+      setAppointment(data as Appointment);
       toast.success('Termin erfolgreich gebucht! Warten Sie auf die Genehmigung.');
 
     } catch (error) {

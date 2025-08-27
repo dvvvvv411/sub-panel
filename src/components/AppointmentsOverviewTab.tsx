@@ -95,7 +95,7 @@ export const AppointmentsOverviewTab = () => {
         return;
       }
 
-      setAppointments(data || []);
+      setAppointments((data || []) as AppointmentWithDetails[]);
     } catch (error) {
       console.error('Error:', error);
       toast.error('Ein Fehler ist aufgetreten');
