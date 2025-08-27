@@ -51,6 +51,7 @@ interface OrderEvaluation {
   overall_comment: string | null;
   status: 'pending' | 'approved' | 'rejected';
   premium_awarded: number;
+  details: Record<string, any> | null;
 }
 
 const AuftragWhatsapp = () => {
@@ -60,6 +61,7 @@ const AuftragWhatsapp = () => {
   
   const [order, setOrder] = useState<OrderWithWhatsApp | null>(null);
   const [employee, setEmployee] = useState<Employee | null>(null);
+  const [assignmentId, setAssignmentId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [appointment, setAppointment] = useState<Appointment | null>(null);
@@ -72,6 +74,7 @@ const AuftragWhatsapp = () => {
   const [evaluation, setEvaluation] = useState<OrderEvaluation | null>(null);
   const [rating, setRating] = useState<number>(0);
   const [overallComment, setOverallComment] = useState<string>('');
+  const [questionResponses, setQuestionResponses] = useState<Record<string, { rating: number; comment: string }>>({});
   const [submittingEvaluation, setSubmittingEvaluation] = useState(false);
 
   // Generate time slots from 08:00 to 18:00 in 30-minute intervals
@@ -184,6 +187,9 @@ const AuftragWhatsapp = () => {
         return;
       }
 
+      // Store assignment ID for evaluation
+      setAssignmentId(assignmentData.id);
+
       // Get order with WhatsApp account
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
@@ -231,7 +237,7 @@ const AuftragWhatsapp = () => {
         // If feedback is requested, load evaluation questions
         if (existingAppointment.feedback_requested) {
           fetchEvaluationQuestions();
-          fetchExistingEvaluation(existingAppointment.id, employeeData.id, orderId);
+          fetchExistingEvaluation(employeeData.id, orderId);
         }
       }
 
@@ -259,12 +265,19 @@ const AuftragWhatsapp = () => {
       }
 
       setQuestions(data || []);
+
+      // Initialize question responses
+      const initialResponses: Record<string, { rating: number; comment: string }> = {};
+      data?.forEach(q => {
+        initialResponses[q.id] = { rating: 0, comment: '' };
+      });
+      setQuestionResponses(initialResponses);
     } catch (error) {
       console.error('Error fetching questions:', error);
     }
   };
 
-  const fetchExistingEvaluation = async (appointmentId: string, employeeId: string, orderId: string) => {
+  const fetchExistingEvaluation = async (employeeId: string, orderId: string) => {
     try {
       const { data } = await supabase
         .from('order_evaluations')
@@ -277,6 +290,19 @@ const AuftragWhatsapp = () => {
         setEvaluation(data as OrderEvaluation);
         setRating(data.rating);
         setOverallComment(data.overall_comment || '');
+        
+        // Prefill question responses from existing evaluation details
+        if (data.details && questions.length > 0) {
+          const updatedResponses: Record<string, { rating: number; comment: string }> = {};
+          questions.forEach(q => {
+            const detail = data.details[q.id];
+            updatedResponses[q.id] = {
+              rating: detail?.rating || 0,
+              comment: detail?.comment || ''
+            };
+          });
+          setQuestionResponses(updatedResponses);
+        }
       }
     } catch (error) {
       console.error('Error fetching existing evaluation:', error);
@@ -324,17 +350,36 @@ const AuftragWhatsapp = () => {
   };
 
   const submitEvaluation = async () => {
-    if (!appointment || !employee || !order || rating === 0) return;
+    if (!assignmentId || !employee || !order || rating === 0) return;
+
+    // Validate question ratings
+    for (const question of questions) {
+      if (questionResponses[question.id]?.rating === 0) {
+        toast.error(`Bitte bewerten Sie: ${question.question}`);
+        return;
+      }
+    }
 
     try {
       setSubmittingEvaluation(true);
 
+      // Prepare evaluation details
+      const evaluationDetails = questions.reduce((acc, question) => {
+        acc[question.id] = {
+          question: question.question,
+          rating: questionResponses[question.id].rating,
+          comment: questionResponses[question.id].comment
+        };
+        return acc;
+      }, {} as Record<string, any>);
+
       const evaluationData = {
         order_id: order.id,
         employee_id: employee.id,
-        assignment_id: appointment.id,
+        assignment_id: assignmentId,
         rating,
         overall_comment: overallComment || null,
+        details: evaluationDetails,
         status: 'pending' as const
       };
 
@@ -363,9 +408,7 @@ const AuftragWhatsapp = () => {
       }
 
       toast.success('Bewertung erfolgreich eingereicht!');
-      setTimeout(() => {
-        navigate('/mitarbeiter');
-      }, 1500);
+      navigate('/mitarbeiter');
 
     } catch (error) {
       console.error('Error:', error);
@@ -381,6 +424,59 @@ const AuftragWhatsapp = () => {
       return;
     }
     window.open(order.whatsapp_accounts.chat_link, '_blank');
+  };
+
+  // Add useEffect to prefill existing evaluation when questions are loaded
+  useEffect(() => {
+    if (questions.length > 0 && evaluation && evaluation.details) {
+      const updatedResponses: Record<string, { rating: number; comment: string }> = {};
+      questions.forEach(q => {
+        const detail = evaluation.details[q.id];
+        updatedResponses[q.id] = {
+          rating: detail?.rating || 0,
+          comment: detail?.comment || ''
+        };
+      });
+      setQuestionResponses(updatedResponses);
+    }
+  }, [questions, evaluation]);
+
+  const StarRating = ({ rating, onRatingChange, disabled = false }: { 
+    rating: number; 
+    onRatingChange: (rating: number) => void;
+    disabled?: boolean;
+  }) => {
+    return (
+      <div className="flex items-center gap-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            onClick={() => !disabled && onRatingChange(star)}
+            disabled={disabled}
+            className={`p-1 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:scale-110'} transition-transform`}
+          >
+            <Star
+              className={`h-6 w-6 ${
+                star <= rating
+                  ? 'fill-yellow-400 text-yellow-400'
+                  : 'text-gray-300'
+              }`}
+            />
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const updateQuestionResponse = (questionId: string, field: 'rating' | 'comment', value: number | string) => {
+    setQuestionResponses(prev => ({
+      ...prev,
+      [questionId]: {
+        ...prev[questionId],
+        [field]: value
+      }
+    }));
   };
 
   if (loading) {
@@ -578,7 +674,6 @@ const AuftragWhatsapp = () => {
                   <Button
                     onClick={openWhatsAppChat}
                     className="w-full mt-4 bg-green-600 hover:bg-green-700"
-                    disabled={!order.whatsapp_accounts?.chat_link}
                   >
                     <MessageCircle className="h-4 w-4 mr-2" />
                     Zum WhatsApp Chat
@@ -602,54 +697,56 @@ const AuftragWhatsapp = () => {
               {/* Bewertung mit Sternen */}
               <div>
                 <label className="text-sm font-medium">Gesamtbewertung *</label>
-                <div className="flex items-center gap-2 mt-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setRating(star)}
-                      className="focus:outline-none"
-                    >
-                      <Star
-                        className={`h-6 w-6 ${
-                          star <= rating
-                            ? 'text-yellow-400 fill-yellow-400'
-                            : 'text-gray-300'
-                        }`}
-                      />
-                    </button>
-                  ))}
-                  <span className="text-sm text-muted-foreground ml-2">
-                    {rating > 0 ? `${rating} von 5 Sternen` : 'Keine Bewertung'}
-                  </span>
+                <div className="mt-2">
+                  <StarRating
+                    rating={rating}
+                    onRatingChange={setRating}
+                  />
                 </div>
               </div>
 
               {/* Gesamtkommentar */}
               <div>
                 <label className="text-sm font-medium">
-                  Gesamtkommentar
+                  Gesamtkommentar (optional)
                 </label>
                 <Textarea
                   value={overallComment}
                   onChange={(e) => setOverallComment(e.target.value)}
-                  placeholder="Teilen Sie Ihre Erfahrungen mit diesem Auftrag..."
+                  placeholder="Zusätzliche Anmerkungen zum Auftrag..."
                   className="mt-2"
-                  rows={4}
+                  rows={3}
                 />
               </div>
 
-              {/* Fragen */}
+              {/* Bewertungsfragen */}
               {questions.length > 0 && (
                 <div>
-                  <label className="text-sm font-medium">Zusätzliche Fragen</label>
-                  <div className="space-y-3 mt-2">
+                  <label className="text-sm font-medium">Bewertungsfragen</label>
+                  <div className="space-y-6 mt-4">
                     {questions.map((question) => (
-                      <div key={question.id} className="p-3 bg-muted rounded-lg">
-                        <p className="text-sm">{question.question}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          (Diese Fragen werden in einem zukünftigen Update bearbeitbar sein)
-                        </p>
+                      <div key={question.id} className="border-b border-border pb-6 last:border-b-0">
+                        <p className="font-medium mb-3">{question.question}</p>
+                        
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-sm font-medium mb-2">Bewertung</p>
+                            <StarRating
+                              rating={questionResponses[question.id]?.rating || 0}
+                              onRatingChange={(rating) => updateQuestionResponse(question.id, 'rating', rating)}
+                            />
+                          </div>
+                          
+                          <div>
+                            <p className="text-sm font-medium mb-2">Kommentar (optional)</p>
+                            <Textarea
+                              value={questionResponses[question.id]?.comment || ''}
+                              onChange={(e) => updateQuestionResponse(question.id, 'comment', e.target.value)}
+                              placeholder="Erläutern Sie Ihre Bewertung..."
+                              rows={2}
+                            />
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
