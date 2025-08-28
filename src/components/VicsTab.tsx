@@ -165,6 +165,11 @@ export const VicsTab = () => {
   const [skipContract, setSkipContract] = useState(false);
   const [employmentType, setEmploymentType] = useState('');
   const [password, setPassword] = useState('');
+  const [bankInfo, setBankInfo] = useState({
+    bank: '',
+    iban: '',
+    bic: ''
+  });
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [selectedSubmission, setSelectedSubmission] = useState<ContractSubmission | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -339,6 +344,25 @@ export const VicsTab = () => {
             return;
           }
 
+          // Save bank information if provided
+          if (bankInfo.bank || bankInfo.iban || bankInfo.bic) {
+            const { error: bankError } = await supabase
+              .from('employee_bank_details')
+              .insert({
+                employee_id: employeeData.id,
+                bank_name: bankInfo.bank || null,
+                iban: bankInfo.iban || null,
+                bic: bankInfo.bic || null,
+                account_holder: `${formData.firstName} ${formData.lastName}`
+              });
+
+            if (bankError) {
+              console.error('Error saving bank details:', bankError);
+              // Don't rollback the user creation, just show a warning
+              toast.error('Benutzer wurde erstellt, aber Bankdaten konnten nicht gespeichert werden');
+            }
+          }
+
           toast.success('Mitarbeiter erfolgreich erstellt und Account angelegt');
           setActiveTab('created');
         } catch (createError) {
@@ -361,6 +385,7 @@ export const VicsTab = () => {
       setSkipContract(false);
       setEmploymentType('');
       setPassword('');
+      setBankInfo({ bank: '', iban: '', bic: '' });
       fetchEmployees();
     } catch (error) {
       console.error('Error adding employee:', error);
@@ -987,6 +1012,37 @@ export const VicsTab = () => {
                       placeholder="Mindestens 6 Zeichen"
                       minLength={6}
                     />
+                  </div>
+                  
+                  <div className="space-y-4 pt-4 border-t">
+                    <h4 className="font-medium text-sm">Bankinformationen (optional)</h4>
+                    <div>
+                      <Label htmlFor="bank">Bank</Label>
+                      <Input
+                        id="bank"
+                        value={bankInfo.bank}
+                        onChange={(e) => setBankInfo({ ...bankInfo, bank: e.target.value })}
+                        placeholder="z.B. Sparkasse München"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="iban">IBAN</Label>
+                      <Input
+                        id="iban"
+                        value={bankInfo.iban}
+                        onChange={(e) => setBankInfo({ ...bankInfo, iban: e.target.value })}
+                        placeholder="DE89 3704 0044 0532 0130 00"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="bic">BIC</Label>
+                      <Input
+                        id="bic"
+                        value={bankInfo.bic}
+                        onChange={(e) => setBankInfo({ ...bankInfo, bic: e.target.value })}
+                        placeholder="COBADEFFXXX"
+                      />
+                    </div>
                   </div>
                 </div>
               )}
