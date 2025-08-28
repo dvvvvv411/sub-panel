@@ -30,6 +30,7 @@ interface Employee {
   id: string;
   first_name: string;
   last_name: string;
+  email: string;
 }
 
 interface Appointment {
@@ -354,6 +355,28 @@ const AuftragWhatsapp = () => {
 
       setAppointment(data as Appointment);
       toast.success('Termin erfolgreich gebucht und bestätigt!');
+
+      // Send appointment confirmation email
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-employee-email', {
+          body: {
+            employee_email: employee.email,
+            employee_name: `${employee.first_name} ${employee.last_name}`,
+            type: 'appointment_confirmation',
+            appointment_data: {
+              scheduled_at: scheduledAt.toISOString(),
+            },
+          },
+        });
+
+        if (emailError) {
+          console.error('Error sending appointment confirmation email:', emailError);
+          // Don't show error to user, just log it
+        }
+      } catch (emailError) {
+        console.error('Error sending appointment confirmation email:', emailError);
+        // Don't show error to user, just log it
+      }
 
     } catch (error) {
       console.error('Error:', error);

@@ -156,6 +156,30 @@ export function AssignOrderDialog({
 
       toast.success('Auftrag erfolgreich zugewiesen');
 
+      // Send assignment notification email
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-employee-email', {
+          body: {
+            employee_email: selectedEmployee.email,
+            employee_name: `${selectedEmployee.first_name} ${selectedEmployee.last_name}`,
+            type: 'assignment',
+            order_data: {
+              title: order.title,
+              order_number: order.order_number,
+              provider: order.provider,
+            },
+          },
+        });
+
+        if (emailError) {
+          console.error('Error sending assignment notification email:', emailError);
+          // Don't show error to user, just log it
+        }
+      } catch (emailError) {
+        console.error('Error sending assignment notification email:', emailError);
+        // Don't show error to user, just log it
+      }
+
       onOpenChange(false);
       onAssignmentComplete();
     } catch (error) {
