@@ -390,6 +390,30 @@ const AuftragWhatsapp = () => {
         // Don't show error to user, just log it
       }
 
+      // Send Telegram notification
+      try {
+        const { error: telegramError } = await supabase.functions.invoke('send-telegram-notification', {
+          body: {
+            type: 'appointment_booked',
+            payload: {
+              employee_name: `${employee.first_name} ${employee.last_name}`,
+              appointment_date: scheduledAt.toLocaleDateString('de-DE'),
+              appointment_time: scheduledAt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
+              order_title: order.title,
+              order_number: order.order_number
+            }
+          }
+        });
+
+        if (telegramError) {
+          console.error('Error sending Telegram notification:', telegramError);
+          // Don't show error to user, just log it
+        }
+      } catch (telegramError) {
+        console.error('Error sending Telegram notification:', telegramError);
+        // Don't show error to user, just log it
+      }
+
     } catch (error) {
       console.error('Error:', error);
       toast.error('Ein Fehler ist aufgetreten');
@@ -463,6 +487,30 @@ const AuftragWhatsapp = () => {
 
       // The trigger will automatically update assignment status to 'evaluated'
       toast.success('Bewertung erfolgreich eingereicht!');
+
+      // Send Telegram notification
+      try {
+        const { error: telegramError } = await supabase.functions.invoke('send-telegram-notification', {
+          body: {
+            type: 'evaluation_submitted',
+            payload: {
+              employee_name: `${employee.first_name} ${employee.last_name}`,
+              order_title: order.title,
+              order_number: order.order_number,
+              rating: derivedRating
+            }
+          }
+        });
+
+        if (telegramError) {
+          console.error('Error sending Telegram notification:', telegramError);
+          // Don't show error to user, just log it
+        }
+      } catch (telegramError) {
+        console.error('Error sending Telegram notification:', telegramError);
+        // Don't show error to user, just log it
+      }
+
       navigate('/mitarbeiter');
 
     } catch (error) {

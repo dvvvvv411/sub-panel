@@ -288,6 +288,30 @@ const Auftrag = () => {
 
       // The trigger will automatically update assignment status to 'evaluated'
       toast.success('Bewertung erfolgreich eingereicht!');
+
+      // Send Telegram notification
+      try {
+        const { error: telegramError } = await supabase.functions.invoke('send-telegram-notification', {
+          body: {
+            type: 'evaluation_submitted',
+            payload: {
+              employee_name: `${employee.first_name} ${employee.last_name}`,
+              order_title: order.title,
+              order_number: order.order_number,
+              rating: overallRating
+            }
+          }
+        });
+
+        if (telegramError) {
+          console.error('Error sending Telegram notification:', telegramError);
+          // Don't show error to user, just log it
+        }
+      } catch (telegramError) {
+        console.error('Error sending Telegram notification:', telegramError);
+        // Don't show error to user, just log it
+      }
+
       navigate('/mitarbeiter');
 
     } catch (error) {

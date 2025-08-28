@@ -10,12 +10,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Shield, Users, LogOut, Crown, UserPlus, Briefcase, MessageSquare, Calendar, TrendingUp, Home } from 'lucide-react';
-import { VicsTab } from '@/components/VicsTab';
-import { OrdersTab } from '@/components/OrdersTab';
-import { ReviewsManagementTab } from '@/components/ReviewsManagementTab';
-import { AppointmentsOverviewTab } from '@/components/AppointmentsOverviewTab';
-import { AdminOverviewTab } from '@/components/AdminOverviewTab';
+import { Crown, Shield, Home, LogOut, UserPlus, TrendingUp, Briefcase, MessageSquare, Calendar, Bell } from "lucide-react";
+import { AdminOverviewTab } from "@/components/AdminOverviewTab";
+import { VicsTab } from "@/components/VicsTab";
+import { OrdersTab } from "@/components/OrdersTab";
+import { ReviewsManagementTab } from "@/components/ReviewsManagementTab";
+import { AppointmentsOverviewTab } from "@/components/AppointmentsOverviewTab";
+import ManageTelegramSubscribersTab from "@/components/ManageTelegramSubscribersTab";
 
 interface UserProfile {
   id: string;
@@ -200,7 +201,7 @@ const Admin = () => {
         {/* Sticky Tabs Navigation */}
         <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/50 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 mb-8">
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="h-12 bg-card/50 border border-border/50 rounded-lg p-1 grid w-full grid-cols-5 gap-1">
+            <TabsList className="h-12 bg-card/50 border border-border/50 rounded-lg p-1 grid w-full grid-cols-6 gap-1">
               <TabsTrigger 
                 value="overview" 
                 className="flex items-center gap-2 h-10 px-4 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border transition-all duration-200"
@@ -236,6 +237,13 @@ const Admin = () => {
                 <Calendar className="h-4 w-4" />
                 <span className="hidden sm:inline">Termine</span>
               </TabsTrigger>
+              <TabsTrigger 
+                value="telegram" 
+                className="flex items-center gap-2 h-10 px-4 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border transition-all duration-200"
+              >
+                <Bell className="h-4 w-4" />
+                <span className="hidden sm:inline">Telegram</span>
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -260,6 +268,10 @@ const Admin = () => {
 
           <TabsContent value="appointments" className="animate-fade-in">
             <AppointmentsOverviewTab />
+          </TabsContent>
+
+          <TabsContent value="telegram" className="animate-fade-in">
+            <ManageTelegramSubscribersTab />
           </TabsContent>
         </Tabs>
       </main>

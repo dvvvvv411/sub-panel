@@ -174,6 +174,28 @@ Deno.serve(async (req) => {
       console.error('Error updating employee status:', employeeUpdateError);
     }
 
+    // Send Telegram notification
+    try {
+      const { error: telegramError } = await supabase.functions.invoke('send-telegram-notification', {
+        body: {
+          type: 'contract_submitted',
+          payload: {
+            employee_name: `${contractData.first_name} ${contractData.last_name}`,
+            employee_email: contractData.email,
+            desired_start_date: contractData.desired_start_date || null
+          }
+        }
+      });
+
+      if (telegramError) {
+        console.error('Error sending Telegram notification:', telegramError);
+        // Don't fail the request if notification fails
+      }
+    } catch (telegramError) {
+      console.error('Error sending Telegram notification:', telegramError);
+      // Don't fail the request if notification fails
+    }
+
     return new Response(
       JSON.stringify({ success: true }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
