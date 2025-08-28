@@ -47,7 +47,10 @@ export const EmployeeNotificationEmail = ({
 
   return (
     <Html>
-      <Head />
+      <Head>
+        <meta httpEquiv="Content-Type" content="text/html; charset=UTF-8" />
+        <meta charSet="UTF-8" />
+      </Head>
       <Preview>{previewText}</Preview>
       <Body style={main}>
         <Container style={container}>
