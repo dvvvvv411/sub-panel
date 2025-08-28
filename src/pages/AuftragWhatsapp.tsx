@@ -80,16 +80,28 @@ const AuftragWhatsapp = () => {
   const [questionResponses, setQuestionResponses] = useState<Record<string, { rating: number; comment: string }>>({});
   const [submittingEvaluation, setSubmittingEvaluation] = useState(false);
 
-  // Generate time slots from 08:00 to 18:00 in 30-minute intervals
+  // Generate time slots: 11:00-14:00 and 19:00-21:00 in 30-minute intervals
   const generateTimeSlots = () => {
     const slots = [];
-    for (let hour = 8; hour <= 18; hour++) {
+    
+    // First block: 11:00 - 14:00
+    for (let hour = 11; hour <= 14; hour++) {
       for (let minute of [0, 30]) {
-        if (hour === 18 && minute === 30) break; // Stop at 18:00
+        if (hour === 14 && minute === 30) break; // Stop at 14:00
         const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
         slots.push(timeStr);
       }
     }
+    
+    // Second block: 19:00 - 21:00
+    for (let hour = 19; hour <= 21; hour++) {
+      for (let minute of [0, 30]) {
+        if (hour === 21 && minute === 30) break; // Stop at 21:00
+        const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        slots.push(timeStr);
+      }
+    }
+    
     return slots;
   };
 
