@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,6 +33,8 @@ const Admin = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
+  const hasInitialized = useRef(false);
+  const [hasInitialLoad, setHasInitialLoad] = useState(false);
   
   // Get active tab from sessionStorage first, then URL, default to 'overview'
   const getInitialTab = () => {
@@ -50,12 +52,13 @@ const Admin = () => {
   };
 
   useEffect(() => {
-    if (!loading && user && profile) {
+    if (!loading && user && profile && !hasInitialized.current) {
       if (profile.role !== 'admin') {
         // Redirect employees to their dashboard
         navigate('/mitarbeiter');
         return;
       }
+      hasInitialized.current = true;
       fetchUsers();
     } else if (!loading && !user) {
       navigate('/auth');
@@ -83,6 +86,7 @@ const Admin = () => {
       toast.error('Fehler beim Laden der Benutzer');
     } finally {
       setLoadingUsers(false);
+      setHasInitialLoad(true);
     }
   };
 
@@ -118,7 +122,7 @@ const Admin = () => {
     navigate('/');
   };
 
-  if (loading || loadingUsers) {
+  if (loading || (loadingUsers && !hasInitialLoad)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">

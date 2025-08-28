@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -73,6 +73,8 @@ const Mitarbeiter = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const hasInitialized = useRef(false);
+  const [hasInitialLoad, setHasInitialLoad] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -86,28 +88,34 @@ const Mitarbeiter = () => {
       return;
     }
     
-    fetchEmployeeData();
-    
-    // Set up real-time subscription for order assignments
-    const channel = supabase
-      .channel('order-assignments-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'order_assignments'
-        },
-        () => {
-          console.log('Order assignments changed, refetching data...');
-          fetchEmployeeData();
-        }
-      )
-      .subscribe();
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      fetchEmployeeData();
+      
+      // Set up real-time subscription for order assignments - only once
+      const channel = supabase
+        .channel('order-assignments-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'order_assignments'
+          },
+          () => {
+            console.log('Order assignments changed, refetching data...');
+            // Only refetch if already initialized to avoid initial load conflicts
+            if (hasInitialized.current) {
+              fetchEmployeeData();
+            }
+          }
+        )
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [user, profile, navigate]);
 
   const fetchEmployeeData = async () => {
@@ -200,6 +208,7 @@ const Mitarbeiter = () => {
       toast.error('Ein Fehler ist aufgetreten');
     } finally {
       setLoading(false);
+      setHasInitialLoad(true);
     }
   };
 
@@ -216,7 +225,7 @@ const Mitarbeiter = () => {
     }
   };
 
-  if (loading) {
+  if (loading && !hasInitialLoad) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
