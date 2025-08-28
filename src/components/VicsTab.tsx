@@ -661,6 +661,20 @@ export const VicsTab = () => {
     }
   };
 
+  const getEmployeeEmploymentType = (emp: Employee): string | undefined => {
+    // First check if the employee record has employment_type
+    if (emp.employment_type) {
+      return emp.employment_type;
+    }
+    
+    // Fallback: check latest contract submission for this employee
+    const employeeSubmissions = contractSubmissions
+      .filter(submission => submission.employee_id === emp.id)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    
+    return employeeSubmissions[0]?.employment_type;
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'imported':
@@ -1301,7 +1315,7 @@ export const VicsTab = () => {
                           <TableCell className="font-medium">
                             <div className="flex items-center">
                               {employee.first_name} {employee.last_name}
-                              {getEmploymentTypeBadge(employee.employment_type)}
+                              {getEmploymentTypeBadge(getEmployeeEmploymentType(employee))}
                             </div>
                           </TableCell>
                           <TableCell>{employee.email}</TableCell>
