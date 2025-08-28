@@ -181,16 +181,24 @@ const Mitarbeiter = () => {
 
       // Calculate stats
       const completedCount = transformedOrders.filter(order => order.assignment_status === 'completed').length;
-      const totalEarnings = transformedOrders
-        .filter(order => order.assignment_status === 'completed')
-        .reduce((sum, order) => sum + order.premium, 0);
 
-      // Get average rating from evaluations
+      // Get approved evaluations with premium awarded
       const { data: evaluationsData } = await supabase
         .from('order_evaluations')
-        .select('rating')
+        .select('rating, premium_awarded')
         .eq('employee_id', employeeData.id)
         .eq('status', 'approved');
+
+      // Get premium adjustments
+      const { data: premiumAdjustments } = await supabase
+        .from('premium_adjustments')
+        .select('amount')
+        .eq('employee_id', employeeData.id);
+
+      // Calculate total earnings from approved evaluations and premium adjustments
+      const evaluationEarnings = evaluationsData?.reduce((sum, evaluation) => sum + (evaluation.premium_awarded || 0), 0) || 0;
+      const adjustmentEarnings = premiumAdjustments?.reduce((sum, adjustment) => sum + (adjustment.amount || 0), 0) || 0;
+      const totalEarnings = evaluationEarnings + adjustmentEarnings;
 
       const averageRating = evaluationsData && evaluationsData.length > 0 
         ? evaluationsData.reduce((sum, evaluation) => sum + evaluation.rating, 0) / evaluationsData.length
