@@ -219,9 +219,12 @@ const Mitarbeiter = () => {
   const handleSignOut = async () => {
     try {
       await signOut();
+      toast.success('Erfolgreich abgemeldet');
     } catch (error) {
       console.error('Error signing out:', error);
-      toast.error('Fehler beim Abmelden');
+    } finally {
+      // Always navigate to auth page regardless of error
+      navigate('/auth');
     }
   };
 

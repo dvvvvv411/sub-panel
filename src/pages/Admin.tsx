@@ -112,8 +112,13 @@ const Admin = () => {
   };
 
   const handleSignOut = async () => {
-    const { error } = await signOut();
-    if (!error) {
+    try {
+      await signOut();
+      toast.success('Erfolgreich abgemeldet');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    } finally {
+      // Always navigate to auth page regardless of error
       navigate('/auth');
     }
   };

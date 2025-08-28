@@ -5,14 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Eye, EyeOff, Zap } from 'lucide-react';
 
 const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, user } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already authenticated
@@ -52,29 +51,6 @@ const Auth = () => {
     setIsLoading(false);
   };
 
-  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    const fullName = formData.get('fullName') as string;
-
-    const { error } = await signUp(email, password, fullName);
-
-    if (error) {
-      if (error.message.includes('User already registered')) {
-        toast.error('Ein Benutzer mit dieser E-Mail-Adresse existiert bereits.');
-      } else {
-        toast.error('Registrierung fehlgeschlagen: ' + error.message);
-      }
-    } else {
-      toast.success('Registrierung erfolgreich! Bitte bestätigen Sie Ihre E-Mail-Adresse.');
-    }
-
-    setIsLoading(false);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
@@ -122,126 +98,56 @@ const Auth = () => {
               <CardHeader className="px-0 text-center mb-8">
                 <CardTitle className="text-2xl font-bold">Anmeldung</CardTitle>
                 <CardDescription>
-                  Melden Sie sich an oder erstellen Sie ein neues Konto
+                  Melden Sie sich mit Ihren Zugangsdaten an
                 </CardDescription>
               </CardHeader>
 
               <CardContent className="px-0">
-                <Tabs defaultValue="signin" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 mb-6">
-                    <TabsTrigger value="signin">Anmelden</TabsTrigger>
-                    <TabsTrigger value="signup">Registrieren</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="signin">
-                    <form onSubmit={handleSignIn} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="signin-email">E-Mail</Label>
-                        <Input
-                          id="signin-email"
-                          name="email"
-                          type="email"
-                          placeholder="ihre.email@beispiel.de"
-                          required
-                          disabled={isLoading}
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="signin-password">Passwort</Label>
-                        <div className="relative">
-                          <Input
-                            id="signin-password"
-                            name="password"
-                            type={showPassword ? 'text' : 'password'}
-                            placeholder="Ihr Passwort"
-                            required
-                            disabled={isLoading}
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                            onClick={() => setShowPassword(!showPassword)}
-                            disabled={isLoading}
-                          >
-                            {showPassword ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-
-                      <Button type="submit" className="w-full" disabled={isLoading}>
-                        {isLoading ? 'Anmelden...' : 'Anmelden'}
+                <form onSubmit={handleSignIn} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signin-email">E-Mail</Label>
+                    <Input
+                      id="signin-email"
+                      name="email"
+                      type="email"
+                      placeholder="ihre.email@beispiel.de"
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="signin-password">Passwort</Label>
+                    <div className="relative">
+                      <Input
+                        id="signin-password"
+                        name="password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="Ihr Passwort"
+                        required
+                        disabled={isLoading}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                        disabled={isLoading}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </Button>
-                    </form>
-                  </TabsContent>
+                    </div>
+                  </div>
 
-                  <TabsContent value="signup">
-                    <form onSubmit={handleSignUp} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-name">Vollständiger Name</Label>
-                        <Input
-                          id="signup-name"
-                          name="fullName"
-                          type="text"
-                          placeholder="Max Mustermann"
-                          required
-                          disabled={isLoading}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-email">E-Mail</Label>
-                        <Input
-                          id="signup-email"
-                          name="email"
-                          type="email"
-                          placeholder="ihre.email@beispiel.de"
-                          required
-                          disabled={isLoading}
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-password">Passwort</Label>
-                        <div className="relative">
-                          <Input
-                            id="signup-password"
-                            name="password"
-                            type={showPassword ? 'text' : 'password'}
-                            placeholder="Mindestens 6 Zeichen"
-                            required
-                            minLength={6}
-                            disabled={isLoading}
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                            onClick={() => setShowPassword(!showPassword)}
-                            disabled={isLoading}
-                          >
-                            {showPassword ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-
-                      <Button type="submit" className="w-full" disabled={isLoading}>
-                        {isLoading ? 'Registrieren...' : 'Konto erstellen'}
-                      </Button>
-                    </form>
-                  </TabsContent>
-                </Tabs>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? 'Anmelden...' : 'Anmelden'}
+                  </Button>
+                </form>
               </CardContent>
             </div>
           </div>
