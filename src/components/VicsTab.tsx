@@ -179,6 +179,7 @@ export const VicsTab = () => {
   const [isEmployeeDetailsOpen, setIsEmployeeDetailsOpen] = useState(false);
   const [employeeAssignments, setEmployeeAssignments] = useState<EmployeeAssignment[]>([]);
   const [employeeEvaluations, setEmployeeEvaluations] = useState<EmployeeEvaluation[]>([]);
+  const [employeePremiumAdjustments, setEmployeePremiumAdjustments] = useState<any[]>([]);
   const [detailsLoading, setDetailsLoading] = useState(false);
   
   // New states for assign order dialog
@@ -817,8 +818,22 @@ export const VicsTab = () => {
         return;
       }
 
+      // Fetch premium adjustments
+      const { data: premiumAdjustments, error: premiumAdjustmentsError } = await supabase
+        .from('premium_adjustments')
+        .select('id, amount, reason, created_at, created_by')
+        .eq('employee_id', employee.id)
+        .order('created_at', { ascending: false });
+
+      if (premiumAdjustmentsError) {
+        console.error('Error fetching premium adjustments:', premiumAdjustmentsError);
+        toast.error('Fehler beim Laden der Prämienanpassungen');
+        return;
+      }
+
       setEmployeeAssignments(assignments || []);
       setEmployeeEvaluations(evaluations || []);
+      setEmployeePremiumAdjustments(premiumAdjustments || []);
     } catch (error) {
       console.error('Error fetching employee details:', error);
       toast.error('Fehler beim Laden der Mitarbeiter-Details');
@@ -1508,6 +1523,8 @@ export const VicsTab = () => {
                             ? approvedEvaluations.reduce((sum, evaluation) => sum + evaluation.rating, 0) / approvedEvaluations.length 
                             : 0;
                           const totalAwarded = approvedEvaluations.reduce((sum, evaluation) => sum + evaluation.premium_awarded, 0);
+                          const adjustmentsTotal = employeePremiumAdjustments.reduce((sum, adjustment) => sum + adjustment.amount, 0);
+                          const totalPremium = totalAwarded + adjustmentsTotal;
                           
                           return (
                             <>
@@ -1549,7 +1566,7 @@ export const VicsTab = () => {
                                   </Button>
                                 </div>
                                 <div className="font-medium text-lg">
-                                  {totalAwarded > 0 ? `€${totalAwarded.toFixed(2)}` : '-'}
+                                  {totalPremium > 0 ? `€${totalPremium.toFixed(2)}` : '-'}
                                 </div>
                               </div>
                               <div className="text-sm">
