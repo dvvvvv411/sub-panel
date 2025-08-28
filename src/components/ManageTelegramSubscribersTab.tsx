@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Trash2, Edit, MessageCircle } from "lucide-react";
+import { Plus, Trash2, Edit, MessageCircle, Send } from "lucide-react";
 
 interface TelegramSubscriber {
   id: string;
@@ -28,6 +28,7 @@ const ManageTelegramSubscribersTab = () => {
   const [editingSubscriber, setEditingSubscriber] = useState<TelegramSubscriber | null>(null);
   const [newChatId, setNewChatId] = useState("");
   const [newLabel, setNewLabel] = useState("");
+  const [sendingTest, setSendingTest] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -189,6 +190,49 @@ const ManageTelegramSubscribersTab = () => {
     setIsEditDialogOpen(true);
   };
 
+  const sendTestMessage = async () => {
+    if (subscribers.filter(s => s.is_active).length === 0) {
+      toast({
+        title: "Keine aktiven Abonnenten",
+        description: "Es sind keine aktiven Telegram-Abonnenten vorhanden.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setSendingTest(true);
+
+      const { data, error } = await supabase.functions.invoke('send-telegram-notification', {
+        body: {
+          type: 'test',
+          payload: {
+            timestamp: new Date().toLocaleString('de-DE')
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Test erfolgreich",
+        description: `Testnachricht an ${data.sent} von ${data.total} Abonnenten gesendet.`,
+      });
+
+      // Refresh subscribers to update last_notified_at
+      fetchSubscribers();
+    } catch (error: any) {
+      console.error('Error sending test message:', error);
+      toast({
+        title: "Fehler",
+        description: "Testnachricht konnte nicht gesendet werden.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center p-8">Lade...</div>;
   }
@@ -211,10 +255,25 @@ const ManageTelegramSubscribersTab = () => {
             <div className="text-sm text-muted-foreground">
               <strong>Aktive Abonnenten:</strong> {subscribers.filter(s => s.is_active).length} von {subscribers.length}
             </div>
-            <Button onClick={() => setIsAddDialogOpen(true)} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Abonnent hinzufügen
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={sendTestMessage} 
+                disabled={sendingTest || subscribers.filter(s => s.is_active).length === 0}
+                variant="outline" 
+                className="flex items-center gap-2"
+              >
+                {sendingTest ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                Test senden
+              </Button>
+              <Button onClick={() => setIsAddDialogOpen(true)} className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Abonnent hinzufügen
+              </Button>
+            </div>
           </div>
 
           {subscribers.length === 0 ? (

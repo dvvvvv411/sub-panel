@@ -104,6 +104,13 @@ serve(async (req) => {
                  `⭐ Bewertung: ${payload.rating}/5`
         break
         
+      case 'test':
+        message = `🧪 Test-Nachricht!\n\n` +
+                 `Diese Nachricht wurde vom Admin-Panel gesendet.\n` +
+                 `📅 Zeit: ${payload.timestamp}\n\n` +
+                 `✅ Telegram-Bot funktioniert korrekt!`
+        break
+        
       default:
         console.error('Unknown notification type:', type)
         return new Response(
