@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,6 +23,7 @@ interface Employee {
   email: string;
   phone?: string | null;
   status: string;
+  employment_type?: string | null;
   created_at: string;
   created_by?: string;
   updated_at?: string;
@@ -158,6 +161,9 @@ export const VicsTab = () => {
     email: '',
     phone: ''
   });
+  const [skipContract, setSkipContract] = useState(false);
+  const [employmentType, setEmploymentType] = useState('');
+  const [password, setPassword] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [selectedSubmission, setSelectedSubmission] = useState<ContractSubmission | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -272,16 +278,31 @@ export const VicsTab = () => {
       return;
     }
 
+    if (skipContract) {
+      if (!employmentType) {
+        toast.error('Bitte wählen Sie eine Anstellungsart aus');
+        return;
+      }
+      if (!password || password.length < 6) {
+        toast.error('Passwort muss mindestens 6 Zeichen haben');
+        return;
+      }
+    }
+
     try {
-      const { error } = await supabase
+      // Insert employee with employment_type if skip is active
+      const { data: employeeData, error } = await supabase
         .from('employees')
         .insert({
           first_name: formData.firstName,
           last_name: formData.lastName,
           email: formData.email,
           phone: formData.phone || null,
+          employment_type: skipContract ? employmentType : null,
           status: 'imported'
-        });
+        })
+        .select()
+        .single();
 
       if (error) {
         console.error('Error adding employee:', error);
@@ -289,8 +310,51 @@ export const VicsTab = () => {
         return;
       }
 
-      toast.success('Mitarbeiter erfolgreich hinzugefügt');
+      if (skipContract && employeeData) {
+        // Call create-user edge function directly
+        try {
+          const { error: createUserError } = await supabase.functions.invoke('create-user', {
+            body: { 
+              email: formData.email, 
+              password: password,
+              employeeId: employeeData.id 
+            }
+          });
+
+          if (createUserError) {
+            // Rollback: delete the employee we just created
+            await supabase
+              .from('employees')
+              .delete()
+              .eq('id', employeeData.id);
+            
+            console.error('Error creating user account:', createUserError);
+            toast.error('Fehler beim Erstellen des Benutzerkontos');
+            return;
+          }
+
+          toast.success('Mitarbeiter erfolgreich erstellt und Account angelegt');
+          setActiveTab('created');
+        } catch (createError) {
+          // Rollback: delete the employee we just created
+          await supabase
+            .from('employees')
+            .delete()
+            .eq('id', employeeData.id);
+          
+          console.error('Error creating user account:', createError);
+          toast.error('Fehler beim Erstellen des Benutzerkontos');
+          return;
+        }
+      } else {
+        toast.success('Mitarbeiter erfolgreich hinzugefügt');
+      }
+
+      // Reset form
       setFormData({ firstName: '', lastName: '', email: '', phone: '' });
+      setSkipContract(false);
+      setEmploymentType('');
+      setPassword('');
       fetchEmployees();
     } catch (error) {
       console.error('Error adding employee:', error);
@@ -868,9 +932,48 @@ export const VicsTab = () => {
                   placeholder="+49 123 456789"
                 />
               </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="skipContract"
+                  checked={skipContract}
+                  onCheckedChange={(checked) => setSkipContract(checked === true)}
+                />
+                <Label htmlFor="skipContract">Arbeitsvertrag skippen</Label>
+              </div>
+
+              {skipContract && (
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+                  <div>
+                    <Label htmlFor="employmentType">Anstellungsart *</Label>
+                    <Select value={employmentType} onValueChange={setEmploymentType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Wählen Sie eine Anstellungsart" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="minijob">Minijob</SelectItem>
+                        <SelectItem value="teilzeit">Teilzeit</SelectItem>
+                        <SelectItem value="vollzeit">Vollzeit</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="password">Passwort *</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Mindestens 6 Zeichen"
+                      minLength={6}
+                    />
+                  </div>
+                </div>
+              )}
+              
               <Button type="submit" className="w-full">
                 <Plus className="h-4 w-4 mr-2" />
-                Mitarbeiter hinzufügen
+                {skipContract ? 'Mitarbeiter erstellen' : 'Mitarbeiter hinzufügen'}
               </Button>
             </form>
           </CardContent>
