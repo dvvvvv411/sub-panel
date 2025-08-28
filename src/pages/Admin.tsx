@@ -34,10 +34,18 @@ const Admin = () => {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
   
-  // Get active tab from URL, default to 'overview'
-  const activeTab = searchParams.get('tab') || 'overview';
+  // Get active tab from sessionStorage first, then URL, default to 'overview'
+  const getInitialTab = () => {
+    const savedTab = sessionStorage.getItem('admin-active-tab');
+    const urlTab = searchParams.get('tab');
+    return savedTab || urlTab || 'overview';
+  };
+  
+  const [activeTab, setActiveTab] = useState(getInitialTab);
   
   const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    sessionStorage.setItem('admin-active-tab', value);
     setSearchParams({ tab: value });
   };
 
