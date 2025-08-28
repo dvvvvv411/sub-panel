@@ -370,7 +370,7 @@ export const VicsTab = () => {
       }
 
       // Create the link with custom base URL
-      const baseUrl = 'https://preview--vic-panel-greeting.lovable.app';
+      const baseUrl = 'https://web.innovaatech.de';
       const contractLink = `${baseUrl}/arbeitsvertrag?token=${token}`;
       
       // Copy to clipboard
@@ -417,7 +417,7 @@ export const VicsTab = () => {
       }
 
       // Create the link with custom base URL if available
-      const baseUrl = 'https://preview--vic-panel-greeting.lovable.app';
+      const baseUrl = 'https://web.innovaatech.de';
       const contractLink = `${baseUrl}/arbeitsvertrag?token=${token}`;
       
       // Copy to clipboard
