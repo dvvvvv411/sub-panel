@@ -749,7 +749,7 @@ const AuftragWhatsapp = () => {
                     <div>
                       <p className="font-medium text-green-900">Termin bestätigt!</p>
                       <p className="text-sm text-green-700 mt-1">
-                        Sie werden den Auftrag am {format(new Date(appointment.scheduled_at), 'dd.MM.yyyy um HH:mm', { locale: de })} Uhr über WhatsApp durchführen.
+                        Sie werden den Auftrag am {format(new Date(appointment.scheduled_at), 'dd.MM.yyyy \'um\' HH:mm', { locale: de })} Uhr über WhatsApp durchführen.
                       </p>
                     </div>
                   </div>
