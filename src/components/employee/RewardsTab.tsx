@@ -20,6 +20,7 @@ interface RewardsTabProps {
 
 export const RewardsTab: React.FC<RewardsTabProps> = ({ employee }) => {
   const [approvedEvaluations, setApprovedEvaluations] = React.useState<any[]>([]);
+  const [premiumAdjustments, setPremiumAdjustments] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [activeSince, setActiveSince] = React.useState<string>('');
   const [assignedOrders, setAssignedOrders] = React.useState<any[]>([]);
@@ -78,6 +79,19 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ employee }) => {
       }
 
       setApprovedEvaluations(data || []);
+
+      // Get premium adjustments
+      const { data: adjustmentData, error: adjustmentError } = await supabase
+        .from('premium_adjustments')
+        .select('*')
+        .eq('employee_id', employee.id)
+        .order('created_at', { ascending: false });
+
+      if (adjustmentError) {
+        console.error('Error fetching premium adjustments:', adjustmentError);
+      }
+
+      setPremiumAdjustments(adjustmentData || []);
       
       // Fallback: if no created_at, use earliest approved evaluation date
       if (!employeeData?.created_at && data && data.length > 0) {
@@ -105,7 +119,8 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ employee }) => {
 
   const completedOrders = assignedOrders.filter((o: any) => o.status === 'completed');
   const completedCount = completedOrders.length;
-  const totalPremium = approvedEvaluations.reduce((sum: number, evaluation: any) => sum + (evaluation.premium_awarded || 0), 0);
+  const totalPremium = approvedEvaluations.reduce((sum: number, evaluation: any) => sum + (evaluation.premium_awarded || 0), 0) +
+                       premiumAdjustments.reduce((sum: number, adjustment: any) => sum + (adjustment.amount || 0), 0);
 
   const achievements = [
     { 
@@ -237,7 +252,7 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ employee }) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {approvedEvaluations.length === 0 ? (
+          {(approvedEvaluations.length === 0 && premiumAdjustments.length === 0) ? (
             <div className="text-center py-12">
               <div className="mx-auto mb-6 p-4 rounded-full bg-muted/50 w-fit">
                 <Coins className="h-12 w-12 text-muted-foreground" />
@@ -249,8 +264,36 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ employee }) => {
             </div>
           ) : (
             <div className="space-y-3">
+              {/* Premium Adjustments */}
+              {premiumAdjustments.map((adjustment, index) => (
+                <div key={`adjustment-${index}`} className="group flex items-center justify-between p-4 rounded-lg border border-muted/50 bg-blue-50/30 hover:bg-blue-50/50 hover:border-blue-200/60 transition-all duration-300">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2.5 rounded-lg bg-blue-500/10">
+                      <Gift className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-semibold text-foreground group-hover:text-blue-800 transition-colors">
+                        {adjustment.reason || 'Prämien-Anpassung'}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        <span>
+                          Hinzugefügt am {new Date(adjustment.created_at).toLocaleDateString('de-DE')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <Badge className="bg-blue-500/10 text-blue-800 text-base font-bold px-3 py-1.5 hover:bg-blue-500/20 transition-colors">
+                      €{adjustment.amount.toFixed(2)}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+              
+              {/* Order Evaluations */}
               {approvedEvaluations.map((evaluation, index) => (
-                <div key={index} className="group flex items-center justify-between p-4 rounded-lg border border-muted/50 bg-green-50/30 hover:bg-green-50/50 hover:border-green-200/60 transition-all duration-300">
+                <div key={`evaluation-${index}`} className="group flex items-center justify-between p-4 rounded-lg border border-muted/50 bg-green-50/30 hover:bg-green-50/50 hover:border-green-200/60 transition-all duration-300">
                   <div className="flex items-center gap-4">
                     <div className="p-2.5 rounded-lg bg-green-500/10">
                       <Trophy className="h-5 w-5 text-green-600" />

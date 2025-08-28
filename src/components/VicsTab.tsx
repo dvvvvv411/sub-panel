@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { CreateEmployeeDialog } from '@/components/CreateEmployeeDialog';
 import { AssignToEmployeeDialog } from '@/components/AssignToEmployeeDialog';
 import { FileUploadComponent } from '@/components/FileUploadComponent';
+import { AddPremiumAdjustmentDialog } from '@/components/AddPremiumAdjustmentDialog';
 
 interface Employee {
   id: string;
@@ -188,6 +189,10 @@ export const VicsTab = () => {
   const [selectedEmployeeForDeactivation, setSelectedEmployeeForDeactivation] = useState<Employee | null>(null);
   const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
   const [isDeactivating, setIsDeactivating] = useState(false);
+  
+  // New states for premium adjustment dialog
+  const [selectedEmployeeForPremium, setSelectedEmployeeForPremium] = useState<Employee | null>(null);
+  const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchEmployees();
@@ -1529,7 +1534,20 @@ export const VicsTab = () => {
                                 </div>
                               </div>
                               <div className="text-sm">
-                                <span className="text-muted-foreground">Gesamte Prämien:</span>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-muted-foreground">Gesamte Prämien:</span>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                    onClick={() => {
+                                      setSelectedEmployeeForPremium(selectedEmployeeForDetails);
+                                      setIsPremiumDialogOpen(true);
+                                    }}
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
+                                </div>
                                 <div className="font-medium text-lg">
                                   {totalAwarded > 0 ? `€${totalAwarded.toFixed(2)}` : '-'}
                                 </div>
@@ -1751,6 +1769,21 @@ export const VicsTab = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Add Premium Adjustment Dialog */}
+      <AddPremiumAdjustmentDialog
+        open={isPremiumDialogOpen}
+        onOpenChange={setIsPremiumDialogOpen}
+        employee={selectedEmployeeForPremium}
+        onSuccess={() => {
+          // Refresh employee details if they're open for the same employee
+          if (selectedEmployeeForDetails?.id === selectedEmployeeForPremium?.id) {
+            handleEmployeeDetails(selectedEmployeeForDetails);
+          }
+          setIsPremiumDialogOpen(false);
+          setSelectedEmployeeForPremium(null);
+        }}
+      />
     </div>
   );
 };
