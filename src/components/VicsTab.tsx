@@ -1223,7 +1223,10 @@ export const VicsTab = () => {
                       return (
                         <TableRow key={employee.id}>
                           <TableCell className="font-medium">
-                            {employee.first_name} {employee.last_name}
+                            <div className="flex items-center">
+                              {employee.first_name} {employee.last_name}
+                              {getEmploymentTypeBadge(employee.employment_type)}
+                            </div>
                           </TableCell>
                           <TableCell>{employee.email}</TableCell>
                           <TableCell>{employee.phone || '-'}</TableCell>
