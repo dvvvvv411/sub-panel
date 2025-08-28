@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -59,6 +59,10 @@ const AuftragWhatsapp = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
+  // Refs to control initialization and reload behavior
+  const hasInitializedRef = useRef(false);
+  const hasReloadedOnFeedbackRef = useRef(false);
+  
   const [order, setOrder] = useState<OrderWithWhatsApp | null>(null);
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [assignmentId, setAssignmentId] = useState<string | null>(null);
@@ -114,8 +118,9 @@ const AuftragWhatsapp = () => {
   };
 
   useEffect(() => {
-    if (!orderId || !user) return;
+    if (!orderId || !user || hasInitializedRef.current) return;
     
+    hasInitializedRef.current = true;
     fetchOrderAndEmployee();
   }, [orderId, user]);
 
@@ -140,6 +145,14 @@ const AuftragWhatsapp = () => {
           
           if (newAppointment.feedback_requested && !appointment.feedback_requested) {
             toast.success('Feedback wurde angefordert! Bitte füllen Sie den Bewertungsbogen aus.');
+            
+            // Trigger single reload when feedback is requested (admin action)
+            if (!hasReloadedOnFeedbackRef.current) {
+              hasReloadedOnFeedbackRef.current = true;
+              window.location.reload();
+              return;
+            }
+            
             fetchEvaluationQuestions();
           }
         }
@@ -153,7 +166,10 @@ const AuftragWhatsapp = () => {
 
   const fetchOrderAndEmployee = async () => {
     try {
-      setLoading(true);
+      // Only show loading overlay on initial load, not on tab switches
+      if (!hasInitializedRef.current) {
+        setLoading(true);
+      }
 
       // Get employee by email
       const { data: employeeData, error: employeeError } = await supabase
@@ -243,7 +259,10 @@ const AuftragWhatsapp = () => {
       console.error('Error:', error);
       toast.error('Ein Fehler ist aufgetreten');
     } finally {
-      setLoading(false);
+      // Only update loading state if it was actually loading
+      if (loading) {
+        setLoading(false);
+      }
     }
   };
 
