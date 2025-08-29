@@ -484,6 +484,10 @@ export type Database = {
           created_by: string
           employee_id: string
           id: string
+          is_order_related: boolean
+          order_number: string | null
+          order_provider: string | null
+          order_title: string | null
           reason: string | null
           updated_at: string
         }
@@ -493,6 +497,10 @@ export type Database = {
           created_by: string
           employee_id: string
           id?: string
+          is_order_related?: boolean
+          order_number?: string | null
+          order_provider?: string | null
+          order_title?: string | null
           reason?: string | null
           updated_at?: string
         }
@@ -502,6 +510,10 @@ export type Database = {
           created_by?: string
           employee_id?: string
           id?: string
+          is_order_related?: boolean
+          order_number?: string | null
+          order_provider?: string | null
+          order_title?: string | null
           reason?: string | null
           updated_at?: string
         }

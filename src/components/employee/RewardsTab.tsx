@@ -80,7 +80,7 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ employee }) => {
 
       setApprovedEvaluations(data || []);
 
-      // Get premium adjustments
+      // Get premium adjustments with new fields
       const { data: adjustmentData, error: adjustmentError } = await supabase
         .from('premium_adjustments')
         .select('*')
@@ -266,15 +266,37 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ employee }) => {
             <div className="space-y-3">
               {/* Premium Adjustments */}
               {premiumAdjustments.map((adjustment, index) => (
-                <div key={`adjustment-${index}`} className="group flex items-center justify-between p-4 rounded-lg border border-muted/50 bg-blue-50/30 hover:bg-blue-50/50 hover:border-blue-200/60 transition-all duration-300">
+                <div key={`adjustment-${index}`} className={`group flex items-center justify-between p-4 rounded-lg border border-muted/50 transition-all duration-300 ${
+                  adjustment.is_order_related 
+                    ? 'bg-green-50/30 hover:bg-green-50/50 hover:border-green-200/60' 
+                    : 'bg-blue-50/30 hover:bg-blue-50/50 hover:border-blue-200/60'
+                }`}>
                   <div className="flex items-center gap-4">
-                    <div className="p-2.5 rounded-lg bg-blue-500/10">
-                      <Gift className="h-5 w-5 text-blue-600" />
+                    <div className={`p-2.5 rounded-lg ${
+                      adjustment.is_order_related ? 'bg-green-500/10' : 'bg-blue-500/10'
+                    }`}>
+                      <Gift className={`h-5 w-5 ${
+                        adjustment.is_order_related ? 'text-green-600' : 'text-blue-600'
+                      }`} />
                     </div>
                     <div className="space-y-1">
-                      <p className="font-semibold text-foreground group-hover:text-blue-800 transition-colors">
-                        {adjustment.reason || 'Prämien-Anpassung'}
+                      <p className={`font-semibold transition-colors ${
+                        adjustment.is_order_related 
+                          ? 'text-foreground group-hover:text-green-800' 
+                          : 'text-foreground group-hover:text-blue-800'
+                      }`}>
+                        {adjustment.is_order_related && adjustment.order_title 
+                          ? adjustment.order_title 
+                          : (adjustment.reason || 'Prämien-Anpassung')
+                        }
                       </p>
+                      {adjustment.is_order_related && (adjustment.order_number || adjustment.order_provider) && (
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                          {adjustment.order_number && <span>{adjustment.order_number}</span>}
+                          {adjustment.order_number && adjustment.order_provider && <span>•</span>}
+                          {adjustment.order_provider && <span>{adjustment.order_provider}</span>}
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Calendar className="h-3 w-3" />
                         <span>
@@ -284,7 +306,11 @@ export const RewardsTab: React.FC<RewardsTabProps> = ({ employee }) => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <Badge className="bg-blue-500/10 text-blue-800 text-base font-bold px-3 py-1.5 hover:bg-blue-500/20 transition-colors">
+                    <Badge className={`text-base font-bold px-3 py-1.5 transition-colors ${
+                      adjustment.is_order_related 
+                        ? 'bg-green-500/10 text-green-800 hover:bg-green-500/20' 
+                        : 'bg-blue-500/10 text-blue-800 hover:bg-blue-500/20'
+                    }`}>
                       €{adjustment.amount.toFixed(2)}
                     </Badge>
                   </div>

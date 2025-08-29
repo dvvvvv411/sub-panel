@@ -1,9 +1,11 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -29,6 +31,10 @@ export const AddPremiumAdjustmentDialog: React.FC<AddPremiumAdjustmentDialogProp
 }) => {
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
+  const [isOrderRelated, setIsOrderRelated] = useState(false);
+  const [orderTitle, setOrderTitle] = useState('');
+  const [orderNumber, setOrderNumber] = useState('');
+  const [orderProvider, setOrderProvider] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,6 +52,21 @@ export const AddPremiumAdjustmentDialog: React.FC<AddPremiumAdjustmentDialogProp
       return;
     }
 
+    if (isOrderRelated) {
+      if (!orderTitle.trim()) {
+        toast.error('Bitte geben Sie einen Auftragstitel ein');
+        return;
+      }
+      if (!orderNumber.trim()) {
+        toast.error('Bitte geben Sie eine Auftragsnummer ein');
+        return;
+      }
+      if (!orderProvider.trim()) {
+        toast.error('Bitte geben Sie einen Anbieter ein');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       const { error } = await supabase
@@ -54,6 +75,10 @@ export const AddPremiumAdjustmentDialog: React.FC<AddPremiumAdjustmentDialogProp
           employee_id: employee.id,
           amount: parseFloat(amount),
           reason: reason.trim(),
+          is_order_related: isOrderRelated,
+          order_title: isOrderRelated ? orderTitle.trim() : null,
+          order_number: isOrderRelated ? orderNumber.trim() : null,
+          order_provider: isOrderRelated ? orderProvider.trim() : null,
           created_by: (await supabase.auth.getUser()).data.user?.id
         });
 
@@ -66,6 +91,10 @@ export const AddPremiumAdjustmentDialog: React.FC<AddPremiumAdjustmentDialogProp
       toast.success(`Prämie von €${amount} für ${employee.first_name} ${employee.last_name} hinzugefügt`);
       setAmount('');
       setReason('');
+      setIsOrderRelated(false);
+      setOrderTitle('');
+      setOrderNumber('');
+      setOrderProvider('');
       onOpenChange(false);
       onSuccess();
     } catch (error) {
@@ -98,6 +127,7 @@ export const AddPremiumAdjustmentDialog: React.FC<AddPremiumAdjustmentDialogProp
               required
             />
           </div>
+          
           <div className="space-y-2">
             <Label htmlFor="reason">Grund für die Prämie</Label>
             <Textarea
@@ -109,6 +139,53 @@ export const AddPremiumAdjustmentDialog: React.FC<AddPremiumAdjustmentDialogProp
               required
             />
           </div>
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="order-related"
+              checked={isOrderRelated}
+              onCheckedChange={setIsOrderRelated}
+            />
+            <Label htmlFor="order-related">Prämie für Auftrag</Label>
+          </div>
+
+          {isOrderRelated && (
+            <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
+              <div className="space-y-2">
+                <Label htmlFor="order-title">Auftragstitel</Label>
+                <Input
+                  id="order-title"
+                  value={orderTitle}
+                  onChange={(e) => setOrderTitle(e.target.value)}
+                  placeholder="z.B. App-Test für Platzhalter"
+                  required={isOrderRelated}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="order-number">Auftragsnummer</Label>
+                <Input
+                  id="order-number"
+                  value={orderNumber}
+                  onChange={(e) => setOrderNumber(e.target.value)}
+                  placeholder="z.B. #157425"
+                  required={isOrderRelated}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="order-provider">Anbieter</Label>
+                <Input
+                  id="order-provider"
+                  value={orderProvider}
+                  onChange={(e) => setOrderProvider(e.target.value)}
+                  placeholder="z.B. BBVA"
+                  required={isOrderRelated}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2">
             <Button
               type="button"
