@@ -174,7 +174,7 @@ export const CreateEmployeeDialog: React.FC<CreateEmployeeDialogProps> = ({
             <Checkbox
               id="skipAV"
               checked={skipAV}
-              onCheckedChange={setSkipAV}
+              onCheckedChange={(checked) => setSkipAV(checked === true)}
             />
             <Label htmlFor="skipAV">AV überspringen (Mitarbeiter direkt aktiv setzen)</Label>
           </div>
