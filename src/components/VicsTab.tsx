@@ -1395,12 +1395,7 @@ export const VicsTab = () => {
       </Tabs>
 
       {/* Create Account Dialog */}
-      <CreateEmployeeDialog
-        employee={selectedEmployee}
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        onSuccess={handleAccountCreated}
-      />
+      <CreateEmployeeDialog onEmployeeCreated={handleAccountCreated} />
 
       {/* Contract Details Dialog */}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
