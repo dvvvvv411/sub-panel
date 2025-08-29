@@ -56,30 +56,43 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ stats, assignedOrders,
     if (!employee?.id) return;
 
     try {
-      // Fetch employment type from latest contract submission
-      const { data: contractData } = await supabase
-        .from('employment_contract_submissions')
+      // First try to get employment type from employees table
+      const { data: employeeData } = await supabase
+        .from('employees')
         .select('employment_type')
-        .eq('employee_id', employee.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
+        .eq('id', employee.id)
         .maybeSingle();
+
+      let employmentType = employeeData?.employment_type;
+
+      // If not found in employees table, fall back to contract submission
+      if (!employmentType) {
+        const { data: contractData } = await supabase
+          .from('employment_contract_submissions')
+          .select('employment_type')
+          .eq('employee_id', employee.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        employmentType = contractData?.employment_type;
+      }
 
       // Set employment type and monthly goal
       let employmentTypeNormalized = 'minijob'; // default
       let goal = 556; // default: Minijob
       
-      if (contractData?.employment_type) {
-        const empType = contractData.employment_type.toLowerCase();
+      if (employmentType) {
+        const empType = employmentType.toLowerCase();
         if (empType.includes('mini')) {
           employmentTypeNormalized = 'minijob';
           goal = 556;
         } else if (empType.includes('teil')) {
           employmentTypeNormalized = 'teilzeit';
-          goal = 1600;
+          goal = 2200;
         } else if (empType.includes('voll')) {
           employmentTypeNormalized = 'vollzeit';
-          goal = 3300;
+          goal = 3200;
         }
       }
       
