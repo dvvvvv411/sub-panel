@@ -1,259 +1,243 @@
+
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Copy, Eye, EyeOff, RefreshCw, UserCheck, Edit3 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-
-interface Employee {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone?: string | null;
-  status: string; // Changed to string to match database
-  created_at: string;
-  created_by?: string;
-  updated_at?: string;
-}
+import { Plus, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CreateEmployeeDialogProps {
-  employee: Employee | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: (employeeId: string) => void;
+  onEmployeeCreated: () => void;
 }
 
-const generatePassword = (): string => {
-  const length = 12;
-  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let password = "";
-  for (let i = 0; i < length; i++) {
-    password += charset.charAt(Math.floor(Math.random() * charset.length));
-  }
-  return password;
-};
-
 export const CreateEmployeeDialog: React.FC<CreateEmployeeDialogProps> = ({
-  employee,
-  isOpen,
-  onClose,
-  onSuccess
+  onEmployeeCreated
 }) => {
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
-  const [useCustomPassword, setUseCustomPassword] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const [city, setCity] = useState('');
+  const [employmentType, setEmploymentType] = useState('');
+  const [skipAV, setSkipAV] = useState(false);
 
-  React.useEffect(() => {
-    if (isOpen && employee) {
-      if (!useCustomPassword) {
-        setPassword(generatePassword());
-      }
-      setShowPassword(true);
-      setUseCustomPassword(false);
-    }
-  }, [isOpen, employee]);
-
-  const handleRegeneratePassword = () => {
-    setPassword(generatePassword());
+  const resetForm = () => {
+    setFirstName('');
+    setLastName('');
+    setEmail('');
+    setPhone('');
+    setAddress('');
+    setPostalCode('');
+    setCity('');
+    setEmploymentType('');
+    setSkipAV(false);
   };
 
-  const handleToggleCustomPassword = (checked: boolean) => {
-    setUseCustomPassword(checked);
-    if (!checked) {
-      setPassword(generatePassword());
-    } else {
-      setPassword('');
-    }
-  };
-
-  const handleCopyPassword = async () => {
-    try {
-      await navigator.clipboard.writeText(password);
-      toast.success('Passwort in Zwischenablage kopiert');
-    } catch (error) {
-      toast.error('Fehler beim Kopieren des Passworts');
-    }
-  };
-
-  const handleCreateAccount = async () => {
-    if (!employee || !password) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    setIsCreating(true);
-    
+    if (!firstName || !lastName || !email) {
+      toast.error('Bitte füllen Sie alle Pflichtfelder aus');
+      return;
+    }
+
+    if (skipAV && (!address || !postalCode || !city)) {
+      toast.error('Bei übersprungenen AV sind Adresse, PLZ und Stadt erforderlich');
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      console.log('Creating account for:', employee.email);
-      
-      // Use Edge Function to create user without affecting current session
-      const { data, error } = await supabase.functions.invoke('create-user', {
-        body: {
-          email: employee.email,
-          password: password,
-          employeeId: employee.id
-        }
-      });
+      const { data, error } = await supabase
+        .from('employees')
+        .insert({
+          first_name: firstName,
+          last_name: lastName,
+          email: email,
+          phone: phone || null,
+          address: skipAV ? address : null,
+          postal_code: skipAV ? postalCode : null,
+          city: skipAV ? city : null,
+          employment_type: employmentType || null,
+          status: skipAV ? 'active' : 'imported'
+        })
+        .select()
+        .single();
 
       if (error) {
-        console.error('Edge function error:', error);
-        toast.error(`Fehler beim Erstellen des Accounts: ${error.message}`);
+        console.error('Error creating employee:', error);
+        toast.error('Fehler beim Erstellen des Mitarbeiters');
         return;
       }
 
-      if (data.error) {
-        console.error('Server error:', data.error);
-        toast.error(`Fehler beim Erstellen des Accounts: ${data.error}`);
-        return;
-      }
-
-      console.log('User created successfully via Edge Function:', data.userId);
-
-      toast.success(`Account für ${employee.first_name} ${employee.last_name} erfolgreich erstellt!`);
-      onSuccess(employee.id);
+      console.log('Employee created:', data);
+      toast.success(`Mitarbeiter ${firstName} ${lastName} wurde erfolgreich erstellt`);
+      
+      onEmployeeCreated();
+      setOpen(false);
+      resetForm();
     } catch (error) {
-      console.error('Error creating account:', error);
-      toast.error('Fehler beim Erstellen des Accounts');
+      console.error('Error:', error);
+      toast.error('Ein unerwarteter Fehler ist aufgetreten');
     } finally {
-      setIsCreating(false);
+      setLoading(false);
     }
   };
 
-  if (!employee) return null;
-
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
+          Neuer Mitarbeiter
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserCheck className="h-5 w-5 text-primary" />
-            Account erstellen
-          </DialogTitle>
-          <DialogDescription>
-            Erstellen Sie einen Account für {employee.first_name} {employee.last_name}
-          </DialogDescription>
+          <DialogTitle>Neuen Mitarbeiter erstellen</DialogTitle>
         </DialogHeader>
-
-        <div className="space-y-4">
-          {/* Employee Info */}
-          <Card>
-            <CardContent className="pt-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <Label className="text-xs text-muted-foreground">Name</Label>
-                  <p className="font-medium">{employee.first_name} {employee.last_name}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">E-Mail</Label>
-                  <p className="font-medium">{employee.email}</p>
-                </div>
-                {employee.phone && (
-                  <div className="col-span-2">
-                    <Label className="text-xs text-muted-foreground">Telefon</Label>
-                    <p className="font-medium">{employee.phone}</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Password Options */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="custom-password">Individuelles Passwort</Label>
-                <p className="text-xs text-muted-foreground">
-                  Eigenes Passwort eingeben statt automatisch generieren
-                </p>
-              </div>
-              <Switch
-                id="custom-password"
-                checked={useCustomPassword}
-                onCheckedChange={handleToggleCustomPassword}
-                disabled={isCreating}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="firstName">Vorname *</Label>
+              <Input
+                id="firstName"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
               />
             </div>
-
-            {/* Password Section */}
-            <div className="space-y-2">
-              <Label htmlFor="password">
-                {useCustomPassword ? 'Individuelles Passwort' : 'Generiertes Passwort'}
-              </Label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={useCustomPassword ? (e) => setPassword(e.target.value) : undefined}
-                    readOnly={!useCustomPassword}
-                    className="pr-20"
-                    placeholder={useCustomPassword ? "Passwort eingeben..." : ""}
-                  />
-                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex gap-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      onClick={handleCopyPassword}
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-                {!useCustomPassword && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRegeneratePassword}
-                    disabled={isCreating}
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {useCustomPassword 
-                  ? "Geben Sie ein sicheres Passwort ein (nur Buchstaben und Zahlen empfohlen)."
-                  : "Notieren Sie sich das Passwort, bevor Sie den Account erstellen."
-                }
-              </p>
+            <div>
+              <Label htmlFor="lastName">Nachname *</Label>
+              <Input
+                id="lastName"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+              />
             </div>
           </div>
-        </div>
+          
+          <div>
+            <Label htmlFor="email">E-Mail *</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="phone">Telefon</Label>
+            <Input
+              id="phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+          </div>
 
-        <DialogFooter className="flex gap-2">
-          <Button variant="outline" onClick={onClose} disabled={isCreating}>
-            Abbrechen
-          </Button>
-          <Button onClick={handleCreateAccount} disabled={isCreating}>
-            {isCreating ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                Erstelle Account...
-              </>
-            ) : (
-              <>
-                <UserCheck className="h-4 w-4 mr-2" />
-                Account erstellen
-              </>
-            )}
-          </Button>
-        </DialogFooter>
+          <div>
+            <Label htmlFor="employmentType">Art der Beschäftigung</Label>
+            <Select value={employmentType} onValueChange={setEmploymentType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Bitte wählen..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="vollzeit">Vollzeit</SelectItem>
+                <SelectItem value="teilzeit">Teilzeit</SelectItem>
+                <SelectItem value="minijob">Minijob</SelectItem>
+                <SelectItem value="werkstudent">Werkstudent</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="skipAV"
+              checked={skipAV}
+              onCheckedChange={setSkipAV}
+            />
+            <Label htmlFor="skipAV">AV überspringen (Mitarbeiter direkt aktiv setzen)</Label>
+          </div>
+
+          {skipAV && (
+            <div className="space-y-4 p-4 bg-muted/30 rounded-lg">
+              <div>
+                <Label htmlFor="address">Adresse + Hausnummer *</Label>
+                <Input
+                  id="address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="z.B. Musterstraße 15"
+                  required={skipAV}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="postalCode">PLZ *</Label>
+                  <Input
+                    id="postalCode"
+                    value={postalCode}
+                    onChange={(e) => setPostalCode(e.target.value)}
+                    placeholder="12345"
+                    required={skipAV}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="city">Stadt *</Label>
+                  <Input
+                    id="city"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="Musterstadt"
+                    required={skipAV}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={loading}
+            >
+              Abbrechen
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Erstellen...
+                </>
+              ) : (
+                'Erstellen'
+              )}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

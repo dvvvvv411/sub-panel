@@ -57,6 +57,8 @@ export type Database = {
       }
       employees: {
         Row: {
+          address: string | null
+          city: string | null
           created_at: string | null
           created_by: string | null
           email: string
@@ -65,10 +67,13 @@ export type Database = {
           id: string
           last_name: string
           phone: string | null
+          postal_code: string | null
           status: string
           updated_at: string | null
         }
         Insert: {
+          address?: string | null
+          city?: string | null
           created_at?: string | null
           created_by?: string | null
           email: string
@@ -77,10 +82,13 @@ export type Database = {
           id?: string
           last_name: string
           phone?: string | null
+          postal_code?: string | null
           status?: string
           updated_at?: string | null
         }
         Update: {
+          address?: string | null
+          city?: string | null
           created_at?: string | null
           created_by?: string | null
           email?: string
@@ -89,6 +97,7 @@ export type Database = {
           id?: string
           last_name?: string
           phone?: string | null
+          postal_code?: string | null
           status?: string
           updated_at?: string | null
         }
@@ -134,8 +143,10 @@ export type Database = {
       }
       employment_contract_submissions: {
         Row: {
+          address: string | null
           bank_name: string | null
           bic: string | null
+          city: string | null
           created_at: string
           desired_start_date: string | null
           email: string
@@ -150,14 +161,17 @@ export type Database = {
           last_name: string
           marital_status: string | null
           phone: string | null
+          postal_code: string | null
           request_id: string
           social_security_number: string | null
           tax_number: string | null
           updated_at: string
         }
         Insert: {
+          address?: string | null
           bank_name?: string | null
           bic?: string | null
+          city?: string | null
           created_at?: string
           desired_start_date?: string | null
           email: string
@@ -172,14 +186,17 @@ export type Database = {
           last_name: string
           marital_status?: string | null
           phone?: string | null
+          postal_code?: string | null
           request_id: string
           social_security_number?: string | null
           tax_number?: string | null
           updated_at?: string
         }
         Update: {
+          address?: string | null
           bank_name?: string | null
           bic?: string | null
+          city?: string | null
           created_at?: string
           desired_start_date?: string | null
           email?: string
@@ -194,6 +211,7 @@ export type Database = {
           last_name?: string
           marital_status?: string | null
           phone?: string | null
+          postal_code?: string | null
           request_id?: string
           social_security_number?: string | null
           tax_number?: string | null

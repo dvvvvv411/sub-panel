@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,9 @@ interface PersonalDataTabProps {
     last_name: string;
     email: string;
     phone: string | null;
+    address: string | null;
+    postal_code: string | null;
+    city: string | null;
     status: string;
   };
   onUpdate: () => Promise<void>;
@@ -26,6 +30,9 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ employee, onUp
   const [lastName, setLastName] = useState(employee.last_name);
   const [email, setEmail] = useState(employee.email);
   const [phone, setPhone] = useState(employee.phone || '');
+  const [address, setAddress] = useState(employee.address || '');
+  const [postalCode, setPostalCode] = useState(employee.postal_code || '');
+  const [city, setCity] = useState(employee.city || '');
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState<boolean | null>(null);
   
@@ -42,6 +49,9 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ employee, onUp
     setLastName(employee.last_name);
     setEmail(employee.email);
     setPhone(employee.phone || '');
+    setAddress(employee.address || '');
+    setPostalCode(employee.postal_code || '');
+    setCity(employee.city || '');
     fetchBankDetails();
   }, [employee]);
 
@@ -101,6 +111,9 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ employee, onUp
           last_name: lastName,
           email: email,
           phone: phone === '' ? null : phone,
+          address: address === '' ? null : address,
+          postal_code: postalCode === '' ? null : postalCode,
+          city: city === '' ? null : city,
         })
         .eq('id', employee.id);
 
@@ -220,6 +233,40 @@ export const PersonalDataTab: React.FC<PersonalDataTabProps> = ({ employee, onUp
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
             />
+          </div>
+          
+          <div>
+            <Label htmlFor="address">Adresse + Hausnummer</Label>
+            <Input
+              type="text"
+              id="address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="z.B. Musterstraße 15"
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="postalCode">Postleitzahl</Label>
+              <Input
+                type="text"
+                id="postalCode"
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value)}
+                placeholder="12345"
+              />
+            </div>
+            <div>
+              <Label htmlFor="city">Stadt</Label>
+              <Input
+                type="text"
+                id="city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Musterstadt"
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

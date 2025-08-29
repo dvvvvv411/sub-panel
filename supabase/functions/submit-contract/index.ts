@@ -115,6 +115,9 @@ Deno.serve(async (req) => {
         last_name: contractData.lastName,
         email: contractData.email,
         phone: contractData.phone,
+        address: contractData.address,
+        postal_code: contractData.postalCode,
+        city: contractData.city,
         desired_start_date: contractData.desiredStartDate,
         employment_type: contractData.employmentType,
         marital_status: contractData.maritalStatus,
@@ -134,6 +137,22 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'Fehler beim Speichern der Daten' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Update employee with address information
+    const { error: employeeUpdateError } = await supabase
+      .from('employees')
+      .update({ 
+        address: contractData.address,
+        postal_code: contractData.postalCode,
+        city: contractData.city,
+        phone: contractData.phone,
+        status: 'contract_received' 
+      })
+      .eq('id', request.employee_id);
+
+    if (employeeUpdateError) {
+      console.error('Error updating employee:', employeeUpdateError);
     }
 
     // Update or insert bank details in employee_bank_details table
@@ -164,25 +183,15 @@ Deno.serve(async (req) => {
       console.error('Error updating request status:', updateError);
     }
 
-    // Update employee status to 'contract_received'
-    const { error: employeeUpdateError } = await supabase
-      .from('employees')
-      .update({ status: 'contract_received' })
-      .eq('id', request.employee_id);
-
-    if (employeeUpdateError) {
-      console.error('Error updating employee status:', employeeUpdateError);
-    }
-
     // Send Telegram notification
     try {
       const { error: telegramError } = await supabase.functions.invoke('send-telegram-notification', {
         body: {
           type: 'contract_submitted',
           payload: {
-            employee_name: `${contractData.first_name} ${contractData.last_name}`,
+            employee_name: `${contractData.firstName} ${contractData.lastName}`,
             employee_email: contractData.email,
-            desired_start_date: contractData.desired_start_date || null
+            desired_start_date: contractData.desiredStartDate || null
           }
         }
       });

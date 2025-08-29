@@ -1,817 +1,547 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { 
-  CheckCircle, 
-  Upload, 
-  FileText, 
-  User, 
-  Calendar, 
-  Heart, 
-  CreditCard, 
-  Camera, 
-  Shield,
-  Mail,
-  Phone,
-  Building,
-  Hash,
-  UserCheck,
-  Banknote,
-  Eye
-} from 'lucide-react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Loader2, Upload, FileText, User, CreditCard, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-interface ContractRequest {
-  id: string;
-  employee_id: string;
-  token: string;
-  status: string;
-  created_at: string;
-  expires_at: string;
-}
-
-interface FormData {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  desiredStartDate: string;
-  employmentType: string;
-  maritalStatus: string;
-  socialSecurityNumber: string;
-  taxNumber: string;
-  healthInsurance: string;
-  iban: string;
-  bic: string;
-  bankName: string;
-}
-
-export default function Arbeitsvertrag() {
+const Arbeitsvertrag = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get('token');
 
   const [currentStep, setCurrentStep] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [contractRequest, setContractRequest] = useState<ContractRequest | null>(null);
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState<FormData>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    desiredStartDate: '',
-    employmentType: '',
-    maritalStatus: '',
-    socialSecurityNumber: '',
-    taxNumber: '',
-    healthInsurance: '',
-    iban: '',
-    bic: '',
-    bankName: ''
-  });
-  const [idPhotos, setIdPhotos] = useState<{
-    front: File | null;
-    back: File | null;
-  }>({
-    front: null,
-    back: null
-  });
+  const [submitting, setSubmitting] = useState(false);
+  const [requestData, setRequestData] = useState<any>(null);
+
+  // Step 1: Personal Information
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const [city, setCity] = useState('');
+  const [desiredStartDate, setDesiredStartDate] = useState('');
+  const [employmentType, setEmploymentType] = useState('');
+  const [maritalStatus, setMaritalStatus] = useState('');
+
+  // Step 2: Official Information  
+  const [socialSecurityNumber, setSocialSecurityNumber] = useState('');
+  const [taxNumber, setTaxNumber] = useState('');
+  const [healthInsurance, setHealthInsurance] = useState('');
+
+  // Step 3: Banking Information
+  const [iban, setIban] = useState('');
+  const [bic, setBic] = useState('');
+  const [bankName, setBankName] = useState('');
+
+  // Step 4: Documents
+  const [idFront, setIdFront] = useState<File | null>(null);
+  const [idBack, setIdBack] = useState<File | null>(null);
 
   useEffect(() => {
-    const fetchContractRequest = async () => {
-      if (!token) {
-        toast.error('Ungültiger Token');
-        setLoading(false);
+    if (!token) {
+      toast.error('Ungültiger oder fehlender Token');
+      navigate('/');
+      return;
+    }
+    fetchRequestData();
+  }, [token, navigate]);
+
+  const fetchRequestData = async () => {
+    try {
+      const response = await supabase.functions.invoke('get-contract-request', {
+        body: { token }
+      });
+
+      if (response.error) {
+        console.error('Error fetching request:', response.error);
+        toast.error('Fehler beim Laden der Anfrage');
+        navigate('/');
         return;
       }
 
-      try {
-        const { data, error } = await supabase.functions.invoke('get-contract-request', {
-          body: { token }
-        });
-
-        if (error) {
-          console.error('Error fetching contract request:', error);
-          toast.error('Fehler beim Abrufen der Vertragsanfrage');
-          setLoading(false);
-          return;
-        }
-
-        if (data?.submitted) {
-          toast.error('Diese Anfrage wurde bereits eingereicht');
-          setLoading(false);
-          return;
-        }
-
-        if (data?.error) {
-          toast.error(data.error);
-          setLoading(false);
-          return;
-        }
-
-        if (data?.requestId) {
-          // Create contract request object for compatibility
-          const contractRequestData: ContractRequest = {
-            id: data.requestId,
-            employee_id: data.employee?.id || '',
-            token: token,
-            status: 'pending',
-            created_at: '',
-            expires_at: data.expiresAt || ''
-          };
-          
-          setContractRequest(contractRequestData);
-          
-          // Pre-fill form with employee data if available
-          if (data.employee) {
-            setFormData(prev => ({
-              ...prev,
-              firstName: data.employee.first_name || '',
-              lastName: data.employee.last_name || '',
-              email: data.employee.email || '',
-              phone: data.employee.phone || ''
-            }));
-          }
-        } else {
-          toast.error('Ungültige oder abgelaufene Anfrage');
-          setLoading(false);
-          return;
-        }
-      } catch (error) {
-        console.error('Error fetching contract request:', error);
-        toast.error('Unerwarteter Fehler beim Abrufen der Anfrage');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchContractRequest();
-  }, [token]);
-
-  const validateCurrentStep = (): boolean => {
-    switch (currentStep) {
-      case 1:
-        return !!(formData.firstName && formData.lastName && formData.email && formData.desiredStartDate && formData.employmentType);
-      case 2:
-        return true;
-      case 3:
-        return !!formData.iban;
-      case 4:
-        return !!(idPhotos.front && idPhotos.back);
-      default:
-        return false;
+      setRequestData(response.data);
+      // Pre-fill known data
+      setFirstName(response.data.first_name || '');
+      setLastName(response.data.last_name || '');
+      setEmail(response.data.email || '');
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Ein Fehler ist aufgetreten');
+      navigate('/');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleNext = () => {
-    if (validateCurrentStep()) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      toast.error('Bitte füllen Sie alle erforderlichen Felder aus');
+    if (currentStep === 1) {
+      if (!firstName || !lastName || !email || !phone || !address || !postalCode || !city || !desiredStartDate || !employmentType || !maritalStatus) {
+        toast.error('Bitte füllen Sie alle Pflichtfelder aus');
+        return;
+      }
+    } else if (currentStep === 2) {
+      if (!socialSecurityNumber || !taxNumber || !healthInsurance) {
+        toast.error('Bitte füllen Sie alle Pflichtfelder aus');
+        return;
+      }
+    } else if (currentStep === 3) {
+      if (!iban || !bic || !bankName) {
+        toast.error('Bitte füllen Sie alle Pflichtfelder aus');
+        return;
+      }
     }
+    
+    setCurrentStep(currentStep + 1);
   };
 
   const handlePrevious = () => {
     setCurrentStep(currentStep - 1);
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setIdPhotos(prev => ({ ...prev, [side]: file }));
-    }
-  };
-
   const handleSubmit = async () => {
-    if (!token) {
-      toast.error('Ungültiger Token');
+    if (!idFront || !idBack) {
+      toast.error('Bitte laden Sie beide Ausweisseiten hoch');
       return;
     }
 
-    setIsSubmitting(true);
+    setSubmitting(true);
 
     try {
-      const formDataToSubmit = new FormData();
-      formDataToSubmit.append('token', token);
-      formDataToSubmit.append('contractData', JSON.stringify(formData));
-      
-      if (idPhotos.front) {
-        formDataToSubmit.append('idFront', idPhotos.front);
-      }
-      if (idPhotos.back) {
-        formDataToSubmit.append('idBack', idPhotos.back);
-      }
+      const formData = new FormData();
+      formData.append('token', token!);
+      formData.append('contractData', JSON.stringify({
+        firstName,
+        lastName,
+        email,
+        phone,
+        address,
+        postalCode,
+        city,
+        desiredStartDate,
+        employmentType,
+        maritalStatus,
+        socialSecurityNumber,
+        taxNumber,
+        healthInsurance,
+        iban,
+        bic,
+        bankName
+      }));
+      formData.append('idFront', idFront);
+      formData.append('idBack', idBack);
 
-      const response = await fetch('https://yvzgszkliqkzfaulpvju.supabase.co/functions/v1/submit-contract', {
-        method: 'POST',
-        body: formDataToSubmit
+      const response = await supabase.functions.invoke('submit-contract', {
+        body: formData
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Fehler beim Übertragen der Daten');
+      if (response.error) {
+        console.error('Error submitting contract:', response.error);
+        toast.error('Fehler beim Einreichen des Vertrags');
+        return;
       }
 
       toast.success('Arbeitsvertrag erfolgreich eingereicht!');
-      setIsSubmitted(true);
-      
+      setCurrentStep(5); // Success step
     } catch (error) {
-      console.error('Error submitting contract:', error);
-      toast.error(error instanceof Error ? error.message : 'Unbekannter Fehler aufgetreten');
+      console.error('Error:', error);
+      toast.error('Ein Fehler ist aufgetreten');
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
-  const getPhotoPreviewUrl = (file: File | null) => {
-    return file ? URL.createObjectURL(file) : null;
-  };
-
-  const stepTitles = [
-    'Persönliche Daten',
-    'Steuer & Soziales', 
-    'Bankverbindung',
-    'Personalausweis'
-  ];
-
   if (loading) {
     return (
-      <div className="min-h-screen professional-bg flex items-center justify-center p-4">
-        <div className="text-center glass-card p-12 rounded-2xl shadow-2xl max-w-md w-full animate-fade-in">
-          <div className="relative mb-8">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/20 border-t-primary mx-auto"></div>
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/10 to-primary/5 animate-pulse"></div>
-          </div>
-          <h3 className="text-xl font-semibold text-slate-800 mb-2">Arbeitsvertrag wird geladen</h3>
-          <p className="text-slate-600">Bitte haben Sie einen Moment Geduld...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Lädt Ihre Anfrage...</p>
         </div>
       </div>
     );
   }
 
-  if (!contractRequest) {
+  if (!requestData) {
     return (
-      <div className="min-h-screen professional-bg flex items-center justify-center p-4">
-        <Card className="w-full max-w-lg glass-card rounded-2xl shadow-2xl border-0 animate-scale-in">
-          <CardHeader className="text-center pb-6 pt-8">
-            <div className="mx-auto mb-4 w-20 h-20 bg-red-100 rounded-full flex items-center justify-center">
-              <Shield className="h-10 w-10 text-red-500" />
-            </div>
-            <CardTitle className="text-2xl font-bold text-red-600 mb-2">Ungültiger Link</CardTitle>
-            <CardDescription className="text-slate-600 text-base leading-relaxed">
-              Dieser Link ist ungültig oder abgelaufen. Bitte wenden Sie sich an Ihren Arbeitgeber 
-              für einen neuen Zugangslink.
-            </CardDescription>
-          </CardHeader>
-          <div className="px-6 pb-8">
-            <Button 
-              onClick={() => navigate('/')} 
-              className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 rounded-xl transition-all duration-200"
-            >
-              Zurück zur Startseite
-            </Button>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  // Show confirmation page after successful submission
-  if (isSubmitted) {
-    return (
-      <div className="min-h-screen professional-bg flex items-center justify-center p-4">
-        <Card className="w-full max-w-lg glass-card rounded-2xl shadow-2xl border-0 animate-scale-in">
-          <CardHeader className="text-center pb-6 pt-8">
-            <div className="mx-auto mb-4 w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle className="h-10 w-10 text-green-500" />
-            </div>
-            <CardTitle className="text-2xl font-bold text-green-600 mb-2">Erfolgreich eingereicht!</CardTitle>
-            <CardDescription className="text-slate-600 text-base leading-relaxed">
-              Vielen Dank! Ihr Arbeitsvertrag wurde erfolgreich eingereicht. Sie erhalten in Kürze 
-              Ihren fertigen Arbeitsvertrag per E-Mail.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen professional-bg py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Professional Header */}
-        <div className="text-center mb-12 animate-fade-in">
-          <div className="inline-flex items-center gap-3 mb-6 px-4 py-2 bg-white/80 rounded-full shadow-sm border border-slate-200/50">
-            <Shield className="h-5 w-5 text-primary" />
-            <span className="text-sm font-medium text-slate-600">Sichere Datenübertragung</span>
-          </div>
-          <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-3">
-            Arbeitsvertrag
-          </h1>
-          <p className="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
-            Vervollständigen Sie Ihre Arbeitsvertragsunterlagen in wenigen einfachen Schritten
-          </p>
-        </div>
-
-        {/* Enhanced Progress Stepper */}
-        <div className="mb-12">
-          <div className="flex items-center justify-between mb-6 relative">
-            <div className="absolute top-4 left-0 right-0 h-0.5 bg-slate-200 -z-10"></div>
-            <div 
-              className="absolute top-4 left-0 h-0.5 bg-gradient-to-r from-primary to-primary/80 transition-all duration-500 -z-10"
-              style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
-            ></div>
-            
-            {[1, 2, 3, 4].map((step) => (
-              <div key={step} className="flex flex-col items-center group">
-                <div className={`
-                  step-indicator w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold mb-3 border-2
-                  ${currentStep > step ? 'completed bg-green-500 border-green-500 text-white' 
-                    : currentStep === step ? 'active bg-primary border-primary text-white' 
-                    : 'inactive bg-white border-slate-300 text-slate-500'}
-                `}>
-                  {currentStep > step ? <CheckCircle className="h-5 w-5" /> : step}
-                </div>
-                <span className={`text-sm font-medium text-center max-w-[100px] leading-tight
-                  ${currentStep >= step ? 'text-slate-700' : 'text-slate-400'}
-                `}>
-                  {stepTitles[step - 1]}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <Card className="glass-card rounded-2xl shadow-2xl border-0 overflow-hidden animate-scale-in">
-          <CardContent className="p-0">
-            {/* Step Content */}
-            <div className="p-8 lg:p-12">
-              {/* Step 1: Personal Information */}
-              {currentStep === 1 && (
-                <div className="form-section">
-                  <div className="flex items-center gap-3 mb-8">
-                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                      <User className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-slate-800">Persönliche Informationen</h2>
-                      <p className="text-slate-600">Grundlegende Informationen für Ihren Arbeitsvertrag</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="input-with-icon">
-                      <Label htmlFor="firstName" className="text-sm font-semibold text-slate-700 mb-2 block">
-                        Vorname *
-                      </Label>
-                      <div className="field">
-                        <User className="h-5 w-5" />
-                        <Input
-                          id="firstName"
-                          value={formData.firstName}
-                          onChange={(e) => setFormData({...formData, firstName: e.target.value})}
-                          placeholder="Max"
-                          className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="input-with-icon">
-                      <Label htmlFor="lastName" className="text-sm font-semibold text-slate-700 mb-2 block">
-                        Nachname *
-                      </Label>
-                      <div className="field">
-                        <User className="h-5 w-5" />
-                        <Input
-                          id="lastName"
-                          value={formData.lastName}
-                          onChange={(e) => setFormData({...formData, lastName: e.target.value})}
-                          placeholder="Mustermann"
-                          className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
-                          required
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="input-with-icon">
-                    <Label htmlFor="email" className="text-sm font-semibold text-slate-700 mb-2 block">
-                      E-Mail-Adresse *
-                    </Label>
-                    <div className="field">
-                      <Mail className="h-5 w-5" />
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
-                        placeholder="max@example.com"
-                        className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
-                        required
-                      />
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1">Für wichtige Mitteilungen und Vertragsunterlagen</p>
-                  </div>
-
-                  <div className="input-with-icon">
-                    <Label htmlFor="phone" className="text-sm font-semibold text-slate-700 mb-2 block">
-                      Telefonnummer
-                    </Label>
-                    <div className="field">
-                      <Phone className="h-5 w-5" />
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                        placeholder="+49 123 456789"
-                        className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="input-with-icon">
-                    <Label htmlFor="desiredStartDate" className="text-sm font-semibold text-slate-700 mb-2 block">
-                      Gewünschtes Startdatum *
-                    </Label>
-                    <div className="field">
-                      <Calendar className="h-5 w-5" />
-                      <Input
-                        id="desiredStartDate"
-                        type="date"
-                        value={formData.desiredStartDate}
-                        onChange={(e) => setFormData({...formData, desiredStartDate: e.target.value})}
-                        className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="employmentType" className="text-sm font-semibold text-slate-700 mb-2 block">
-                      Anstellungsart *
-                    </Label>
-                    <Select 
-                      value={formData.employmentType} 
-                      onValueChange={(value) => setFormData({...formData, employmentType: value})}
-                    >
-                      <SelectTrigger className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20 bg-white">
-                        <SelectValue placeholder="Bitte wählen..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white border-slate-200 rounded-xl shadow-xl z-50">
-                        <SelectItem value="minijob">Minijob</SelectItem>
-                        <SelectItem value="teilzeit">Teilzeit</SelectItem>
-                        <SelectItem value="vollzeit">Vollzeit</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="maritalStatus" className="text-sm font-semibold text-slate-700 mb-2 block">
-                      Familienstand
-                    </Label>
-                    <Select 
-                      value={formData.maritalStatus} 
-                      onValueChange={(value) => setFormData({...formData, maritalStatus: value})}
-                    >
-                      <SelectTrigger className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20 bg-white">
-                        <SelectValue placeholder="Bitte wählen..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white border-slate-200 rounded-xl shadow-xl z-50">
-                        <SelectItem value="single">Ledig</SelectItem>
-                        <SelectItem value="married">Verheiratet</SelectItem>
-                        <SelectItem value="divorced">Geschieden</SelectItem>
-                        <SelectItem value="widowed">Verwitwet</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 2: Tax and Social Security */}
-              {currentStep === 2 && (
-                <div className="form-section">
-                  <div className="flex items-center gap-3 mb-8">
-                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                      <FileText className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-slate-800">Steuer- und Sozialversicherungsdaten</h2>
-                      <p className="text-slate-600">Informationen für die Lohnabrechnung (optional)</p>
-                    </div>
-                  </div>
-
-                  <div className="input-with-icon">
-                    <Label htmlFor="socialSecurityNumber" className="text-sm font-semibold text-slate-700 mb-2 block">
-                      Sozialversicherungsnummer
-                    </Label>
-                    <div className="field">
-                      <Hash className="h-5 w-5" />
-                      <Input
-                        id="socialSecurityNumber"
-                        value={formData.socialSecurityNumber}
-                        onChange={(e) => setFormData({...formData, socialSecurityNumber: e.target.value})}
-                        placeholder="12 345678 A 123"
-                        className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
-                      />
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1">Falls vorhanden - finden Sie auf Ihrem Sozialversicherungsausweis</p>
-                  </div>
-
-                  <div className="input-with-icon">
-                    <Label htmlFor="taxNumber" className="text-sm font-semibold text-slate-700 mb-2 block">
-                      Steuernummer
-                    </Label>
-                    <div className="field">
-                      <Hash className="h-5 w-5" />
-                      <Input
-                        id="taxNumber"
-                        value={formData.taxNumber}
-                        onChange={(e) => setFormData({...formData, taxNumber: e.target.value})}
-                        placeholder="123/456/78901"
-                        className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
-                      />
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1">Falls bekannt - finden Sie auf Ihrem letzten Steuerbescheid</p>
-                  </div>
-
-                  <div className="input-with-icon">
-                    <Label htmlFor="healthInsurance" className="text-sm font-semibold text-slate-700 mb-2 block">
-                      Krankenkasse
-                    </Label>
-                    <div className="field">
-                      <Heart className="h-5 w-5" />
-                      <Input
-                        id="healthInsurance"
-                        value={formData.healthInsurance}
-                        onChange={(e) => setFormData({...formData, healthInsurance: e.target.value})}
-                        placeholder="AOK, Barmer, Techniker Krankenkasse..."
-                        className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
-                      />
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1">Name Ihrer aktuellen Krankenkasse</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 3: Bank Information */}
-              {currentStep === 3 && (
-                <div className="form-section">
-                  <div className="flex items-center gap-3 mb-8">
-                    <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                      <CreditCard className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-slate-800">Bankverbindung</h2>
-                      <p className="text-slate-600">Für die Überweisung Ihres Gehalts</p>
-                    </div>
-                  </div>
-
-                  <div className="input-with-icon">
-                    <Label htmlFor="iban" className="text-sm font-semibold text-slate-700 mb-2 block">
-                      IBAN * 
-                    </Label>
-                    <div className="field">
-                      <Banknote className="h-5 w-5" />
-                      <Input
-                        id="iban"
-                        value={formData.iban}
-                        onChange={(e) => setFormData({...formData, iban: e.target.value.toUpperCase()})}
-                        placeholder="DE89 3704 0044 0532 0130 00"
-                        className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20 font-mono"
-                        required
-                      />
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1">22-stellige internationale Bankkontonummer</p>
-                  </div>
-
-                  <div className="input-with-icon">
-                    <Label htmlFor="bic" className="text-sm font-semibold text-slate-700 mb-2 block">
-                      BIC (optional)
-                    </Label>
-                    <div className="field">
-                      <Hash className="h-5 w-5" />
-                      <Input
-                        id="bic"
-                        value={formData.bic}
-                        onChange={(e) => setFormData({...formData, bic: e.target.value.toUpperCase()})}
-                        placeholder="COBADEFFXXX"
-                        className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20 font-mono"
-                      />
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1">Bank Identifier Code - meist automatisch erkannt</p>
-                  </div>
-
-                  <div className="input-with-icon">
-                    <Label htmlFor="bankName" className="text-sm font-semibold text-slate-700 mb-2 block">
-                      Bank (optional)
-                    </Label>
-                    <div className="field">
-                      <Building className="h-5 w-5" />
-                      <Input
-                        id="bankName"
-                        value={formData.bankName}
-                        onChange={(e) => setFormData({...formData, bankName: e.target.value})}
-                        placeholder="Sparkasse, Volksbank, Deutsche Bank..."
-                        className="h-12 rounded-xl border-slate-300 focus:border-primary focus:ring-primary/20"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 4: ID Photos */}
-              {currentStep === 4 && (
-                <div className="form-section">
-                  <div className="flex items-center gap-3 mb-8">
-                    <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                      <Camera className="h-6 w-6 text-orange-600" />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-slate-800">Personalausweis Fotos</h2>
-                      <p className="text-slate-600">Für die Identitätsprüfung und Dokumentation</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-8">
-                    <div className="flex items-start gap-3">
-                      <Eye className="h-5 w-5 text-blue-600 mt-0.5" />
-                      <div>
-                        <h4 className="font-semibold text-blue-800 mb-1">Foto-Hinweise</h4>
-                        <ul className="text-sm text-blue-700 space-y-1">
-                          <li>• Fotos sollten gut beleuchtet und scharf sein</li>
-                          <li>• Alle Texte müssen klar lesbar sein</li>
-                          <li>• Keine Schatten oder Reflexionen</li>
-                          <li>• Akzeptierte Formate: JPG, PNG (max. 10MB)</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Front ID */}
-                    <div>
-                      <Label className="text-sm font-semibold text-slate-700 mb-3 block">
-                        Vorderseite *
-                      </Label>
-                      <div className="space-y-3">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handlePhotoUpload(e, 'front')}
-                          className="hidden"
-                          id="id-front"
-                        />
-                        <label
-                          htmlFor="id-front"
-                          className={`upload-zone ${idPhotos.front ? 'has-file' : ''} flex flex-col items-center justify-center h-48 p-6`}
-                        >
-                          {idPhotos.front ? (
-                            <div className="text-center space-y-3">
-                              <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
-                              <div>
-                                <p className="font-medium text-green-700">{idPhotos.front.name}</p>
-                                <p className="text-sm text-green-600">Datei erfolgreich ausgewählt</p>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-center space-y-3">
-                              <Upload className="h-12 w-12 text-slate-400 mx-auto" />
-                              <div>
-                                <p className="font-medium text-slate-600">Vorderseite hochladen</p>
-                                <p className="text-sm text-slate-500">Klicken oder Datei hierher ziehen</p>
-                              </div>
-                            </div>
-                          )}
-                        </label>
-                        
-                        {idPhotos.front && getPhotoPreviewUrl(idPhotos.front) && (
-                          <div className="relative">
-                            <img 
-                              src={getPhotoPreviewUrl(idPhotos.front)!} 
-                              alt="Personalausweis Vorderseite"
-                              className="w-full h-32 object-cover rounded-lg border border-slate-200"
-                            />
-                            <div className="absolute top-2 right-2 bg-green-500 text-white p-1 rounded-full">
-                              <CheckCircle className="h-4 w-4" />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Back ID */}
-                    <div>
-                      <Label className="text-sm font-semibold text-slate-700 mb-3 block">
-                        Rückseite *
-                      </Label>
-                      <div className="space-y-3">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handlePhotoUpload(e, 'back')}
-                          className="hidden"
-                          id="id-back"
-                        />
-                        <label
-                          htmlFor="id-back"
-                          className={`upload-zone ${idPhotos.back ? 'has-file' : ''} flex flex-col items-center justify-center h-48 p-6`}
-                        >
-                          {idPhotos.back ? (
-                            <div className="text-center space-y-3">
-                              <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
-                              <div>
-                                <p className="font-medium text-green-700">{idPhotos.back.name}</p>
-                                <p className="text-sm text-green-600">Datei erfolgreich ausgewählt</p>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-center space-y-3">
-                              <Upload className="h-12 w-12 text-slate-400 mx-auto" />
-                              <div>
-                                <p className="font-medium text-slate-600">Rückseite hochladen</p>
-                                <p className="text-sm text-slate-500">Klicken oder Datei hierher ziehen</p>
-                              </div>
-                            </div>
-                          )}
-                        </label>
-                        
-                        {idPhotos.back && getPhotoPreviewUrl(idPhotos.back) && (
-                          <div className="relative">
-                            <img 
-                              src={getPhotoPreviewUrl(idPhotos.back)!} 
-                              alt="Personalausweis Rückseite"
-                              className="w-full h-32 object-cover rounded-lg border border-slate-200"
-                            />
-                            <div className="absolute top-2 right-2 bg-green-500 text-white p-1 rounded-full">
-                              <CheckCircle className="h-4 w-4" />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Sticky Navigation Footer */}
-            <div className="sticky-nav p-6 lg:p-8">
-              <div className="flex justify-between items-center">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handlePrevious}
-                  disabled={currentStep === 1}
-                  className="px-8 py-3 h-auto rounded-xl border-slate-300 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                >
-                  Zurück
-                </Button>
-
-                <div className="flex items-center gap-2 text-sm text-slate-500">
-                  <span>Schritt {currentStep} von 4</span>
-                </div>
-
-                {currentStep < 4 ? (
-                  <Button
-                    type="button"
-                    onClick={handleNext}
-                    disabled={!validateCurrentStep()}
-                    className="px-8 py-3 h-auto rounded-xl bg-primary hover:bg-primary/90 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition-all duration-200"
-                  >
-                    Weiter
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={isSubmitting || !validateCurrentStep()}
-                    className="px-8 py-3 h-auto rounded-xl bg-green-600 hover:bg-green-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition-all duration-200"
-                  >
-                    {isSubmitting ? (
-                      <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></div>
-                        Wird eingereicht...
-                      </div>
-                    ) : (
-                      'Arbeitsvertrag einreichen'
-                    )}
-                  </Button>
-                )}
-              </div>
-            </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6 text-center">
+            <p className="text-muted-foreground">Anfrage nicht gefunden oder bereits bearbeitet.</p>
           </CardContent>
         </Card>
       </div>
+    );
+  }
+
+  const renderStep = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Schritt 1: Persönliche Daten
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="firstName">Vorname *</Label>
+                  <Input
+                    id="firstName"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lastName">Nachname *</Label>
+                  <Input
+                    id="lastName"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="email">E-Mail-Adresse *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="phone">Telefonnummer *</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="address">Adresse + Hausnummer *</Label>
+                <Input
+                  id="address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="z.B. Musterstraße 15"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="postalCode">Postleitzahl *</Label>
+                  <Input
+                    id="postalCode"
+                    value={postalCode}
+                    onChange={(e) => setPostalCode(e.target.value)}
+                    placeholder="12345"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="city">Stadt *</Label>
+                  <Input
+                    id="city"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="Musterstadt"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="desiredStartDate">Gewünschtes Startdatum *</Label>
+                <Input
+                  id="desiredStartDate"
+                  type="date"
+                  value={desiredStartDate}
+                  onChange={(e) => setDesiredStartDate(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="employmentType">Art der Beschäftigung *</Label>
+                <Select value={employmentType} onValueChange={setEmploymentType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Bitte wählen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vollzeit">Vollzeit</SelectItem>
+                    <SelectItem value="teilzeit">Teilzeit</SelectItem>
+                    <SelectItem value="minijob">Minijob</SelectItem>
+                    <SelectItem value="werkstudent">Werkstudent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="maritalStatus">Familienstand *</Label>
+                <Select value={maritalStatus} onValueChange={setMaritalStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Bitte wählen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ledig">Ledig</SelectItem>
+                    <SelectItem value="verheiratet">Verheiratet</SelectItem>
+                    <SelectItem value="geschieden">Geschieden</SelectItem>
+                    <SelectItem value="verwitwet">Verwitwet</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case 2:
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Schritt 2: Steuerliche und sozialversicherungsrechtliche Angaben
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="socialSecurityNumber">Sozialversicherungsnummer *</Label>
+                <Input
+                  id="socialSecurityNumber"
+                  value={socialSecurityNumber}
+                  onChange={(e) => setSocialSecurityNumber(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="taxNumber">Steuerliche Identifikationsnummer *</Label>
+                <Input
+                  id="taxNumber"
+                  value={taxNumber}
+                  onChange={(e) => setTaxNumber(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="healthInsurance">Krankenversicherung *</Label>
+                <Input
+                  id="healthInsurance"
+                  value={healthInsurance}
+                  onChange={(e) => setHealthInsurance(e.target.value)}
+                  placeholder="z.B. TK, AOK, Barmer..."
+                  required
+                />
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case 3:
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Schritt 3: Bankverbindung
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="iban">IBAN *</Label>
+                <Input
+                  id="iban"
+                  value={iban}
+                  onChange={(e) => setIban(e.target.value.toUpperCase())}
+                  placeholder="DE89 3704 0044 0532 0130 00"
+                  required
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="bic">BIC *</Label>
+                <Input
+                  id="bic"
+                  value={bic}
+                  onChange={(e) => setBic(e.target.value.toUpperCase())}
+                  placeholder="COBADEFFXXX"
+                  required
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="bankName">Name der Bank *</Label>
+                <Input
+                  id="bankName"
+                  value={bankName}
+                  onChange={(e) => setBankName(e.target.value)}
+                  placeholder="z.B. Deutsche Bank"
+                  required
+                />
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case 4:
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Upload className="h-5 w-5" />
+                Schritt 4: Ausweisdokumente
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="idFront">Ausweis Vorderseite *</Label>
+                <Input
+                  id="idFront"
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => setIdFront(e.target.files?.[0] || null)}
+                  required
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="idBack">Ausweis Rückseite *</Label>
+                <Input
+                  id="idBack"
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => setIdBack(e.target.files?.[0] || null)}
+                  required
+                />
+              </div>
+
+              <div className="mt-6">
+                <Button 
+                  onClick={handleSubmit} 
+                  disabled={submitting}
+                  className="w-full"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Wird eingereicht...
+                    </>
+                  ) : (
+                    'Arbeitsvertrag einreichen'
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case 5:
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-green-600">
+                <CheckCircle className="h-5 w-5" />
+                Erfolgreich eingereicht!
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
+              <p className="text-muted-foreground">
+                Ihr Arbeitsvertrag wurde erfolgreich eingereicht. Sie erhalten in Kürze eine Bestätigung per E-Mail.
+              </p>
+              <Badge variant="secondary" className="mt-4">
+                Status: Eingereicht
+              </Badge>
+            </CardContent>
+          </Card>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto">
+          <div className="mb-8 text-center">
+            <h1 className="text-3xl font-bold text-foreground mb-2">
+              Arbeitsvertrag ausfüllen
+            </h1>
+            <p className="text-muted-foreground">
+              Bitte füllen Sie alle erforderlichen Informationen aus
+            </p>
+          </div>
+
+          {/* Progress indicator */}
+          {currentStep < 5 && (
+            <div className="mb-8">
+              <div className="flex justify-between items-center">
+                {[1, 2, 3, 4].map((step) => (
+                  <div
+                    key={step}
+                    className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                      step <= currentStep
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {step}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 h-2 bg-muted rounded-full">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-300"
+                  style={{ width: `${(currentStep / 4) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {renderStep()}
+
+          {/* Navigation buttons */}
+          {currentStep < 4 && (
+            <div className="flex justify-between mt-6">
+              <Button
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentStep === 1}
+              >
+                Zurück
+              </Button>
+              <Button onClick={handleNext}>
+                Weiter
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default Arbeitsvertrag;
