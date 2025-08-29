@@ -47,7 +47,7 @@ export const AddPremiumAdjustmentDialog: React.FC<AddPremiumAdjustmentDialogProp
       return;
     }
 
-    if (!reason.trim()) {
+    if (!isOrderRelated && !reason.trim()) {
       toast.error('Bitte geben Sie einen Grund für die Prämie ein');
       return;
     }
@@ -136,7 +136,7 @@ export const AddPremiumAdjustmentDialog: React.FC<AddPremiumAdjustmentDialogProp
               onChange={(e) => setReason(e.target.value)}
               placeholder="z.B. Bonus für außergewöhnliche Leistung, Weihnachtsprämie..."
               rows={3}
-              required
+              required={!isOrderRelated}
             />
           </div>
 
