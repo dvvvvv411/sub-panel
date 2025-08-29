@@ -23,6 +23,9 @@ interface Employee {
   last_name: string;
   email: string;
   phone?: string | null;
+  address?: string | null;
+  postal_code?: string | null;
+  city?: string | null;
   status: string;
   employment_type?: string | null;
   created_at: string;
@@ -77,6 +80,9 @@ interface ContractSubmission {
   last_name: string;
   email: string;
   phone?: string;
+  address?: string;
+  postal_code?: string;
+  city?: string;
   desired_start_date?: string;
   employment_type?: string;
   marital_status?: string;
@@ -199,6 +205,14 @@ export const VicsTab = () => {
   // New states for premium adjustment dialog
   const [selectedEmployeeForPremium, setSelectedEmployeeForPremium] = useState<Employee | null>(null);
   const [isPremiumDialogOpen, setIsPremiumDialogOpen] = useState(false);
+  
+  // New states for address form editing
+  const [addressForm, setAddressForm] = useState({
+    address: '',
+    postal_code: '',
+    city: ''
+  });
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
 
   useEffect(() => {
     fetchEmployees();
@@ -822,6 +836,13 @@ export const VicsTab = () => {
     setSelectedEmployeeForDetails(employee);
     setIsEmployeeDetailsOpen(true);
     setDetailsLoading(true);
+    
+    // Initialize address form with current employee data
+    setAddressForm({
+      address: employee.address || '',
+      postal_code: employee.postal_code || '',
+      city: employee.city || ''
+    });
 
     try {
       // Fetch assignments with order details
@@ -878,6 +899,50 @@ export const VicsTab = () => {
       toast.error('Fehler beim Laden der Mitarbeiter-Details');
     } finally {
       setDetailsLoading(false);
+    }
+  };
+
+  const handleSaveAddress = async () => {
+    if (!selectedEmployeeForDetails) return;
+    
+    setIsSavingAddress(true);
+    try {
+      const { error } = await supabase
+        .from('employees')
+        .update({
+          address: addressForm.address || null,
+          postal_code: addressForm.postal_code || null,
+          city: addressForm.city || null
+        })
+        .eq('id', selectedEmployeeForDetails.id);
+
+      if (error) {
+        console.error('Error updating employee address:', error);
+        toast.error('Fehler beim Speichern der Adresse');
+        return;
+      }
+
+      // Update local state
+      const updatedEmployee = {
+        ...selectedEmployeeForDetails,
+        address: addressForm.address || null,
+        postal_code: addressForm.postal_code || null,
+        city: addressForm.city || null
+      };
+      
+      setSelectedEmployeeForDetails(updatedEmployee);
+      setEmployees(prevEmployees => 
+        prevEmployees.map(emp => 
+          emp.id === selectedEmployeeForDetails.id ? updatedEmployee : emp
+        )
+      );
+
+      toast.success('Adresse erfolgreich aktualisiert');
+    } catch (error) {
+      console.error('Error updating employee address:', error);
+      toast.error('Fehler beim Speichern der Adresse');
+    } finally {
+      setIsSavingAddress(false);
     }
   };
 
@@ -1411,14 +1476,17 @@ export const VicsTab = () => {
                   <CardHeader>
                     <CardTitle className="text-sm">Persönliche Daten</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2 text-sm">
-                    <div><strong>Name:</strong> {selectedSubmission.first_name} {selectedSubmission.last_name}</div>
-                    <div><strong>E-Mail:</strong> {selectedSubmission.email}</div>
-                    <div><strong>Telefon:</strong> {selectedSubmission.phone || '-'}</div>
-                    <div><strong>Startdatum:</strong> {selectedSubmission.desired_start_date ? new Date(selectedSubmission.desired_start_date).toLocaleDateString('de-DE') : '-'}</div>
-                    <div><strong>Anstellungsart:</strong> {selectedSubmission.employment_type ? getEmploymentTypeBadge(selectedSubmission.employment_type) : '-'}</div>
-                    <div><strong>Familienstand:</strong> {getMaritalStatusLabel(selectedSubmission.marital_status || '')}</div>
-                  </CardContent>
+                   <CardContent className="space-y-2 text-sm">
+                     <div><strong>Name:</strong> {selectedSubmission.first_name} {selectedSubmission.last_name}</div>
+                     <div><strong>E-Mail:</strong> {selectedSubmission.email}</div>
+                     <div><strong>Telefon:</strong> {selectedSubmission.phone || '-'}</div>
+                     <div><strong>Adresse:</strong> {selectedSubmission.address || '-'}</div>
+                     <div><strong>PLZ:</strong> {selectedSubmission.postal_code || '-'}</div>
+                     <div><strong>Stadt:</strong> {selectedSubmission.city || '-'}</div>
+                     <div><strong>Startdatum:</strong> {selectedSubmission.desired_start_date ? new Date(selectedSubmission.desired_start_date).toLocaleDateString('de-DE') : '-'}</div>
+                     <div><strong>Anstellungsart:</strong> {selectedSubmission.employment_type ? getEmploymentTypeBadge(selectedSubmission.employment_type) : '-'}</div>
+                     <div><strong>Familienstand:</strong> {getMaritalStatusLabel(selectedSubmission.marital_status || '')}</div>
+                   </CardContent>
                 </Card>
 
                 {/* Tax & Insurance Data */}
@@ -1525,17 +1593,20 @@ export const VicsTab = () => {
                 <>
                   {/* Employee Overview */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-sm">Kontaktdaten</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2 text-sm">
-                        <div><strong>Name:</strong> {selectedEmployeeForDetails.first_name} {selectedEmployeeForDetails.last_name}</div>
-                        <div><strong>E-Mail:</strong> {selectedEmployeeForDetails.email}</div>
-                        <div><strong>Telefon:</strong> {selectedEmployeeForDetails.phone || '-'}</div>
-                        <div><strong>Status:</strong> {getStatusBadge(selectedEmployeeForDetails.status)}</div>
-                      </CardContent>
-                    </Card>
+                     <Card>
+                       <CardHeader>
+                         <CardTitle className="text-sm">Kontaktdaten</CardTitle>
+                       </CardHeader>
+                       <CardContent className="space-y-2 text-sm">
+                         <div><strong>Name:</strong> {selectedEmployeeForDetails.first_name} {selectedEmployeeForDetails.last_name}</div>
+                         <div><strong>E-Mail:</strong> {selectedEmployeeForDetails.email}</div>
+                         <div><strong>Telefon:</strong> {selectedEmployeeForDetails.phone || '-'}</div>
+                         <div><strong>Adresse:</strong> {selectedEmployeeForDetails.address || '-'}</div>
+                         <div><strong>PLZ:</strong> {selectedEmployeeForDetails.postal_code || '-'}</div>
+                         <div><strong>Stadt:</strong> {selectedEmployeeForDetails.city || '-'}</div>
+                         <div><strong>Status:</strong> {getStatusBadge(selectedEmployeeForDetails.status)}</div>
+                       </CardContent>
+                     </Card>
 
                     <Card>
                       <CardHeader>
@@ -1642,10 +1713,63 @@ export const VicsTab = () => {
                           );
                         })()}
                       </CardContent>
-                    </Card>
-                  </div>
+                     </Card>
+                   </div>
 
-                  {/* Assigned Orders */}
+                   {/* Address Form */}
+                   <Card>
+                     <CardHeader>
+                       <CardTitle className="text-sm">Adresse</CardTitle>
+                     </CardHeader>
+                     <CardContent className="space-y-4">
+                       <div className="grid grid-cols-1 gap-3">
+                         <div>
+                           <Label htmlFor="address">Adresse + Hausnummer</Label>
+                           <Input
+                             id="address"
+                             value={addressForm.address}
+                             onChange={(e) => setAddressForm({ ...addressForm, address: e.target.value })}
+                             placeholder="Musterstraße 123"
+                           />
+                         </div>
+                         <div>
+                           <Label htmlFor="postal_code">PLZ</Label>
+                           <Input
+                             id="postal_code"
+                             value={addressForm.postal_code}
+                             onChange={(e) => setAddressForm({ ...addressForm, postal_code: e.target.value })}
+                             placeholder="12345"
+                           />
+                         </div>
+                         <div>
+                           <Label htmlFor="city">Stadt</Label>
+                           <Input
+                             id="city"
+                             value={addressForm.city}
+                             onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
+                             placeholder="Musterstadt"
+                           />
+                         </div>
+                       </div>
+                       <Button
+                         onClick={handleSaveAddress}
+                         disabled={isSavingAddress}
+                         className="w-full"
+                         size="sm"
+                       >
+                         {isSavingAddress ? (
+                           <>
+                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                             Speichert...
+                           </>
+                         ) : (
+                           'Adresse speichern'
+                         )}
+                       </Button>
+                     </CardContent>
+                   </Card>
+
+                   {/* Assigned Orders */}
                   <Card>
                     <CardHeader>
                       <CardTitle>Zugewiesene Aufträge</CardTitle>
