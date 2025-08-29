@@ -1395,7 +1395,7 @@ export const VicsTab = () => {
       </Tabs>
 
       {/* Create Account Dialog */}
-      <CreateEmployeeDialog onEmployeeCreated={handleAccountCreated} />
+      <CreateEmployeeDialog onEmployeeCreated={() => fetchEmployees()} />
 
       {/* Contract Details Dialog */}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>

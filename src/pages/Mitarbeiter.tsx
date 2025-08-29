@@ -345,7 +345,7 @@ const Mitarbeiter = () => {
               
               <Badge variant="secondary" className="px-3 py-1">
                 <User className="h-3 w-3 mr-1" />
-                {employee.status === 'active' ? 'Aktiv' : 'Inaktiv'}
+                Aktiv
               </Badge>
               <Button onClick={handleSignOut} variant="outline" size="sm">
                 <LogOut className="h-4 w-4 mr-2" />
