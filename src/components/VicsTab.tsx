@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Plus, Upload, UserCheck, Clock, Trash2, Link, Eye, Download, UserPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { CreateEmployeeDialog } from '@/components/CreateEmployeeDialog';
+
 import { AssignToEmployeeDialog } from '@/components/AssignToEmployeeDialog';
 import { FileUploadComponent } from '@/components/FileUploadComponent';
 import { AddPremiumAdjustmentDialog } from '@/components/AddPremiumAdjustmentDialog';
@@ -176,6 +176,11 @@ export const VicsTab = () => {
     iban: '',
     bic: ''
   });
+  const [addressInfo, setAddressInfo] = useState({
+    address: '',
+    postal_code: '',
+    city: ''
+  });
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [selectedSubmission, setSelectedSubmission] = useState<ContractSubmission | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -324,6 +329,9 @@ export const VicsTab = () => {
           email: formData.email,
           phone: formData.phone || null,
           employment_type: skipContract ? employmentType : null,
+          address: skipContract ? (addressInfo.address || null) : null,
+          postal_code: skipContract ? (addressInfo.postal_code || null) : null,
+          city: skipContract ? (addressInfo.city || null) : null,
           status: 'imported'
         })
         .select()
@@ -400,6 +408,7 @@ export const VicsTab = () => {
       setEmploymentType('');
       setPassword('');
       setBankInfo({ bank: '', iban: '', bic: '' });
+      setAddressInfo({ address: '', postal_code: '', city: '' });
       fetchEmployees();
     } catch (error) {
       console.error('Error adding employee:', error);
@@ -1093,36 +1102,69 @@ export const VicsTab = () => {
                     />
                   </div>
                   
-                  <div className="space-y-4 pt-4 border-t">
-                    <h4 className="font-medium text-sm">Bankinformationen (optional)</h4>
-                    <div>
-                      <Label htmlFor="bank">Bank</Label>
-                      <Input
-                        id="bank"
-                        value={bankInfo.bank}
-                        onChange={(e) => setBankInfo({ ...bankInfo, bank: e.target.value })}
-                        placeholder="z.B. Sparkasse München"
-                      />
+                    <div className="space-y-4 pt-4 border-t">
+                      <h4 className="font-medium text-sm">Adressdaten (optional)</h4>
+                      <div>
+                        <Label htmlFor="address">Straße + Hausnummer</Label>
+                        <Input
+                          id="address"
+                          value={addressInfo.address}
+                          onChange={(e) => setAddressInfo({ ...addressInfo, address: e.target.value })}
+                          placeholder="z.B. Musterstraße 12"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="postal_code">PLZ</Label>
+                          <Input
+                            id="postal_code"
+                            value={addressInfo.postal_code}
+                            onChange={(e) => setAddressInfo({ ...addressInfo, postal_code: e.target.value })}
+                            placeholder="80331"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="city">Stadt</Label>
+                          <Input
+                            id="city"
+                            value={addressInfo.city}
+                            onChange={(e) => setAddressInfo({ ...addressInfo, city: e.target.value })}
+                            placeholder="München"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="iban">IBAN</Label>
-                      <Input
-                        id="iban"
-                        value={bankInfo.iban}
-                        onChange={(e) => setBankInfo({ ...bankInfo, iban: e.target.value })}
-                        placeholder="DE89 3704 0044 0532 0130 00"
-                      />
+                    
+                    <div className="space-y-4 pt-4 border-t">
+                      <h4 className="font-medium text-sm">Bankinformationen (optional)</h4>
+                      <div>
+                        <Label htmlFor="bank">Bank</Label>
+                        <Input
+                          id="bank"
+                          value={bankInfo.bank}
+                          onChange={(e) => setBankInfo({ ...bankInfo, bank: e.target.value })}
+                          placeholder="z.B. Sparkasse München"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="iban">IBAN</Label>
+                        <Input
+                          id="iban"
+                          value={bankInfo.iban}
+                          onChange={(e) => setBankInfo({ ...bankInfo, iban: e.target.value })}
+                          placeholder="DE89 3704 0044 0532 0130 00"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="bic">BIC</Label>
+                        <Input
+                          id="bic"
+                          value={bankInfo.bic}
+                          onChange={(e) => setBankInfo({ ...bankInfo, bic: e.target.value })}
+                          placeholder="COBADEFFXXX"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="bic">BIC</Label>
-                      <Input
-                        id="bic"
-                        value={bankInfo.bic}
-                        onChange={(e) => setBankInfo({ ...bankInfo, bic: e.target.value })}
-                        placeholder="COBADEFFXXX"
-                      />
-                    </div>
-                  </div>
                 </div>
               )}
               
@@ -1459,8 +1501,6 @@ export const VicsTab = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Create Account Dialog */}
-      <CreateEmployeeDialog onEmployeeCreated={() => fetchEmployees()} />
 
       {/* Contract Details Dialog */}
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
