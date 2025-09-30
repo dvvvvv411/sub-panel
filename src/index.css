@@ -45,6 +45,11 @@ All colors MUST be HSL.
     --text-glow: 0 0 20px hsl(221 83% 53% / 0.3);
     --subtle-border: 214 32% 91%;
     --primary-glow: 221 83% 63%;
+    
+    /* Button gradients */
+    --gradient-action: linear-gradient(135deg, hsl(142 76% 36%), hsl(221 83% 53%));
+    --gradient-premium: linear-gradient(135deg, hsl(38 92% 50%), hsl(43 96% 56%), hsl(33 100% 53%));
+    --shadow-glow: 0 10px 40px -10px hsl(var(--primary) / 0.4);
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 84% 4.9%;

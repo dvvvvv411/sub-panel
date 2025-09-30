@@ -361,9 +361,9 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({ employee }) => {
                         size="sm"
                         variant="outline"
                         onClick={() => handleViewDetails(evaluation)}
-                        className="group-hover:scale-105 transition-transform"
+                        className="group/btn hover:border-primary/60 hover:bg-primary/5 hover:scale-105 transition-all"
                       >
-                        <Eye className="h-4 w-4 mr-1" />
+                        <Eye className="h-4 w-4 mr-1 group-hover/btn:scale-110 transition-transform" />
                         Details
                       </Button>
                     )}

@@ -84,23 +84,24 @@ export const TasksTab: React.FC<TasksTabProps> = ({ assignedOrders, onStartOrder
         {showStartButton && order.assignment_status === 'assigned' && (
           <Button 
             onClick={() => navigate(`/auftrag/${order.id}`)} 
-            className="w-full group-hover:scale-[1.02] transition-transform"
+            className="w-full group/btn relative overflow-hidden"
             size="lg"
+            variant="gradient"
           >
-            <Play className="h-4 w-4 mr-2" />
-            Auftrag starten
+            <Play className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform" />
+            <span className="relative z-10">Auftrag starten</span>
           </Button>
         )}
         
         {showStartButton && order.assignment_status === 'in_progress' && (
           <Button 
             onClick={() => navigate(`/auftrag/${order.id}`)} 
-            className="w-full group-hover:scale-[1.02] transition-transform"
+            className="w-full group/btn border-primary/40 hover:border-primary hover:bg-primary/5"
             size="lg"
             variant="outline"
           >
-            <Clock className="h-4 w-4 mr-2" />
-            Auftrag fortsetzen
+            <Clock className="h-4 w-4 mr-2 group-hover/btn:rotate-12 transition-transform" />
+            <span>Auftrag fortsetzen</span>
           </Button>
         )}
       </CardContent>
