@@ -18,7 +18,7 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        gradient: "bg-gradient-to-r from-green-500 to-blue-500 text-white hover:from-green-600 hover:to-blue-600 shadow-lg hover:shadow-xl hover:scale-[1.02] [&_svg]:animate-pulse",
+        gradient: "bg-gradient-to-r from-primary to-primary-glow text-primary-foreground hover:shadow-[var(--shadow-glow)] hover:scale-[1.02] transition-all duration-300",
         "gradient-outline": "border-2 border-transparent bg-gradient-to-r from-primary to-primary-glow bg-clip-padding hover:shadow-lg hover:scale-[1.02] relative before:absolute before:inset-0 before:rounded-md before:p-[2px] before:bg-gradient-to-r before:from-primary before:to-blue-400 before:-z-10",
         premium: "bg-gradient-to-br from-amber-500 via-yellow-500 to-orange-500 text-white hover:from-amber-600 hover:via-yellow-600 hover:to-orange-600 shadow-lg hover:shadow-2xl hover:scale-[1.02] font-semibold",
       },
