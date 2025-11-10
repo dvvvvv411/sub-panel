@@ -11,7 +11,7 @@ import { usePreventUnload } from '@/hooks/use-prevent-unload';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
-interface WhatsAppAccount {
+interface TeamsAccount {
   id: string;
   name: string;
   account_info: string | null;
@@ -19,19 +19,19 @@ interface WhatsAppAccount {
   is_default: boolean;
 }
 
-interface ManageWhatsAppAccountsDialogProps {
+interface ManageTeamsAccountsDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   onAccountsUpdated: () => void;
 }
 
-export function ManageWhatsAppAccountsDialog({ 
+export function ManageTeamsAccountsDialog({ 
   open, 
   onOpenChange, 
   onAccountsUpdated 
-}: ManageWhatsAppAccountsDialogProps) {
+}: ManageTeamsAccountsDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
-  const [whatsappAccounts, setWhatsappAccounts] = useState<WhatsAppAccount[]>([]);
+  const [teamsAccounts, setTeamsAccounts] = useState<TeamsAccount[]>([]);
   const [loading, setLoading] = useState(false);
   
   // Account management state
@@ -53,11 +53,11 @@ export function ManageWhatsAppAccountsDialog({
 
   useEffect(() => {
     if (isOpen) {
-      fetchWhatsAppAccounts();
+      fetchTeamsAccounts();
     }
   }, [isOpen]);
 
-  const fetchWhatsAppAccounts = async () => {
+  const fetchTeamsAccounts = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -67,21 +67,21 @@ export function ManageWhatsAppAccountsDialog({
         .order('name');
 
       if (error) {
-        console.error('Error fetching WhatsApp accounts:', error);
-        toast.error('Fehler beim Laden der WhatsApp-Konten');
+        console.error('Error fetching Teams accounts:', error);
+        toast.error('Fehler beim Laden der Teams-Konten');
         return;
       }
 
-      setWhatsappAccounts(data || []);
+      setTeamsAccounts(data || []);
     } catch (error) {
-      console.error('Error fetching WhatsApp accounts:', error);
-      toast.error('Fehler beim Laden der WhatsApp-Konten');
+      console.error('Error fetching Teams accounts:', error);
+      toast.error('Fehler beim Laden der Teams-Konten');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddWhatsAppAccount = async () => {
+  const handleAddTeamsAccount = async () => {
     if (!newAccountName.trim()) {
       toast.error('Name ist erforderlich');
       return;
@@ -100,26 +100,26 @@ export function ManageWhatsAppAccountsDialog({
         .single();
 
       if (error) {
-        console.error('Error adding WhatsApp account:', error);
-        toast.error('Fehler beim Hinzufügen des WhatsApp-Kontos');
+        console.error('Error adding Teams account:', error);
+        toast.error('Fehler beim Hinzufügen des Teams-Kontos');
         return;
       }
 
-      await fetchWhatsAppAccounts(); // Refresh to get updated order
+      await fetchTeamsAccounts();
       setNewAccountName('');
       setNewAccountInfo('');
       setNewAccountLink('');
       setNewAccountDefault(false);
       setShowAddAccount(false);
-      toast.success('WhatsApp-Konto erfolgreich hinzugefügt');
+      toast.success('Teams-Konto erfolgreich hinzugefügt');
       onAccountsUpdated();
     } catch (error) {
-      console.error('Error adding WhatsApp account:', error);
-      toast.error('Fehler beim Hinzufügen des WhatsApp-Kontos');
+      console.error('Error adding Teams account:', error);
+      toast.error('Fehler beim Hinzufügen des Teams-Kontos');
     }
   };
 
-  const handleEditWhatsAppAccount = async (accountId: string) => {
+  const handleEditTeamsAccount = async (accountId: string) => {
     if (!editingAccountName.trim()) {
       toast.error('Name ist erforderlich');
       return;
@@ -137,26 +137,26 @@ export function ManageWhatsAppAccountsDialog({
         .eq('id', accountId);
 
       if (error) {
-        console.error('Error updating WhatsApp account:', error);
-        toast.error('Fehler beim Bearbeiten des WhatsApp-Kontos');
+        console.error('Error updating Teams account:', error);
+        toast.error('Fehler beim Bearbeiten des Teams-Kontos');
         return;
       }
 
-      await fetchWhatsAppAccounts(); // Refresh to get updated order
+      await fetchTeamsAccounts();
       setEditingAccountId(null);
       setEditingAccountName('');
       setEditingAccountInfo('');
       setEditingAccountLink('');
       setEditingAccountDefault(false);
-      toast.success('WhatsApp-Konto erfolgreich bearbeitet');
+      toast.success('Teams-Konto erfolgreich bearbeitet');
       onAccountsUpdated();
     } catch (error) {
-      console.error('Error updating WhatsApp account:', error);
-      toast.error('Fehler beim Bearbeiten des WhatsApp-Kontos');
+      console.error('Error updating Teams account:', error);
+      toast.error('Fehler beim Bearbeiten des Teams-Kontos');
     }
   };
 
-  const handleDeleteWhatsAppAccount = async (accountId: string) => {
+  const handleDeleteTeamsAccount = async (accountId: string) => {
     try {
       const { error } = await supabase
         .from('whatsapp_accounts')
@@ -164,17 +164,17 @@ export function ManageWhatsAppAccountsDialog({
         .eq('id', accountId);
 
       if (error) {
-        console.error('Error deleting WhatsApp account:', error);
-        toast.error('Fehler beim Löschen des WhatsApp-Kontos');
+        console.error('Error deleting Teams account:', error);
+        toast.error('Fehler beim Löschen des Teams-Kontos');
         return;
       }
 
-      setWhatsappAccounts(whatsappAccounts.filter(account => account.id !== accountId));
-      toast.success('WhatsApp-Konto erfolgreich gelöscht');
+      setTeamsAccounts(teamsAccounts.filter(account => account.id !== accountId));
+      toast.success('Teams-Konto erfolgreich gelöscht');
       onAccountsUpdated();
     } catch (error) {
-      console.error('Error deleting WhatsApp account:', error);
-      toast.error('Fehler beim Löschen des WhatsApp-Kontos');
+      console.error('Error deleting Teams account:', error);
+      toast.error('Fehler beim Löschen des Teams-Kontos');
     }
   };
 
@@ -191,7 +191,7 @@ export function ManageWhatsAppAccountsDialog({
         return;
       }
 
-      await fetchWhatsAppAccounts(); // Refresh to get updated order
+      await fetchTeamsAccounts();
       toast.success(newDefaultState ? 'Als Standard-Konto gesetzt' : 'Standard-Status entfernt');
       onAccountsUpdated();
     } catch (error) {
@@ -200,7 +200,7 @@ export function ManageWhatsAppAccountsDialog({
     }
   };
 
-  const startEditingAccount = (account: WhatsAppAccount) => {
+  const startEditingAccount = (account: TeamsAccount) => {
     setEditingAccountId(account.id);
     setEditingAccountName(account.name);
     setEditingAccountInfo(account.account_info || '');
@@ -219,7 +219,6 @@ export function ManageWhatsAppAccountsDialog({
   const handleOpenChange = (newOpen: boolean) => {
     setIsOpen(newOpen);
     if (!newOpen) {
-      // Reset state when closing
       setShowAddAccount(false);
       setNewAccountName('');
       setNewAccountInfo('');
@@ -235,7 +234,7 @@ export function ManageWhatsAppAccountsDialog({
         <DialogTrigger asChild>
           <Button variant="outline" size="sm" type="button">
             <MessageSquare className="h-4 w-4 mr-2" />
-            WhatsApp-Konten verwalten
+            Teams-Konten verwalten
           </Button>
         </DialogTrigger>
       )}
@@ -243,7 +242,7 @@ export function ManageWhatsAppAccountsDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
-            WhatsApp-Konten verwalten
+            Teams-Konten verwalten
           </DialogTitle>
         </DialogHeader>
         
@@ -251,7 +250,7 @@ export function ManageWhatsAppAccountsDialog({
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
-                <CardTitle className="text-base">WhatsApp-Konten</CardTitle>
+                <CardTitle className="text-base">Teams-Konten</CardTitle>
                 <Button
                   type="button"
                   variant="outline"
@@ -271,7 +270,6 @@ export function ManageWhatsAppAccountsDialog({
                 </div>
               ) : (
                 <>
-                  {/* Add new account form */}
                   {showAddAccount && (
                     <div className="border rounded-lg p-3 bg-muted/50">
                       <div className="space-y-2">
@@ -282,13 +280,13 @@ export function ManageWhatsAppAccountsDialog({
                             onChange={(e) => setNewAccountName(e.target.value)}
                           />
                           <Input
-                            placeholder="Telefonnummer/Info (optional)"
+                            placeholder="Info (optional)"
                             value={newAccountInfo}
                             onChange={(e) => setNewAccountInfo(e.target.value)}
                           />
                         </div>
                         <Input
-                          placeholder="WhatsApp Chat-Link (z.B. https://wa.me/491784171510)"
+                          placeholder="Teams Chat-Link (optional)"
                           value={newAccountLink}
                           onChange={(e) => setNewAccountLink(e.target.value)}
                         />
@@ -307,7 +305,7 @@ export function ManageWhatsAppAccountsDialog({
                           <Button
                             type="button"
                             size="sm"
-                            onClick={handleAddWhatsAppAccount}
+                            onClick={handleAddTeamsAccount}
                           >
                             <Save className="h-4 w-4 mr-1" />
                             Speichern
@@ -331,9 +329,8 @@ export function ManageWhatsAppAccountsDialog({
                     </div>
                   )}
 
-                  {/* Existing accounts list */}
                   <div className="space-y-2">
-                    {whatsappAccounts.map((account) => (
+                    {teamsAccounts.map((account) => (
                       <div key={account.id} className="flex items-center gap-2 p-2 border rounded">
                         {editingAccountId === account.id ? (
                           <>
@@ -347,13 +344,13 @@ export function ManageWhatsAppAccountsDialog({
                                 <Input
                                   value={editingAccountInfo}
                                   onChange={(e) => setEditingAccountInfo(e.target.value)}
-                                  placeholder="Telefonnummer/Info (optional)"
+                                  placeholder="Info (optional)"
                                 />
                               </div>
                               <Input
                                 value={editingAccountLink}
                                 onChange={(e) => setEditingAccountLink(e.target.value)}
-                                placeholder="WhatsApp Chat-Link (z.B. https://wa.me/491784171510)"
+                                placeholder="Teams Chat-Link (optional)"
                               />
                               <div className="flex items-center space-x-2">
                                 <Switch
@@ -370,7 +367,7 @@ export function ManageWhatsAppAccountsDialog({
                             <Button
                               type="button"
                               size="sm"
-                              onClick={() => handleEditWhatsAppAccount(account.id)}
+                              onClick={() => handleEditTeamsAccount(account.id)}
                             >
                               <Save className="h-4 w-4" />
                             </Button>
@@ -427,7 +424,7 @@ export function ManageWhatsAppAccountsDialog({
                               type="button"
                               variant="outline"
                               size="sm"
-                              onClick={() => handleDeleteWhatsAppAccount(account.id)}
+                              onClick={() => handleDeleteTeamsAccount(account.id)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -435,9 +432,9 @@ export function ManageWhatsAppAccountsDialog({
                         )}
                       </div>
                     ))}
-                    {whatsappAccounts.length === 0 && (
+                    {teamsAccounts.length === 0 && (
                       <p className="text-sm text-muted-foreground text-center py-2">
-                        Noch keine WhatsApp-Konten vorhanden
+                        Noch keine Teams-Konten vorhanden
                       </p>
                     )}
                   </div>

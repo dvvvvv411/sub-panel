@@ -11,7 +11,7 @@ import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import Mitarbeiter from "./pages/Mitarbeiter";
 import Auftrag from "./pages/Auftrag";
-import AuftragWhatsapp from "./pages/AuftragWhatsapp";
+import AuftragTeams from "./pages/AuftragTeams";
 import Arbeitsvertrag from "./pages/Arbeitsvertrag";
 import NotFound from "./pages/NotFound";
 
@@ -30,7 +30,7 @@ const App = () => (
             <Route path="/admin" element={<Admin />} />
             <Route path="/mitarbeiter" element={<Mitarbeiter />} />
             <Route path="/auftrag/:orderId" element={<Auftrag />} />
-            <Route path="/auftrag-whatsapp/:orderId" element={<AuftragWhatsapp />} />
+            <Route path="/auftrag-teams/:orderId" element={<AuftragTeams />} />
             <Route path="/arbeitsvertrag" element={<Arbeitsvertrag />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

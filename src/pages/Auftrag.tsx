@@ -103,9 +103,9 @@ const Auftrag = () => {
         return;
       }
 
-      // If this is a WhatsApp order, redirect to WhatsApp flow
+      // If this is a Teams order, redirect to Teams flow
       if (orderData.whatsapp_account_id) {
-        navigate(`/auftrag-whatsapp/${orderId}`);
+        navigate(`/auftrag-teams/${orderId}`);
         return;
       }
 

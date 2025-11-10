@@ -12,10 +12,10 @@ import { Plus, X, Briefcase, Download, FileText, Star, Users, Clock, Target, Set
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { ManageWhatsAppAccountsDialog } from './ManageWhatsAppAccountsDialog';
+import { ManageTeamsAccountsDialog } from './ManageTeamsAccountsDialog';
 import { usePreventUnload } from '@/hooks/use-prevent-unload';
 
-interface WhatsAppAccount {
+interface TeamsAccount {
   id: string;
   name: string;
   account_info: string | null;

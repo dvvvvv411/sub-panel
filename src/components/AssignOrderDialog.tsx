@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { UserPlus, MessageSquare, Settings, Check, ChevronsUpDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ManageWhatsAppAccountsDialog } from './ManageWhatsAppAccountsDialog';
+import { ManageTeamsAccountsDialog } from './ManageTeamsAccountsDialog';
 import { cn } from '@/lib/utils';
 import { usePreventUnload } from '@/hooks/use-prevent-unload';
 
@@ -22,7 +22,7 @@ interface Employee {
   email: string;
 }
 
-interface WhatsAppAccount {
+interface TeamsAccount {
   id: string;
   name: string;
   account_info: string | null;
@@ -56,25 +56,25 @@ export function AssignOrderDialog({
   onAssignmentComplete 
 }: AssignOrderDialogProps) {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
-  const [selectedWhatsAppId, setSelectedWhatsAppId] = useState('');
-  const [whatsappAccounts, setWhatsappAccounts] = useState<WhatsAppAccount[]>([]);
+  const [selectedTeamsId, setSelectedTeamsId] = useState('');
+  const [teamsAccounts, setTeamsAccounts] = useState<TeamsAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [employeeSearchOpen, setEmployeeSearchOpen] = useState(false);
-  const [manageWhatsAppOpen, setManageWhatsAppOpen] = useState(false);
+  const [manageTeamsOpen, setManageTeamsOpen] = useState(false);
 
   usePreventUnload(open);
 
   useEffect(() => {
     if (open) {
-      fetchWhatsAppAccounts();
+      fetchTeamsAccounts();
       setSelectedEmployeeId('');
-      setSelectedWhatsAppId('');
+      setSelectedTeamsId('');
       setEmployeeSearchOpen(false);
     }
   }, [open]);
 
-  const fetchWhatsAppAccounts = async () => {
+  const fetchTeamsAccounts = async () => {
     try {
       setLoadingAccounts(true);
       const { data, error } = await supabase
@@ -84,40 +84,40 @@ export function AssignOrderDialog({
         .order('name');
 
       if (error) {
-        console.error('Error fetching WhatsApp accounts:', error);
-        toast.error('Fehler beim Laden der WhatsApp-Konten');
+        console.error('Error fetching Teams accounts:', error);
+        toast.error('Fehler beim Laden der Teams-Konten');
         return;
       }
 
-      setWhatsappAccounts(data || []);
+      setTeamsAccounts(data || []);
       
-      // Pre-select default WhatsApp account if available and order is not a placeholder
+      // Pre-select default Teams account if available and order is not a placeholder
       if (data && order && !order.is_placeholder) {
         const defaultAccount = data.find(account => account.is_default);
         if (defaultAccount) {
-          setSelectedWhatsAppId(defaultAccount.id);
+          setSelectedTeamsId(defaultAccount.id);
         }
       }
     } catch (error) {
-      console.error('Error fetching WhatsApp accounts:', error);
-      toast.error('Fehler beim Laden der WhatsApp-Konten');
+      console.error('Error fetching Teams accounts:', error);
+      toast.error('Fehler beim Laden der Teams-Konten');
     } finally {
       setLoadingAccounts(false);
     }
   };
 
-  const handleWhatsAppAccountsUpdated = () => {
-    fetchWhatsAppAccounts();
+  const handleTeamsAccountsUpdated = () => {
+    fetchTeamsAccounts();
   };
 
   const selectedEmployee = availableEmployees.find(emp => emp.id === selectedEmployeeId);
 
   const handleAssign = async () => {
-    // For placeholder orders, WhatsApp account is not required
-    if (!order || !selectedEmployeeId || (!order.is_placeholder && !selectedWhatsAppId)) {
+    // For placeholder orders, Teams account is not required
+    if (!order || !selectedEmployeeId || (!order.is_placeholder && !selectedTeamsId)) {
       const missingFields = [];
       if (!selectedEmployeeId) missingFields.push('Mitarbeiter');
-      if (!order.is_placeholder && !selectedWhatsAppId) missingFields.push('WhatsApp-Konto');
+      if (!order.is_placeholder && !selectedTeamsId) missingFields.push('Teams-Konto');
       
       toast.error(`Bitte wählen Sie ${missingFields.join(' und ')} aus`);
       return;
@@ -141,16 +141,16 @@ export function AssignOrderDialog({
         return;
       }
 
-      // Update order with WhatsApp account (only for non-placeholder orders)
-      if (!order.is_placeholder && selectedWhatsAppId) {
+      // Update order with Teams account (only for non-placeholder orders)
+      if (!order.is_placeholder && selectedTeamsId) {
         const { error: updateError } = await supabase
           .from('orders')
-          .update({ whatsapp_account_id: selectedWhatsAppId })
+          .update({ whatsapp_account_id: selectedTeamsId })
           .eq('id', order.id);
 
         if (updateError) {
-          console.error('Error updating order with WhatsApp account:', updateError);
-          toast.error('Mitarbeiter zugewiesen, aber Fehler beim WhatsApp-Konto');
+          console.error('Error updating order with Teams account:', updateError);
+          toast.error('Mitarbeiter zugewiesen, aber Fehler beim Teams-Konto');
         }
       }
 
@@ -285,23 +285,23 @@ export function AssignOrderDialog({
             </Popover>
           </div>
 
-          {/* WhatsApp Account Selection - Only for non-placeholder orders */}
+          {/* Teams Account Selection - Only for non-placeholder orders */}
           {!order.is_placeholder && (
             <div className="space-y-2">
-              <Label htmlFor="whatsapp" className="flex items-center gap-2">
+              <Label htmlFor="teams" className="flex items-center gap-2">
                 <MessageSquare className="h-4 w-4" />
-                WhatsApp-Konto auswählen *
+                Teams-Konto auswählen *
               </Label>
               <Select 
-                value={selectedWhatsAppId} 
-                onValueChange={setSelectedWhatsAppId}
+                value={selectedTeamsId} 
+                onValueChange={setSelectedTeamsId}
                 disabled={loadingAccounts}
               >
                 <SelectTrigger className="bg-background">
-                  <SelectValue placeholder={loadingAccounts ? "Lädt..." : "WhatsApp-Konto auswählen"} />
+                  <SelectValue placeholder={loadingAccounts ? "Lädt..." : "Teams-Konto auswählen"} />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border">
-                  {whatsappAccounts.map((account) => (
+                  {teamsAccounts.map((account) => (
                     <SelectItem key={account.id} value={account.id}>
                       <div className="flex items-center gap-2">
                         {account.name} {account.account_info && `(${account.account_info})`}
@@ -320,11 +320,11 @@ export function AssignOrderDialog({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setManageWhatsAppOpen(true)}
+                  onClick={() => setManageTeamsOpen(true)}
                   className="flex items-center gap-2"
                 >
                   <Settings className="h-4 w-4" />
-                  WhatsApp-Konten verwalten
+                  Teams-Konten verwalten
                 </Button>
               </div>
             </div>
@@ -335,7 +335,7 @@ export function AssignOrderDialog({
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800">
                 💡 <strong>Platzhalterauftrag:</strong> Dieser Auftrag wird direkt auf der Plattform durchgeführt. 
-                Eine WhatsApp-Zuweisung ist nicht erforderlich.
+                Eine Teams-Zuweisung ist nicht erforderlich.
               </p>
             </div>
           )}
@@ -352,18 +352,18 @@ export function AssignOrderDialog({
             </Button>
             <Button 
               onClick={handleAssign}
-              disabled={loading || !selectedEmployeeId || (!order.is_placeholder && !selectedWhatsAppId)}
+              disabled={loading || !selectedEmployeeId || (!order.is_placeholder && !selectedTeamsId)}
             >
               {loading ? 'Zuweisen...' : 'Zuweisen'}
             </Button>
           </div>
         </div>
 
-        {/* WhatsApp Management Dialog */}
-        <ManageWhatsAppAccountsDialog 
-          open={manageWhatsAppOpen}
-          onOpenChange={setManageWhatsAppOpen}
-          onAccountsUpdated={handleWhatsAppAccountsUpdated}
+        {/* Teams Management Dialog */}
+        <ManageTeamsAccountsDialog 
+          open={manageTeamsOpen}
+          onOpenChange={setManageTeamsOpen}
+          onAccountsUpdated={handleTeamsAccountsUpdated}
         />
       </DialogContent>
     </Dialog>

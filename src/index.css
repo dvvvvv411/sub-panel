@@ -46,6 +46,11 @@ All colors MUST be HSL.
     --subtle-border: 214 32% 91%;
     --primary-glow: 221 83% 63%;
     
+    /* Microsoft Teams Colors */
+    --teams-primary: 123 131 235;        /* #7B83EB - Teams Lila */
+    --teams-secondary: 80 89 201;        /* #5059C9 - Dunkleres Teams Lila */
+    --teams-accent: 241 242 253;         /* #F1F2FD - Helles Lila für Backgrounds */
+    
     /* Button gradients */
     --gradient-action: linear-gradient(135deg, hsl(221 83% 53%), hsl(221 83% 63%));
     --gradient-premium: linear-gradient(135deg, hsl(38 92% 50%), hsl(43 96% 56%), hsl(33 100% 53%));
