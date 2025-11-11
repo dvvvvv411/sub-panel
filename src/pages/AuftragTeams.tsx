@@ -591,10 +591,10 @@ const AuftragTeams = () => {
           {getEvaluationStatusBanner()}
 
           {/* Teams Branding Card */}
-          <Card className="bg-gradient-to-br from-purple-50 via-violet-50 to-blue-50 border-purple-200/60 shadow-lg overflow-hidden">
+          <Card className="bg-white border-l-4 border-l-[#7B83EB] border border-gray-200 shadow-sm">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="flex-shrink-0 bg-white rounded-lg p-3 shadow-md">
+                <div className="flex-shrink-0 bg-gray-50 rounded-lg p-3">
                   <img 
                     src={teamsLogo} 
                     alt="Microsoft Teams" 
@@ -602,10 +602,10 @@ const AuftragTeams = () => {
                   />
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-xl font-bold bg-gradient-to-r from-purple-900 to-blue-900 bg-clip-text text-transparent">
+                  <h2 className="text-xl font-bold text-gray-900">
                     Microsoft Teams Auftrag
                   </h2>
-                  <p className="text-sm text-purple-700 mt-1">
+                  <p className="text-sm text-gray-600 mt-1">
                     Führen Sie diesen Auftrag über Microsoft Teams durch
                   </p>
                 </div>
@@ -614,7 +614,7 @@ const AuftragTeams = () => {
           </Card>
 
           {/* Order Information */}
-          <Card className="border-purple-200/40 shadow-md">
+          <Card className="border-gray-200 shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg">Auftragsinformationen</CardTitle>
             </CardHeader>
@@ -651,7 +651,7 @@ const AuftragTeams = () => {
           </Card>
 
           {/* Appointment Booking / Status */}
-          <Card className="border-purple-200/40 shadow-md">
+          <Card className="border-gray-200 shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-[#7B83EB]" />
@@ -664,14 +664,14 @@ const AuftragTeams = () => {
             <CardContent className="space-y-4">
               {appointment ? (
                 <div className="space-y-4">
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="bg-gray-50 border-l-4 border-l-[#7B83EB] border border-gray-200 rounded-lg p-4">
                     <div className="flex items-center gap-3 mb-3">
                       <Clock className="h-5 w-5 text-[#7B83EB]" />
                       <div>
-                        <p className="font-semibold text-purple-900">
+                        <p className="font-semibold text-gray-900">
                           Termin gebucht: {format(parseISO(appointment.scheduled_at), 'PPP', { locale: de })}
                         </p>
-                        <p className="text-sm text-purple-700">
+                        <p className="text-sm text-gray-700">
                           Uhrzeit: {format(parseISO(appointment.scheduled_at), 'HH:mm', { locale: de })} Uhr
                         </p>
                       </div>
@@ -682,14 +682,14 @@ const AuftragTeams = () => {
                   </div>
 
                   {appointment.status === 'approved' && (
-                    <div className="bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4">
+                    <div className="bg-green-50/30 border-l-4 border-l-green-500 border border-gray-200 rounded-lg p-4">
                       <div className="flex items-start gap-3 mb-3">
-                        <CheckCircle2 className="h-5 w-5 text-[#7B83EB] mt-0.5 flex-shrink-0" />
+                        <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
                         <div className="flex-1">
-                          <p className="font-semibold text-purple-900 mb-1">
+                          <p className="font-semibold text-gray-900 mb-1">
                             Termin bestätigt!
                           </p>
-                          <p className="text-sm text-purple-700 mb-3">
+                          <p className="text-sm text-gray-700 mb-3">
                             Sie werden den Auftrag über Microsoft Teams durchführen. Bitte klicken Sie auf den Button unten, um den Teams-Chat zu öffnen.
                           </p>
                         </div>
@@ -705,12 +705,12 @@ const AuftragTeams = () => {
                   )}
 
                   {appointment.feedback_requested && evaluationQuestions.length > 0 && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="bg-amber-50/30 border-l-4 border-l-amber-500 border border-gray-200 rounded-lg p-4">
                       <div className="flex items-center gap-3">
-                        <AlertCircle className="h-5 w-5 text-blue-600" />
+                        <AlertCircle className="h-5 w-5 text-amber-600" />
                         <div>
-                          <p className="font-semibold text-blue-900">Feedback angefordert</p>
-                          <p className="text-sm text-blue-700">
+                          <p className="font-semibold text-gray-900">Feedback angefordert</p>
+                          <p className="text-sm text-gray-700">
                             Der Admin hat um Ihre Bewertung gebeten. Bitte scrollen Sie nach unten, um den Auftrag zu bewerten.
                           </p>
                         </div>
@@ -783,7 +783,7 @@ const AuftragTeams = () => {
 
           {/* Evaluation Section */}
           {appointment?.feedback_requested && evaluationQuestions.length > 0 && (
-            <Card className="border-purple-200/40 shadow-md">
+            <Card className="border-gray-200 shadow-sm">
               <CardHeader>
                 <CardTitle className="text-lg">Auftragsbewertung</CardTitle>
                 <CardDescription>
